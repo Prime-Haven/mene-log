@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { detectCurrency } from "./geo.server";
+import { toMinorUnits } from "./currency";
 
 /**
  * Paystack initialisation. The secret key is read inside the handler and is
@@ -79,7 +81,9 @@ export const startPayment = createServerFn({ method: "POST" })
       };
     }
 
-    const amount = TIER_PRICES_PESEWAS[data.tier]!;
+    // Subscription renewals are charged in USD until the database accepts GHS renewals.
+    const currency = "USD" as const;
+    const amount = toMinorUnits(TIER_PRICES_PESEWAS[data.tier]!, currency);
     const reference = `gch_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -91,7 +95,7 @@ export const startPayment = createServerFn({ method: "POST" })
       body: JSON.stringify({
         email,
         amount,
-        currency: "USD",
+        currency,
         reference,
         channels: ["card", "mobile_money"],
         metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription" },
@@ -124,7 +128,7 @@ export const startPayment = createServerFn({ method: "POST" })
       tenant_id: data.tenant_id,
       reference: body.data.reference,
       amount_kobo: amount,
-      currency: "USD",
+      currency,
       tier: data.tier,
       status: "pending",
     });
@@ -203,12 +207,14 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
       };
     }
 
+    const currency = await detectCurrency();
+    const spaceAmount = toMinorUnits(bundle.amountPesewas, currency);
     const reference = `space_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const { error: requestError } = await supabase.rpc("request_extra_space", {
       p_tenant: data.tenant_id,
       p_slots: bundle.slots,
-      p_amount: bundle.amountPesewas,
+      p_amount: spaceAmount,
       p_reference: reference,
     });
     if (requestError) {
@@ -227,8 +233,8 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
       },
       body: JSON.stringify({
         email,
-        amount: bundle.amountPesewas,
-        currency: "USD",
+        amount: spaceAmount,
+        currency,
         reference,
         channels: ["card", "mobile_money"],
         metadata: { tenant_id: data.tenant_id, slots: bundle.slots, kind: "space" },
@@ -261,7 +267,7 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
       _tenant: data.tenant_id,
       _action: "space.purchase_initialised",
       _target: reference,
-      _detail: { slots: bundle.slots, amount: bundle.amountPesewas },
+      _detail: { slots: bundle.slots, amount: spaceAmount, currency },
       _actor: userId,
     });
 

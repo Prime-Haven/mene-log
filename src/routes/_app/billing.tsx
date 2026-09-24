@@ -7,6 +7,8 @@ import { useTenant } from "@/hooks/useTenant";
 import { startPayment, startSpacePurchase, EXTRA_SPACE_BUNDLES } from "@/lib/billing.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
+import { formatUsd } from "@/lib/currency";
 import { FEATURE_LABELS, type Feature } from "@/lib/entitlements";
 
 const FEATURE_ORDER: Feature[] = [
@@ -47,6 +49,7 @@ function Billing() {
   const { tenant } = ctx;
   const trialActive = !!tenant?.trial_ends_at && new Date(tenant.trial_ends_at).getTime() > Date.now();
   const pay = useServerFn(startPayment);
+  const currency = useCurrency();
 
   const renew = useMutation({
     mutationFn: async (tier: "basic" | "standard" | "premium") => {
@@ -202,8 +205,7 @@ function Billing() {
                   disabled={purchaseSpace.isPending}
                   onClick={() => purchaseSpace.mutate(bundle.slots)}
                 >
-                  +{bundle.slots.toLocaleString()} members — $
-                  {(bundle.amountPesewas / 100).toFixed(2)}
+                  +{bundle.slots.toLocaleString()} members — {formatUsd(bundle.amountPesewas / 100, currency)}
                 </Button>
               ))}
             </div>
