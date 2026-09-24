@@ -17,6 +17,8 @@ import {
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useCurrency } from "@/hooks/useCurrency";
+import { currencySymbol, USD_TO_GHS } from "@/lib/currency";
 
 import heroVideo from "@/assets/mene-worship-hero.webm";
 import heroPoster from "@/assets/mene-worship-poster.jpg";
@@ -248,14 +250,14 @@ function LandingPage() {
             <div className="max-w-3xl">
               <p className="text-eyebrow">Simple monthly plans</p>
               <h2 className="mt-4 font-display text-3xl font-bold leading-tight sm:text-5xl">Choose the structure your church needs today.</h2>
-              <p className="mt-5 text-muted-foreground">All plans include secure attendance, membership records and reporting. Prices are in US dollars and billed monthly.</p>
+              <p className="mt-5 text-muted-foreground">All plans include secure attendance, membership records and reporting. Prices are shown in your local currency and billed monthly.</p>
             </div>
             <div className="mt-12 grid gap-5 lg:grid-cols-3">
               {tiers.map((tier) => (
                 <article key={tier.name} className={`relative flex flex-col rounded-lg border p-7 ${tier.featured ? "border-primary bg-primary text-primary-foreground shadow-xl" : "border-border bg-card"}`}>
                   {tier.featured && <span className="mb-5 self-start rounded-md bg-primary-foreground px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Most popular</span>}
                   <h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{tier.name}</h3>
-                  <div className="mt-4 flex items-end"><span className="mb-2 text-lg">$</span><span className={`font-display text-6xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{tier.price}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>/month</span></div>
+                  <div className="mt-4 flex items-end"><span className="mb-2 text-lg">{currencySymbol(currency)}</span><span className={`font-display text-6xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{currency === "GHS" ? Number(tier.price) * USD_TO_GHS : tier.price}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>/month</span></div>
                   <p className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{tier.blurb}</p>
                   <div className={`my-7 h-px ${tier.featured ? "bg-primary-foreground/20" : "bg-border"}`} />
                   <ul className="flex-1 space-y-3 text-sm">

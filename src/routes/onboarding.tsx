@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordField } from "@/components/PasswordField";
 import { passwordIsStrong } from "@/lib/password";
+import { useCurrency } from "@/hooks/useCurrency";
+import { formatUsd } from "@/lib/currency";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -72,6 +74,7 @@ function toHandle(value: string) {
 }
 
 function Onboarding() {
+  const currency = useCurrency();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
   const { membership, isLoading } = useTenant();
@@ -372,7 +375,7 @@ function Onboarding() {
                       <div>
                         <p className="font-display font-bold text-lg">{t.name}</p>
                         <p className="mt-1 text-2xl font-extrabold text-primary">
-                          {t.price} <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                          {formatUsd(t.priceNum, currency)} <span className="text-xs font-normal text-muted-foreground">/mo</span>
                         </p>
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t.blurb}</p>
                       </div>
@@ -407,7 +410,7 @@ function Onboarding() {
                  <PasswordField id="pass" label="Create account password" value={password} onChange={setPassword} />
                  <div className="space-y-1.5"><Label htmlFor="confirm">Confirm password</Label><Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required maxLength={16}/>{confirm.length > 0 && confirm !== password && <p className="text-xs text-destructive">Both passwords must match.</p>}</div>
                </div>
-               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4"><p className="font-semibold">14-day {selectedTier.name} trial</p><p className="mt-1 text-xs text-muted-foreground">No payment is collected now. Your monthly price will be {selectedTier.price} when you choose to pay from Billing.</p></div>
+               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4"><p className="font-semibold">14-day {selectedTier.name} trial</p><p className="mt-1 text-xs text-muted-foreground">No payment is collected now. Your monthly price will be {formatUsd(selectedTier.priceNum, currency)} when you choose to pay from Billing.</p></div>
               <div className="flex items-start gap-2 pt-2 text-xs text-muted-foreground">
                 <ShieldCheck className="mt-0.5 size-4 text-primary shrink-0" />
                 <span>
