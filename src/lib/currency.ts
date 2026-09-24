@@ -17,8 +17,8 @@ export function formatUsd(usdDollars: number, currency: Currency) {
     return new Intl.NumberFormat("en", {
       style: "currency",
       currency: currency.code,
-      maximumFractionDigits: value >= 100 ? 0 : 2,
-      minimumFractionDigits: 0,
+      maximumFractionDigits: Number.isInteger(Math.round(value * 100) / 100) ? 0 : 2,
+      minimumFractionDigits: Number.isInteger(Math.round(value * 100) / 100) ? 0 : 2,
     }).format(value);
   } catch {
     return `$${usdDollars.toLocaleString()}`;
