@@ -19,10 +19,10 @@ export default defineConfig({
     // unavailable during a deployment. Private credentials remain server-only.
     define: {
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(
-        "https://edhtwycqgiokiwnmtlio.supabase.co",
+        "https://pmkimlbvdzgduxgxucsx.supabase.co",
       ),
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        "sb_publishable_aKCzF6IdC-5fOR40yHgMMA_EB2UepNT",
+        "sb_publishable_UWtwnrZyj1q_4jHqR4517w_yt1pXFUQ",
       ),
     },
   },
