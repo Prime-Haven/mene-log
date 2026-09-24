@@ -221,8 +221,10 @@ function Billing() {
       <div className="surface p-5">
         <h2 className="text-base font-semibold">Pay or renew</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Pay by card or mobile money. Mobile money is never debited automatically — you confirm
-          each renewal yourself. Payments appear below as soon as they clear.
+          {currency === "GHS"
+            ? "Pay by card or mobile money. Mobile money is never debited automatically — you confirm each renewal yourself."
+            : "Pay by card."}{" "}
+          Payments appear below as soon as they clear.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {(["basic", "standard", "premium"] as const).map((t) => (
@@ -233,7 +235,8 @@ function Billing() {
               onClick={() => renew.mutate(t)}
               className="capitalize"
             >
-              {t === (sub?.tier ?? tenant?.tier) ? `Renew ${t}` : `Switch to ${t}`}
+              {t === (sub?.tier ?? tenant?.tier) ? `Renew ${t}` : `Switch to ${t}`} ·{" "}
+              {formatUsd(({ basic: 15, standard: 30, premium: 55 } as const)[t], currency)}
             </Button>
           ))}
         </div>
@@ -245,7 +248,7 @@ function Billing() {
             <div>
               <p className="font-mono text-xs text-muted-foreground">{p.reference}</p>
               <p className="font-medium capitalize">
-                {p.tier} · {p.currency} {(Number(p.amount_kobo) / 100).toFixed(2)}
+                {p.tier} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
               </p>
             </div>
             <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>

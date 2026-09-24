@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { USD_TO_GHS } from "@/lib/currency";
 
 /**
  * Paystack webhook. Every request is verified with an HMAC-SHA512 signature over
@@ -30,7 +31,8 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             channel?: string;
             paid_at?: string;
             amount?: number;
-            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number };
+            currency?: string;
+            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string };
           };
         };
         try {
@@ -57,11 +59,17 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
           return new Response("ok");
         }
 
+        // Ghana renewals are charged in GHS at the flat rate; the stored price is in USD.
+        let amount = event.data.amount;
+        if (typeof amount === "number" && event.data.currency === "GHS") {
+          if (amount % USD_TO_GHS !== 0) return new Response("Amount mismatch", { status: 400 });
+          amount = amount / USD_TO_GHS;
+        }
         const { error } = await supabaseAdmin.rpc("apply_successful_payment", {
           p_reference: event.data.reference,
           p_paid_at: event.data.paid_at ?? new Date().toISOString(),
           ...(event.data.channel ? { p_channel: event.data.channel } : {}),
-          ...(typeof event.data.amount === "number" ? { p_amount: event.data.amount } : {}),
+          ...(typeof amount === "number" ? { p_amount: amount } : {}),
         });
 
         if (error) {
