@@ -227,7 +227,7 @@ function Billing() {
         <p className="mt-2 text-sm text-muted-foreground">
           {currency.code === "GHS"
             ? "Pay by card or mobile money. Mobile money is never debited automatically — you confirm each renewal yourself."
-            : "Pay by card."}{" "}
+            : currency.code === "USD" ? "Pay by card." : "Pay by card. Prices in your currency are approximate — your card is charged the US dollar amount."}{" "}
           Payments appear below as soon as they clear.
         </p>
         <div className="mt-4">
