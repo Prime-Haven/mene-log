@@ -1,5 +1,5 @@
-/** Fixed rate set by the business: 1 USD = 11 GHS. Never use live rates. */
-export const USD_TO_GHS = 11;
+/** Fixed rate set by the business: 1 USD = 10 GHS. Never use live rates. */
+export const USD_TO_GHS = 10;
 
 export type Currency = "USD" | "GHS";
 
