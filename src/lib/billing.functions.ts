@@ -81,9 +81,10 @@ export const startPayment = createServerFn({ method: "POST" })
       };
     }
 
-    // Subscription renewals are charged in USD until the database accepts GHS renewals.
-    const currency = "USD" as const;
-    const amount = toMinorUnits(TIER_PRICES_PESEWAS[data.tier]!, currency);
+    // The payment row keeps the canonical USD price; Ghana visitors are charged the flat-rate GHS amount.
+    const currency = await detectCurrency();
+    const usdAmount = TIER_PRICES_PESEWAS[data.tier]!;
+    const amount = toMinorUnits(usdAmount, currency);
     const reference = `gch_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -97,8 +98,8 @@ export const startPayment = createServerFn({ method: "POST" })
         amount,
         currency,
         reference,
-        channels: ["card", "mobile_money"],
-        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription" },
+        channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
+        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency },
       }),
     });
 
@@ -127,8 +128,8 @@ export const startPayment = createServerFn({ method: "POST" })
     await supabaseAdmin.from("payments").insert({
       tenant_id: data.tenant_id,
       reference: body.data.reference,
-      amount_kobo: amount,
-      currency,
+      amount_kobo: usdAmount,
+      currency: "USD",
       tier: data.tier,
       status: "pending",
     });
@@ -136,7 +137,7 @@ export const startPayment = createServerFn({ method: "POST" })
       _tenant: data.tenant_id,
       _action: "payment.initialised",
       _target: body.data.reference,
-      _detail: { tier: data.tier, amount },
+      _detail: { tier: data.tier, amount, currency },
       _actor: userId,
     });
 
@@ -236,7 +237,7 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
         amount: spaceAmount,
         currency,
         reference,
-        channels: ["card", "mobile_money"],
+        channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
         metadata: { tenant_id: data.tenant_id, slots: bundle.slots, kind: "space" },
       }),
     });
