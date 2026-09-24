@@ -15,7 +15,7 @@ import { passwordIsStrong } from "@/lib/password";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
-import { MONTHLY_USD, yearlyUsd, type BillingInterval } from "@/lib/pricing";
+import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, type BillingInterval, type PlanTier } from "@/lib/pricing";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -44,8 +44,16 @@ const tierCopy: Array<{
   features: string[];
 }> = [
   {
+    id: "free" as Tier,
+    name: "Free",
+    price: "Free",
+    priceNum: 0,
+    blurb: "Free forever. No trial, no payment.",
+    features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel export"],
+  },
+  {
     id: "basic",
-    name: "Basic",
+    name: "Standard",
     price: `$${MONTHLY_USD.basic}`,
     priceNum: MONTHLY_USD.basic,
     blurb: "Single-site congregation ready for digital attendance.",
@@ -53,11 +61,11 @@ const tierCopy: Array<{
   },
   {
     id: "standard",
-    name: "Standard",
+    name: "Pro",
     price: `$${MONTHLY_USD.standard}`,
     priceNum: MONTHLY_USD.standard,
     blurb: "Structured churches with departments and cell leaders.",
-    features: ["Everything in Basic", "Leader portal & access codes", "Department & cell groups", "Email broadcast engine"],
+    features: ["Everything in Standard", "Leader portal & access codes", "Department & cell groups", "Email broadcast engine"],
   },
   {
     id: "premium",
@@ -65,7 +73,7 @@ const tierCopy: Array<{
     price: `$${MONTHLY_USD.premium}`,
     priceNum: MONTHLY_USD.premium,
     blurb: "Multi-branch ministries needing full control and automation.",
-    features: ["Everything in Standard", "Multiple church branches", "SMS notifications", "Automated follow-up reminders"],
+    features: ["Everything in Pro", "Multiple church branches", "SMS notifications", "Automated follow-up reminders"],
   },
 ];
 
@@ -220,7 +228,7 @@ function Onboarding() {
           </div>
           <h1 className="font-display text-3xl font-bold">Registration Received!</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
-             Thank you, <b className="text-foreground">{fullName}</b>. {submitted === "verification" ? <>We sent a verification link to <b className="text-foreground">{email}</b>. Your church and 14-day trial will be created after you confirm it.</> : <>Your account for <b className="text-foreground">{churchName}</b> is now on a 14-day {tier.toUpperCase()} trial and has been submitted for approval.</>}
+             Thank you, <b className="text-foreground">{fullName}</b>. {submitted === "verification" ? <>We sent a verification link to <b className="text-foreground">{email}</b>. Your church and 14-day trial will be created after you confirm it.</> : <>Your account for <b className="text-foreground">{churchName}</b> is now on a {(tier as string) === "free" ? "Free plan" : `14-day ${selectedTier.name} trial`} and has been submitted for approval.</>}
           </p>
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-left text-xs space-y-2">
             <p className="font-semibold text-foreground">What happens next?</p>
@@ -356,7 +364,7 @@ function Onboarding() {
                 <h2 className="font-display text-base font-bold">Select Your Church Package</h2>
               </div>
               <BillingToggle value={interval} onChange={setBillingInterval} />
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {tierCopy.map((t) => {
                   const selected = t.id === tier;
                   return (
@@ -379,8 +387,10 @@ function Onboarding() {
                       <div>
                         <p className="font-display font-bold text-lg">{t.name}</p>
                         <p className="mt-1 text-2xl font-extrabold text-primary">
-                          {interval === "yearly" ? formatUsd(yearlyUsd(t.id), currency) : formatUsd(t.priceNum, currency)} <span className="text-xs font-normal text-muted-foreground">{interval === "yearly" ? "/yr" : "/mo"}</span>
-                          {interval === "yearly" && <span className="block text-xs font-normal text-muted-foreground">{formatUsd(Math.round((yearlyUsd(t.id) / 12) * 100) / 100, currency)}/mo billed yearly</span>}
+                          {(t.id as string) === "free" ? (<>Free <span className="block text-xs font-normal text-muted-foreground">Free forever</span></>) : (<>
+                          {interval === "yearly" ? formatUsd(yearlyUsd(t.id as PlanTier), currency) : formatUsd(t.priceNum, currency)} <span className="text-xs font-normal text-muted-foreground">{interval === "yearly" ? "/yr" : "/mo"}</span>
+                          {interval === "yearly" && <span className="block text-xs font-normal text-muted-foreground">Save {Math.round(YEARLY_DISCOUNT[t.id as PlanTier] * 100)}% · {formatUsd(yearlyPerMonthUsd(t.id as PlanTier), currency)}/mo billed yearly</span>}
+                          </>)}
                         </p>
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t.blurb}</p>
                       </div>
@@ -415,7 +425,7 @@ function Onboarding() {
                  <PasswordField id="pass" label="Create account password" value={password} onChange={setPassword} />
                  <div className="space-y-1.5"><Label htmlFor="confirm">Confirm password</Label><Input id="confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required maxLength={16}/>{confirm.length > 0 && confirm !== password && <p className="text-xs text-destructive">Both passwords must match.</p>}</div>
                </div>
-               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4"><p className="font-semibold">14-day {selectedTier.name} trial</p><p className="mt-1 text-xs text-muted-foreground">No payment is collected now. Your price will be {interval === "yearly" ? `${formatUsd(yearlyUsd(selectedTier.id), currency)} per year` : `${formatUsd(selectedTier.priceNum, currency)} per month`} when you choose to pay from Billing.</p></div>
+               {(selectedTier.id as string) === "free" ? (<div className="rounded-lg border border-primary/20 bg-primary/5 p-4"><p className="font-semibold">Free plan, forever</p><p className="mt-1 text-xs text-muted-foreground">No trial and no payment. You can upgrade from Billing at any time.</p></div>) : (<div className="rounded-lg border border-primary/20 bg-primary/5 p-4"><p className="font-semibold">14-day {selectedTier.name} trial</p><p className="mt-1 text-xs text-muted-foreground">No payment is collected now. Your price will be {interval === "yearly" ? `${formatUsd(yearlyUsd(selectedTier.id as PlanTier), currency)} per year` : `${formatUsd(selectedTier.priceNum, currency)} per month`} when you choose to pay from Billing.</p></div>)}
               <div className="flex items-start gap-2 pt-2 text-xs text-muted-foreground">
                 <ShieldCheck className="mt-0.5 size-4 text-primary shrink-0" />
                 <span>
