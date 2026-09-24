@@ -1864,7 +1864,7 @@ export type Database = {
       member_status: "first_timer" | "active" | "archived" | "anonymised"
       pay_method: "card" | "momo"
       tenant_status: "active" | "grace" | "suspended" | "closed"
-      tenant_tier: "basic" | "standard" | "premium"
+      tenant_tier: "free" | "basic" | "standard" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2006,7 +2006,7 @@ export const Constants = {
       member_status: ["first_timer", "active", "archived", "anonymised"],
       pay_method: ["card", "momo"],
       tenant_status: ["active", "grace", "suspended", "closed"],
-      tenant_tier: ["basic", "standard", "premium"],
+      tenant_tier: ["free", "basic", "standard", "premium"],
     },
   },
 } as const
