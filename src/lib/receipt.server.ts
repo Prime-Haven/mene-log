@@ -1,7 +1,7 @@
 import { sendEmail } from "./messaging.server";
 import { intervalFromReference, planLabel } from "./pricing";
 
-const SITE = "https://mene.lovable.app";
+import { SITE_URL as SITE } from "./site";
 
 function esc(v: string) {
   return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);

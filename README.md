@@ -5,7 +5,7 @@ Ensure supreme data protection, rate limiting and add all security features to a
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://mene.lovable.app
+**Live app**: https://project--fa7ecf51-3d30-4b07-a318-3138a21a6cf2.lovable.app
 
 ## Build with Lovable
 
