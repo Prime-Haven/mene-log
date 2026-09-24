@@ -29,7 +29,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-const SITE = "https://menelog.site";
+import { SITE_URL as SITE } from "./site";
 
 /** Mene:Log branded HTML wrapper, carrying the church's own name, logo and accent colour. */
 export function renderEmail(options: {
