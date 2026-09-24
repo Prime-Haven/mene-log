@@ -14,7 +14,7 @@ export type SendResult = {
 };
 
 export function emailConfigured(): boolean {
-  return !!process.env["RESEND_API_KEY"] && !!process.env["LOVABLE_API_KEY"];
+  return !!process.env["MENELOG_RESEND_API_KEY"];
 }
 
 export function smsConfigured(): boolean {
@@ -65,21 +65,18 @@ export async function sendEmail(options: {
   fromName: string;
   replyTo: string | null;
 }): Promise<SendResult> {
-  const key = process.env["RESEND_API_KEY"];
+  const key = process.env["MENELOG_RESEND_API_KEY"];
   if (!key) return { ok: false, error: "Email is not configured yet" };
-  const lovableKey = process.env["LOVABLE_API_KEY"];
-  if (!lovableKey) return { ok: false, error: "Email is not configured yet" };
-  const from = process.env["MENE_EMAIL_FROM"] ?? "Mene:Log <onboarding@resend.dev>";
+  const from = process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <no-reply@menelog.site>";
   const safeName = options.fromName.replace(/[<>"\n\r]/g, "").slice(0, 60) || "Mene:Log";
   const sender = from.includes("<") ? from : `${safeName} <${from}>`;
 
   try {
-    const response = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": key,
+        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         from: sender,
@@ -92,7 +89,9 @@ export async function sendEmail(options: {
     const text = await response.text();
     if (!response.ok) {
       console.error(`[messaging] Resend failed [${response.status}]: ${text}`);
-      return { ok: false, error: `Email provider error ${response.status}` };
+      let detail = "";
+      try { detail = (JSON.parse(text) as { message?: string }).message ?? ""; } catch { detail = ""; }
+      return { ok: false, error: `Email provider error ${response.status}${detail ? `: ${detail}` : ""}` };
     }
     let providerId: string | undefined;
     try {

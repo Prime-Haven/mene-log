@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createLovableAiGatewayProvider, GEMINI_MODEL } from "@/lib/ai-gateway.server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 
@@ -65,17 +65,12 @@ export const Route = createFileRoute("/api/public/ask-mene")({
             created_by: claims.claims.sub,
           });
 
-          const gateway = createOpenAI({
-            apiKey,
-            baseURL: "https://ai.gateway.lovable.dev/v1",
-            headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-          });
+          const gateway = createLovableAiGatewayProvider(apiKey);
           const result = streamText({
-            model: gateway.responses("openai/gpt-6-astra"),
-            system: `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality. Do not expose hidden reasoning.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`,
+            model: gateway(GEMINI_MODEL),
+            system: `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`,
             messages: await convertToModelMessages(messages),
             maxOutputTokens: 700,
-            providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
           });
 
           void supabaseAdmin.from("audit_events").insert({

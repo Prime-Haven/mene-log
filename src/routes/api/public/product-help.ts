@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createLovableAiGatewayProvider, GEMINI_MODEL } from "@/lib/ai-gateway.server";
 import { createClient } from "@supabase/supabase-js";
 import { streamText } from "ai";
 import { z } from "zod";
@@ -41,16 +41,11 @@ export const Route = createFileRoute("/api/public/product-help")({
 
           const apiKey = process.env["LOVABLE_API_KEY"];
           if (!apiKey) return Response.json({ error: "Mene:Log help is not configured yet." }, { status: 503 });
-          const lovable = createOpenAI({
-            baseURL: "https://ai.gateway.lovable.dev/v1",
-            apiKey,
-            headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-          });
+          const lovable = createLovableAiGatewayProvider(apiKey);
           const result = streamText({
-            model: lovable.responses("openai/gpt-6-astra"),
+            model: lovable(GEMINI_MODEL),
             system: "You are Mene:Log product help. Answer only questions about the Mene:Log church attendance platform. It offers QR attendance, membership records, services, reports, church branding, email, leader access on Pro, and branches/SMS/automation on Premium. Plans: Free forever (branded check-in, QR attendance, member registry, Excel export, up to 150 members), Standard $10, Pro $25, Premium $50 monthly; yearly saves 8%, 10% and 15%. Paid plans start with a 14-day trial. Permanent check-in links use menelog.site/c/name. Never claim access to a church's data, never request personal member information, and never answer unrelated questions. Be concise and practical.",
             prompt: input.data.question,
-            providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
           });
           const answer = (await result.text).trim();
           return Response.json({ answer: answer || "I could not produce an answer for that question." });

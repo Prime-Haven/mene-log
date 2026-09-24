@@ -48,7 +48,7 @@ export function HomepageStats() {
             >
               <Icon className="size-5 text-primary" />
               <p className="mt-6 font-display text-3xl font-bold text-deep-foreground">
-                {stats.isLoading ? "—" : number.format(value ?? 0)}
+                {number.format(Number(value ?? 0) || 0)}
               </p>
               <p className="mt-1 text-sm text-deep-foreground/55">{label}</p>
             </motion.div>
