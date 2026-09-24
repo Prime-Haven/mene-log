@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { FEATURE_LABELS, requiredTier, type Feature, type Tier } from "@/lib/entitlements";
 
 const TIER_NAME: Record<Tier, string> = {
-  basic: "Basic",
-  standard: "Standard",
+  free: "Free",
+  basic: "Standard",
+  standard: "Pro",
   premium: "Premium",
 };
 

@@ -3,7 +3,7 @@
  * The database mirrors this exactly in public.tier_entitlements(), so the
  * browser and the server can never disagree. Change both together.
  */
-export type Tier = "basic" | "standard" | "premium";
+export type Tier = "free" | "basic" | "standard" | "premium";
 
 export type Feature =
   | "members"
@@ -31,6 +31,30 @@ export type Limit = "staff_seats" | "member_limit" | "daily_messages";
 type Entitlement = Record<Feature, boolean> & Record<Limit, number>;
 
 export const ENTITLEMENTS: Record<Tier, Entitlement> = {
+  free: {
+    members: true,
+    services: true,
+    checkin: true,
+    qr: true,
+    branding: false,
+    reports_basic: false,
+    reports_advanced: false,
+    ask_mene: false,
+    structure: false,
+    groups: false,
+    branches: false,
+    leaders: false,
+    space_addon: false,
+    followups: false,
+    email: false,
+    sms: false,
+    broadcasts: false,
+    automations: false,
+    audit: false,
+    staff_seats: 1,
+    member_limit: 150,
+    daily_messages: 0,
+  },
   basic: {
     members: true,
     services: true,
@@ -106,12 +130,12 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
 };
 
 export function hasFeature(tier: Tier | undefined, feature: Feature): boolean {
-  if (!tier) return false;
+  if (!tier || !ENTITLEMENTS[tier]) return false;
   return ENTITLEMENTS[tier][feature] === true;
 }
 
 export function limitOf(tier: Tier | undefined, key: Limit): number {
-  if (!tier) return 0;
+  if (!tier || !ENTITLEMENTS[tier]) return 0;
   return ENTITLEMENTS[tier][key];
 }
 
@@ -140,6 +164,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 
 /** The cheapest package that unlocks a capability. */
 export function requiredTier(feature: Feature): Tier {
+  if (ENTITLEMENTS.free[feature]) return "free";
   if (ENTITLEMENTS.basic[feature]) return "basic";
   if (ENTITLEMENTS.standard[feature]) return "standard";
   return "premium";

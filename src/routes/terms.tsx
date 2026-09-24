@@ -49,7 +49,7 @@ const sections: Array<{ title: string; body: string[] }> = [
   {
     title: "4. Subscription Packages, 30-Day Cycles & Billing",
     body: [
-      "Mene:Log offers tiered monthly packages billed in United States Dollars (USD) or local currency equivalents: Basic ($10/month), Standard ($25/month), and Premium ($50/month).",
+      "Mene:Log offers tiered monthly packages billed in United States Dollars (USD) or local currency equivalents: a Free plan (free forever), Standard ($10/month), Pro ($25/month), and Premium ($50/month). Yearly billing saves 8%, 10% and 15% respectively.",
       "New churches receive a 14-day trial. Paid subscriptions renew monthly from the day payment is confirmed through our authorized payment processor, including card and Mobile Money payments through Paystack.",
       "Because mobile money transactions cannot be charged automatically without active user authorization, account owners receive electronic renewal prompts and invoices before the expiration of each 30-day period.",
       "If a renewal payment is not completed before cycle expiry, the account enters a 7-day grace period, followed by subscription suspension. During suspension, check-in and data modification are paused, but existing records, attendances, and complete exports remain permanently accessible.",

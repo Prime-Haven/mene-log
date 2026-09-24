@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import type { BillingInterval } from "@/lib/pricing";
+import { MAX_YEARLY_DISCOUNT, type BillingInterval } from "@/lib/pricing";
 
 export function BillingToggle({
   value,
@@ -43,7 +43,7 @@ export function BillingToggle({
               transition={{ duration: 0.22 }}
               className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
             >
-              Save 20% when you pay yearly
+              Save up to {Math.round(MAX_YEARLY_DISCOUNT * 100)}% when you pay yearly
             </motion.span>
           )}
         </AnimatePresence>
