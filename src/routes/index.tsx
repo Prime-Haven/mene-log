@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
-import { currencySymbol, formatUsd, USD_TO_GHS } from "@/lib/currency";
+import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
 import { MONTHLY_USD, yearlyUsd, type BillingInterval, type PlanTier } from "@/lib/pricing";
 
@@ -255,14 +255,14 @@ function LandingPage() {
               <p className="text-eyebrow">Simple monthly or yearly plans</p>
               <h2 className="mt-4 font-display text-3xl font-bold leading-tight sm:text-5xl">Choose the structure your church needs today.</h2>
               <p className="mt-5 text-muted-foreground">All plans include secure attendance, membership records and reporting. Prices are shown in your local currency, billed monthly or yearly.</p>
-              <div className="mt-6"><BillingToggle value={interval} onChange={setBillingInterval} /></div>
             </div>
-            <div className="mt-12 grid gap-5 lg:grid-cols-3">
+            <div className="mt-10"><BillingToggle value={interval} onChange={setBillingInterval} /></div>
+            <div className="mt-6 grid gap-5 lg:grid-cols-3">
               {tiers.map((tier) => (
                 <article key={tier.name} className={`relative flex flex-col rounded-lg border p-7 ${tier.featured ? "border-primary bg-primary text-primary-foreground shadow-xl" : "border-border bg-card"}`}>
                   {tier.featured && <span className="mb-5 self-start rounded-md bg-primary-foreground px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Most popular</span>}
                   <h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{tier.name}</h3>
-                  <div className="mt-4 flex items-end"><span className="mb-2 text-lg">{currencySymbol(currency)}</span><span className={`font-display text-6xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{(interval === "yearly" ? yearlyUsd(tier.id) : MONTHLY_USD[tier.id]) * (currency === "GHS" ? USD_TO_GHS : 1)}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
+                  <div className="mt-4 flex items-end"><span className={`font-display text-5xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{formatUsd(interval === "yearly" ? yearlyUsd(tier.id) : MONTHLY_USD[tier.id], currency)}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
                   {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{formatUsd(Math.round((yearlyUsd(tier.id) / 12) * 100) / 100, currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id], currency)}/month</p>}
                   <p className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{tier.blurb}</p>
                   <div className={`my-7 h-px ${tier.featured ? "bg-primary-foreground/20" : "bg-border"}`} />

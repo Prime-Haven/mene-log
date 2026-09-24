@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getVisitorCurrency } from "@/lib/geo.functions";
-import type { Currency } from "@/lib/currency";
+import { USD, type Currency } from "@/lib/currency";
 
 export function useCurrency(): Currency {
   const fn = useServerFn(getVisitorCurrency);
@@ -11,5 +11,5 @@ export function useCurrency(): Currency {
     staleTime: 1000 * 60 * 60,
     retry: false,
   });
-  return data?.currency ?? "USD";
+  return data?.currency ?? USD;
 }
