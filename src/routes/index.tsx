@@ -20,7 +20,7 @@ import { useRef, useState } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
-import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, type BillingInterval, type AnyTier } from "@/lib/pricing";
+import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, type BillingInterval, type AnyTier, type PlanTier } from "@/lib/pricing";
 
 import heroVideo from "@/assets/mene-worship-hero.webm";
 import heroPoster from "@/assets/mene-worship-poster.jpg";
@@ -66,7 +66,7 @@ const tiers = [
   { id: "free" as AnyTier, name: "Free", blurb: "Free forever for any church getting started.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel export"], missing: ["Excel import", "Reports", "Email", "Ask Mene:Log AI", "Leadership structure", "Multiple branches"] },
   { id: "basic" as AnyTier, name: "Standard", blurb: "For a single-site church ready to move beyond paper.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel import and export", "Core reports and email"], missing: ["Leadership structure", "Multiple branches"] },
   { id: "standard" as AnyTier, name: "Pro", blurb: "For churches led through ministries, units or departments.", features: ["Everything in Standard", "Leadership and groups", "Leader access", "Email broadcasts", "Deeper insights"], missing: ["Multiple branches", "Text messaging"] , featured: true},
-  { id: "premium" as PlanTier, name: "Premium", blurb: "For multi-branch and cell-structured ministries.", features: ["Everything in Standard", "Multiple branches", "Text messaging", "Automated follow-up", "Advanced reports and audit"], missing: [] },
+  { id: "premium" as AnyTier, name: "Premium", blurb: "For multi-branch and cell-structured ministries.", features: ["Everything in Standard", "Multiple branches", "Text messaging", "Automated follow-up", "Advanced reports and audit"], missing: [] },
 ];
 
 const faqs = [
@@ -266,8 +266,8 @@ function LandingPage() {
                   {tier.id === "free" ? (
                     <div className="mt-4"><span className="font-display text-5xl font-bold text-foreground">Free</span><p className="mt-1 text-xs text-muted-foreground">Free forever · no card needed</p></div>
                   ) : (<>
-                  <div className="mt-4 flex flex-wrap items-end"><span className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{formatUsd(interval === "yearly" ? yearlyUsd(tier.id) : MONTHLY_USD[tier.id], currency)}</span><span className={`mb-1.5 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
-                  {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}><b>Save {Math.round(YEARLY_DISCOUNT[tier.id] * 100)}%</b> · {formatUsd(yearlyPerMonthUsd(tier.id), currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id], currency)}/month</p>}
+                  <div className="mt-4 flex flex-wrap items-end"><span className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{formatUsd(interval === "yearly" ? yearlyUsd(tier.id as PlanTier) : MONTHLY_USD[tier.id as PlanTier], currency)}</span><span className={`mb-1.5 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
+                  {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}><b>Save {Math.round(YEARLY_DISCOUNT[tier.id as PlanTier] * 100)}%</b> · {formatUsd(yearlyPerMonthUsd(tier.id as PlanTier), currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id as PlanTier], currency)}/month</p>}
                   </>)}
                   <p className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{tier.blurb}</p>
                   <div className={`my-7 h-px ${tier.featured ? "bg-primary-foreground/20" : "bg-border"}`} />

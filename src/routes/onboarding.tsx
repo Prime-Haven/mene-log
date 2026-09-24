@@ -228,7 +228,7 @@ function Onboarding() {
           </div>
           <h1 className="font-display text-3xl font-bold">Registration Received!</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
-             Thank you, <b className="text-foreground">{fullName}</b>. {submitted === "verification" ? <>We sent a verification link to <b className="text-foreground">{email}</b>. Your church and 14-day trial will be created after you confirm it.</> : <>Your account for <b className="text-foreground">{churchName}</b> is now on a {(tier as string) === "free" ? "Free plan" : `14-day ${selectedTier.name} trial`} and has been submitted for approval.</>}
+             Thank you, <b className="text-foreground">{fullName}</b>. {submitted === "verification" ? <>We sent a verification link to <b className="text-foreground">{email}</b>. Your church and 14-day trial will be created after you confirm it.</> : <>Your account for <b className="text-foreground">{churchName}</b> is now on a {(tier as string) === "free" ? "Free plan" : `14-day ${tierCopy.find((x) => x.id === tier)?.name ?? ""} trial`} and has been submitted for approval.</>}
           </p>
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 text-left text-xs space-y-2">
             <p className="font-semibold text-foreground">What happens next?</p>
@@ -451,7 +451,7 @@ function Onboarding() {
             disabled={!stepValid || busy}
             className="gap-2 rounded-xl px-6"
           >
-             {busy ? "Processing…" : step < 3 ? "Continue" : "Start 14-day trial"}
+             {busy ? "Processing…" : step < 3 ? "Continue" : (tier as string) === "free" ? "Create free account" : "Start 14-day trial"}
             {!busy && <ArrowRight className="size-4" />}
           </Button>
         </div>
