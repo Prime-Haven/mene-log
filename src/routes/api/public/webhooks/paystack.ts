@@ -32,7 +32,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             paid_at?: string;
             amount?: number;
             currency?: string;
-            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string };
+            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number };
           };
         };
         try {
