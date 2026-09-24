@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { detectCurrency } from "./geo.server";
 import { toMinorUnits } from "./currency";
+import { MONTHLY_USD, priceUsdCents, referencePrefix } from "./pricing";
 
 /**
  * Paystack initialisation. The secret key is read inside the handler and is
@@ -11,9 +12,9 @@ import { toMinorUnits } from "./currency";
  */
 
 export const TIER_PRICES_PESEWAS: Record<string, number> = {
-  basic: 1500, // USD 15.00 / month
-  standard: 3000, // USD 30.00 / month
-  premium: 5500, // USD 55.00 / month
+  basic: MONTHLY_USD.basic * 100,
+  standard: MONTHLY_USD.standard * 100,
+  premium: MONTHLY_USD.premium * 100,
 };
 
 /** One-off top-ups of member capacity, on top of whatever the package includes. */
@@ -26,6 +27,7 @@ export const EXTRA_SPACE_BUNDLES = [
 const schema = z.object({
   tenant_id: z.string().uuid(),
   tier: z.enum(["basic", "standard", "premium"]),
+  interval: z.enum(["monthly", "yearly"]).default("monthly"),
 });
 
 const spaceSchema = z.object({
@@ -83,9 +85,9 @@ export const startPayment = createServerFn({ method: "POST" })
 
     // The payment row keeps the canonical USD price; Ghana visitors are charged the flat-rate GHS amount.
     const currency = await detectCurrency();
-    const usdAmount = TIER_PRICES_PESEWAS[data.tier]!;
+    const usdAmount = priceUsdCents(data.tier, data.interval);
     const amount = toMinorUnits(usdAmount, currency);
-    const reference = `gch_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
+    const reference = `${referencePrefix(data.interval)}_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -99,7 +101,7 @@ export const startPayment = createServerFn({ method: "POST" })
         currency,
         reference,
         channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
-        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency },
+        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval },
       }),
     });
 
@@ -137,7 +139,7 @@ export const startPayment = createServerFn({ method: "POST" })
       _tenant: data.tenant_id,
       _action: "payment.initialised",
       _target: body.data.reference,
-      _detail: { tier: data.tier, amount, currency },
+      _detail: { tier: data.tier, amount, currency, interval: data.interval },
       _actor: userId,
     });
 

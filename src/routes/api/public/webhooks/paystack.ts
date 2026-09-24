@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { USD_TO_GHS } from "@/lib/currency";
+import { intervalFromReference } from "@/lib/pricing";
 
 /**
  * Paystack webhook. Every request is verified with an HMAC-SHA512 signature over
@@ -75,6 +76,30 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
         if (error) {
           console.error("paystack_webhook_apply_failed", error.message);
           return new Response("Could not record payment", { status: 500 });
+        }
+
+        // Yearly plans: the payment records one period; stretch it to a full year (idempotent).
+        if (intervalFromReference(event.data.reference) === "yearly") {
+          const { data: pay } = await supabaseAdmin
+            .from("payments")
+            .select("tenant_id")
+            .eq("reference", event.data.reference)
+            .maybeSingle();
+          if (pay) {
+            const { data: sub } = await supabaseAdmin
+              .from("subscriptions")
+              .select("period_start")
+              .eq("tenant_id", pay.tenant_id)
+              .maybeSingle();
+            if (sub) {
+              const end = new Date(`${sub.period_start}T00:00:00Z`);
+              end.setUTCFullYear(end.getUTCFullYear() + 1);
+              await supabaseAdmin
+                .from("subscriptions")
+                .update({ period_end: end.toISOString().slice(0, 10) })
+                .eq("tenant_id", pay.tenant_id);
+            }
+          }
         }
 
         return new Response("ok");
