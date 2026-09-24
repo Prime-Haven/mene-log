@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
-import { currencySymbol, USD_TO_GHS } from "@/lib/currency";
+import { currencySymbol, formatUsd, USD_TO_GHS } from "@/lib/currency";
+import { BillingToggle } from "@/components/BillingToggle";
+import { MONTHLY_USD, yearlyUsd, type BillingInterval, type PlanTier } from "@/lib/pricing";
 
 import heroVideo from "@/assets/mene-worship-hero.webm";
 import heroPoster from "@/assets/mene-worship-poster.jpg";
@@ -61,20 +63,21 @@ const features = [
 ];
 
 const tiers = [
-  { name: "Basic", price: "15", blurb: "For a single-site church ready to move beyond paper.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel import and export", "Core reports and email"], missing: ["Leadership structure", "Multiple branches"] },
-  { name: "Standard", price: "30", blurb: "For churches led through ministries, units or departments.", features: ["Everything in Basic", "Leadership and groups", "Leader access", "Email broadcasts", "Deeper insights"], missing: ["Multiple branches", "Text messaging"] , featured: true},
-  { name: "Premium", price: "55", blurb: "For multi-branch and cell-structured ministries.", features: ["Everything in Standard", "Multiple branches", "Text messaging", "Automated follow-up", "Advanced reports and audit"], missing: [] },
+  { id: "basic" as PlanTier, name: "Basic", blurb: "For a single-site church ready to move beyond paper.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel import and export", "Core reports and email"], missing: ["Leadership structure", "Multiple branches"] },
+  { id: "standard" as PlanTier, name: "Standard", blurb: "For churches led through ministries, units or departments.", features: ["Everything in Basic", "Leadership and groups", "Leader access", "Email broadcasts", "Deeper insights"], missing: ["Multiple branches", "Text messaging"] , featured: true},
+  { id: "premium" as PlanTier, name: "Premium", blurb: "For multi-branch and cell-structured ministries.", features: ["Everything in Standard", "Multiple branches", "Text messaging", "Automated follow-up", "Advanced reports and audit"], missing: [] },
 ];
 
 const faqs = [
   { q: "Do members need to install an app?", a: "No. Members can check in from any browser or present the QR code saved on their phone. Church teams can install Mene:Log to their home screen for app-like access." },
-  { q: "How are subscriptions billed?", a: "Plans are billed monthly in US dollars. Payments are secured through Paystack and you receive an invoice before renewal." },
+  { q: "How are subscriptions billed?", a: "Plans are billed monthly, or yearly with 20% off. Ghana churches pay in cedis; everyone else pays in US dollars. Payments are secured through Paystack and you receive an invoice before renewal." },
   { q: "What happens if we pause?", a: "Your records are not deleted. Check-in and editing pause, while your church keeps read and export access until renewal." },
   { q: "Is our congregation's information protected?", a: "Yes. Every church is isolated at the data level, access follows staff responsibilities, and sensitive member details are protected by strict permissions." },
 ];
 
 function LandingPage() {
   const currency = useCurrency();
+  const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const heroRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
@@ -249,16 +252,18 @@ function LandingPage() {
         <section id="pricing" className="bg-background px-5 py-24 sm:py-28">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl">
-              <p className="text-eyebrow">Simple monthly plans</p>
+              <p className="text-eyebrow">Simple monthly or yearly plans</p>
               <h2 className="mt-4 font-display text-3xl font-bold leading-tight sm:text-5xl">Choose the structure your church needs today.</h2>
-              <p className="mt-5 text-muted-foreground">All plans include secure attendance, membership records and reporting. Prices are shown in your local currency and billed monthly.</p>
+              <p className="mt-5 text-muted-foreground">All plans include secure attendance, membership records and reporting. Prices are shown in your local currency, billed monthly or yearly.</p>
+              <div className="mt-6"><BillingToggle value={interval} onChange={setBillingInterval} /></div>
             </div>
             <div className="mt-12 grid gap-5 lg:grid-cols-3">
               {tiers.map((tier) => (
                 <article key={tier.name} className={`relative flex flex-col rounded-lg border p-7 ${tier.featured ? "border-primary bg-primary text-primary-foreground shadow-xl" : "border-border bg-card"}`}>
                   {tier.featured && <span className="mb-5 self-start rounded-md bg-primary-foreground px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">Most popular</span>}
                   <h3 className={`text-sm font-bold uppercase tracking-[0.16em] ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{tier.name}</h3>
-                  <div className="mt-4 flex items-end"><span className="mb-2 text-lg">{currencySymbol(currency)}</span><span className={`font-display text-6xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{currency === "GHS" ? Number(tier.price) * USD_TO_GHS : tier.price}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>/month</span></div>
+                  <div className="mt-4 flex items-end"><span className="mb-2 text-lg">{currencySymbol(currency)}</span><span className={`font-display text-6xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{(interval === "yearly" ? yearlyUsd(tier.id) : MONTHLY_USD[tier.id]) * (currency === "GHS" ? USD_TO_GHS : 1)}</span><span className={`mb-2 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
+                  {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{formatUsd(Math.round((yearlyUsd(tier.id) / 12) * 100) / 100, currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id], currency)}/month</p>}
                   <p className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{tier.blurb}</p>
                   <div className={`my-7 h-px ${tier.featured ? "bg-primary-foreground/20" : "bg-border"}`} />
                   <ul className="flex-1 space-y-3 text-sm">

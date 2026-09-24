@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
+import { useState } from "react";
+import { BillingToggle } from "@/components/BillingToggle";
+import { MONTHLY_USD, yearlyUsd, intervalFromReference, type BillingInterval } from "@/lib/pricing";
 import { FEATURE_LABELS, type Feature } from "@/lib/entitlements";
 
 const FEATURE_ORDER: Feature[] = [
@@ -50,10 +53,11 @@ function Billing() {
   const trialActive = !!tenant?.trial_ends_at && new Date(tenant.trial_ends_at).getTime() > Date.now();
   const pay = useServerFn(startPayment);
   const currency = useCurrency();
+  const [interval, setInterval] = useState<BillingInterval>("monthly");
 
   const renew = useMutation({
     mutationFn: async (tier: "basic" | "standard" | "premium") => {
-      const result = await pay({ data: { tenant_id: tenant!.id, tier } });
+      const result = await pay({ data: { tenant_id: tenant!.id, tier, interval } });
       if (!result.ok) throw new Error(result.message);
       window.location.href = result.authorization_url;
     },
@@ -226,6 +230,9 @@ function Billing() {
             : "Pay by card."}{" "}
           Payments appear below as soon as they clear.
         </p>
+        <div className="mt-4">
+          <BillingToggle value={interval} onChange={setInterval} />
+        </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {(["basic", "standard", "premium"] as const).map((t) => (
             <Button
@@ -236,7 +243,9 @@ function Billing() {
               className="capitalize"
             >
               {t === (sub?.tier ?? tenant?.tier) ? `Renew ${t}` : `Switch to ${t}`} ·{" "}
-              {formatUsd(({ basic: 15, standard: 30, premium: 55 } as const)[t], currency)}
+              {interval === "yearly"
+                ? `${formatUsd(yearlyUsd(t), currency)}/yr (${formatUsd(Math.round((yearlyUsd(t) / 12) * 100) / 100, currency)}/mo)`
+                : `${formatUsd(MONTHLY_USD[t], currency)}/mo`}
             </Button>
           ))}
         </div>
@@ -248,7 +257,7 @@ function Billing() {
             <div>
               <p className="font-mono text-xs text-muted-foreground">{p.reference}</p>
               <p className="font-medium capitalize">
-                {p.tier} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
+                {p.tier} · {intervalFromReference(p.reference)} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
               </p>
             </div>
             <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>
