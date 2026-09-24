@@ -189,11 +189,11 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
     if (!tenant) {
       return { ok: false as const, reason: "forbidden" as const, message: "Church not found." };
     }
-    if (tenant.tier === "basic") {
+    if (tenant.tier !== "standard" && tenant.tier !== "premium") {
       return {
         ok: false as const,
         reason: "forbidden" as const,
-        message: "Extra member space is available on the Standard and Premium packages.",
+        message: "Extra member space is available on the Pro and Premium plans.",
       };
     }
 
@@ -278,4 +278,39 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
     });
 
     return { ok: true as const, authorization_url: body.data.authorization_url };
+  });
+
+export const resendReceipt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ tenant_id: z.string().uuid(), reference: z.string().min(3).max(80) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("is_tenant_admin", { _tenant: data.tenant_id });
+    if (isAdmin !== true) return { ok: false as const, message: "Only an administrator can request receipts." };
+    const { data: pay } = await supabase
+      .from("payments")
+      .select("reference, tier, amount_kobo, currency, channel, paid_at, status, tenant_id")
+      .eq("tenant_id", data.tenant_id)
+      .eq("reference", data.reference)
+      .maybeSingle();
+    if (!pay || pay.status !== "success") return { ok: false as const, message: "Receipts are available for completed payments only." };
+    const { data: profile } = await supabase.from("profiles").select("email").eq("id", userId).maybeSingle();
+    if (!profile?.email) return { ok: false as const, message: "Add an email address to your profile first." };
+    const { data: tenant } = await supabase.from("tenants").select("name").eq("id", data.tenant_id).maybeSingle();
+    const { data: sub } = await supabase.from("subscriptions").select("period_end").eq("tenant_id", data.tenant_id).maybeSingle();
+    const { sendReceipt } = await import("./receipt.server");
+    const result = await sendReceipt({
+      to: profile.email,
+      churchName: tenant?.name ?? "Your church",
+      reference: pay.reference,
+      kind: "subscription",
+      tier: pay.tier,
+      amountMinor: Number(pay.amount_kobo),
+      currency: pay.currency ?? "USD",
+      channel: pay.channel,
+      paidAt: pay.paid_at ?? new Date().toISOString(),
+      renewsOn: sub?.period_end ?? null,
+    });
+    if (!result.ok) return { ok: false as const, message: "The receipt could not be sent right now. Please try again shortly." };
+    return { ok: true as const, email: profile.email };
   });

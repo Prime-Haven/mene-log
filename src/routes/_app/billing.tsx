@@ -4,14 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
-import { startPayment, startSpacePurchase, EXTRA_SPACE_BUNDLES } from "@/lib/billing.functions";
+import { startPayment, startSpacePurchase, resendReceipt, EXTRA_SPACE_BUNDLES } from "@/lib/billing.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { useState } from "react";
 import { BillingToggle } from "@/components/BillingToggle";
-import { MONTHLY_USD, yearlyUsd, intervalFromReference, type BillingInterval } from "@/lib/pricing";
+import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, intervalFromReference, planLabel, type BillingInterval } from "@/lib/pricing";
 import { FEATURE_LABELS, type Feature } from "@/lib/entitlements";
 
 const FEATURE_ORDER: Feature[] = [
@@ -62,6 +62,17 @@ function Billing() {
       window.location.href = result.authorization_url;
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not start payment"),
+  });
+
+  const receiptFn = useServerFn(resendReceipt);
+  const sendReceipt = useMutation({
+    mutationFn: async (reference: string) => {
+      const result = await receiptFn({ data: { tenant_id: tenant!.id, reference } });
+      if (!result.ok) throw new Error(result.message);
+      return result.email;
+    },
+    onSuccess: (email) => toast.success(`Receipt sent to ${email}`),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not send receipt"),
   });
 
   const buySpace = useServerFn(startSpacePurchase);
@@ -126,10 +137,10 @@ function Billing() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="surface p-5">
           <p className="text-eyebrow">Current tier</p>
-          <p className="mt-2 text-2xl font-bold capitalize">{sub?.tier ?? tenant?.tier}</p>
+          <p className="mt-2 text-2xl font-bold">{planLabel(sub?.tier ?? tenant?.tier)} plan</p>
           {sub?.pending_tier && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Changing to {sub.pending_tier} at period end
+              Changing to {planLabel(sub.pending_tier)} at period end
             </p>
           )}
         </div>
@@ -240,11 +251,10 @@ function Billing() {
               variant={t === (sub?.tier ?? tenant?.tier) ? "default" : "outline"}
               disabled={renew.isPending}
               onClick={() => renew.mutate(t)}
-              className="capitalize"
             >
-              {t === (sub?.tier ?? tenant?.tier) ? `Renew ${t}` : `Switch to ${t}`} ·{" "}
+              {t === (sub?.tier ?? tenant?.tier) ? `Renew ${planLabel(t)}` : `Switch to ${planLabel(t)}`} ·{" "}
               {interval === "yearly"
-                ? `${formatUsd(yearlyUsd(t), currency)}/yr (${formatUsd(Math.round((yearlyUsd(t) / 12) * 100) / 100, currency)}/mo)`
+                ? `${formatUsd(yearlyUsd(t), currency)}/yr (${formatUsd(yearlyPerMonthUsd(t), currency)}/mo, save ${Math.round(YEARLY_DISCOUNT[t] * 100)}%)`
                 : `${formatUsd(MONTHLY_USD[t], currency)}/mo`}
             </Button>
           ))}
@@ -256,11 +266,18 @@ function Billing() {
           <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
             <div>
               <p className="font-mono text-xs text-muted-foreground">{p.reference}</p>
-              <p className="font-medium capitalize">
-                {p.tier} · {intervalFromReference(p.reference)} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
+              <p className="font-medium">
+                {planLabel(p.tier)} · {intervalFromReference(p.reference)} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
               </p>
             </div>
-            <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>
+            <div className="flex items-center gap-2">
+              {p.status === "success" && (
+                <Button size="sm" variant="outline" disabled={sendReceipt.isPending} onClick={() => sendReceipt.mutate(p.reference)}>
+                  Resend receipt
+                </Button>
+              )}
+              <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>
+            </div>
           </div>
         ))}
         {(payments ?? []).length === 0 && (

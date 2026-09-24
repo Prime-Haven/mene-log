@@ -1,3 +1,4 @@
+import { planLabel } from "./pricing";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -35,6 +36,7 @@ export const inviteAccount = createServerFn({ method: "POST" })
     if (!tenant) return { ok: false as const, message: "Church not found." };
 
     const tierAllows: Record<string, string[]> = {
+      free: [],
       basic: ["usher"],
       standard: ["usher", "church_admin", "leader"],
       premium: ["usher", "church_admin", "leader", "branch_admin"],
@@ -42,7 +44,7 @@ export const inviteAccount = createServerFn({ method: "POST" })
     if (!tierAllows[tenant.tier]?.includes(data.role)) {
       return {
         ok: false as const,
-        message: `The ${data.role.replace("_", " ")} role is not included in your ${tenant.tier} package.`,
+        message: `The ${data.role.replace("_", " ")} role is not included in your ${planLabel(tenant.tier)} package.`,
       };
     }
 

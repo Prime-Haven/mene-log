@@ -33,7 +33,7 @@ const sections: Array<{ title: string; icon?: any; body: string[] }> = [
     title: "2. The Platform Operator Zero-Access Guarantee",
     body: [
       "Our system is architected with a strict technical zero-access boundary: the platform operator console (used by Prime Haven administrators) can only ever inspect institutional account metadata.",
-      "This includes: registered church name, subdomain handle, package tier (Basic, Standard, Premium), account status (active, grace, suspended, closed), primary administrator contact info, and aggregate counts (e.g. total attendance count over 30 days, billing health).",
+      "This includes: registered church name, subdomain handle, package tier (Free, Standard, Pro, Premium), account status (active, grace, suspended, closed), primary administrator contact info, and aggregate counts (e.g. total attendance count over 30 days, billing health).",
       "The platform operator never sees and cannot access: individual member names, phone numbers, email addresses, dates of birth, marital status, residential areas, occupations, educational backgrounds, who invited them, individual attendance check-in timestamps, member codes, or church message contents.",
       "This separation is enforced at the database level via PostgreSQL Row Level Security (RLS) and cryptographic access functions, not merely client-side hiding.",
     ],
