@@ -16,13 +16,15 @@ const number = new Intl.NumberFormat("en", { notation: "compact", maximumFractio
 export function HomepageStats() {
   const reduceMotion = useReducedMotion();
   const stats = useQuery({
-    queryKey: ["public-platform-stats"],
+    queryKey: ["public-platform-stats-live"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("public_platform_stats");
       if (error) throw error;
       return data as unknown as PublicStats;
     },
-    staleTime: 15 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchInterval: 60 * 1000,
   });
 
   const rows = [

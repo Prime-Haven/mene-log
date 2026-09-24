@@ -29,32 +29,41 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Branded HTML wrapper carrying the church's own name and colour. */
+const SITE = "https://menelog.site";
+
+/** Mene:Log branded HTML wrapper, carrying the church's own name, logo and accent colour. */
 export function renderEmail(options: {
   churchName: string;
   brandPrimary: string;
   logoUrl: string | null;
   subject: string;
   body: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
 }): string {
   const colour = /^#[0-9a-f]{6}$/i.test(options.brandPrimary) ? options.brandPrimary : "#3b82f6";
   const paragraphs = options.body
     .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 14px;line-height:1.6">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .map((p) => `<p style="margin:0 0 14px;line-height:1.65">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
-  const logo = options.logoUrl
-    ? `<img src="${escapeHtml(options.logoUrl)}" alt="" width="52" height="52" style="border-radius:12px;display:block;margin:0 auto 12px">`
+  const churchLogo = options.logoUrl
+    ? `<img src="${escapeHtml(options.logoUrl)}" alt="" width="44" height="44" style="border-radius:10px;display:block;margin:0 0 14px">`
     : "";
-  return `<!doctype html><html><body style="margin:0;background:#f4f6f9;padding:28px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
+  const cta = options.ctaLabel && options.ctaUrl && /^https:\/\//.test(options.ctaUrl)
+    ? `<a href="${escapeHtml(options.ctaUrl)}" style="display:inline-block;background:${colour};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;margin-top:6px">${escapeHtml(options.ctaLabel)}</a>`
+    : "";
+  return `<!doctype html><html><body style="margin:0;background:#ffffff;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e8ecf1">
-<tr><td style="background:${colour};height:5px"></td></tr>
-<tr><td style="padding:28px 28px 8px;text-align:center">${logo}
-<div style="font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#94a3b8">${escapeHtml(options.churchName)}</div>
-<h1 style="margin:10px 0 18px;font-size:20px">${escapeHtml(options.subject)}</h1></td></tr>
-<tr><td style="padding:0 28px 26px;font-size:15px;color:#334155">${paragraphs}</td></tr>
-<tr><td style="padding:16px 28px 24px;border-top:1px solid #e8ecf1;font-size:12px;color:#94a3b8;text-align:center">
-Sent by ${escapeHtml(options.churchName)} · powered by Mene:Log</td></tr>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;border:1px solid #e8ecf1;border-radius:16px;overflow:hidden">
+<tr><td style="background:#0b0f19;padding:22px 28px"><img src="${SITE}/favicon.png" width="34" height="34" alt="Mene:Log" style="vertical-align:middle;border-radius:8px"/>
+<span style="color:#ffffff;font-size:19px;font-weight:700;vertical-align:middle;margin-left:10px">Mene:Log</span></td></tr>
+<tr><td style="background:${colour};height:4px;line-height:4px;font-size:0">&nbsp;</td></tr>
+<tr><td style="padding:28px 28px 6px">${churchLogo}
+<p style="margin:0;color:${colour};font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase">${escapeHtml(options.churchName)}</p>
+<h1 style="margin:8px 0 18px;font-size:24px;line-height:1.25;color:#0f172a">${escapeHtml(options.subject)}</h1></td></tr>
+<tr><td style="padding:0 28px 26px;font-size:15px;color:#334155">${paragraphs}${cta}</td></tr>
+<tr><td style="padding:16px 28px;border-top:1px solid #e8ecf1;font-size:12px;color:#94a3b8;text-align:center">
+Sent by ${escapeHtml(options.churchName)} · powered by <a href="${SITE}" style="color:#3b82f6;text-decoration:none">Mene:Log</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
