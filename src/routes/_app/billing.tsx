@@ -135,9 +135,9 @@ function Billing() {
         </div>
         <div className="surface p-5">
           <p className="text-eyebrow">Payment method</p>
-          <p className="mt-2 text-2xl font-bold uppercase">{sub?.payment_method ?? "momo"}</p>
+          <p className="mt-2 text-2xl font-bold uppercase">{sub?.payment_method ?? (currency === "GHS" ? "momo" : "card")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Mobile money cannot be auto-debited, so renewal is prompted each cycle.
+            {currency === "GHS" ? "Mobile money cannot be auto-debited, so renewal is prompted each cycle." : "Card payments only in your region."}
           </p>
         </div>
       </div>
