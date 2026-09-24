@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { intervalFromReference } from "@/lib/pricing";
+import { sendReceiptOnce } from "@/lib/receipt.server";
 
 /**
  * Paystack webhook. Every request is verified with an HMAC-SHA512 signature over
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             paid_at?: string;
             amount?: number;
             currency?: string;
+            customer?: { email?: string };
             metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number };
           };
         };
@@ -55,6 +57,19 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
           if (error) {
             console.error("paystack_webhook_apply_space_failed", error.message);
             return new Response("Could not record space purchase", { status: 500 });
+          }
+          if (event.data.metadata?.tenant_id) {
+            await sendReceiptOnce(supabaseAdmin, {
+              tenantId: event.data.metadata.tenant_id,
+              reference: event.data.reference,
+              to: event.data.customer?.email,
+              kind: "space",
+              slots: event.data.metadata.slots ?? null,
+              amountMinor: event.data.amount ?? 0,
+              currency: event.data.currency ?? "USD",
+              channel: event.data.channel ?? null,
+              paidAt: event.data.paid_at ?? new Date().toISOString(),
+            });
           }
           return new Response("ok");
         }
@@ -106,6 +121,27 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
                 .update({ period_end: end.toISOString().slice(0, 10) })
                 .eq("tenant_id", pay.tenant_id);
             }
+          }
+        }
+
+        {
+          const { data: pay } = await supabaseAdmin
+            .from("payments")
+            .select("tenant_id, tier")
+            .eq("reference", event.data.reference)
+            .maybeSingle();
+          if (pay) {
+            await sendReceiptOnce(supabaseAdmin, {
+              tenantId: pay.tenant_id,
+              reference: event.data.reference,
+              to: event.data.customer?.email,
+              kind: "subscription",
+              tier: pay.tier,
+              amountMinor: event.data.amount ?? 0,
+              currency: event.data.currency ?? "USD",
+              channel: event.data.channel ?? null,
+              paidAt: event.data.paid_at ?? new Date().toISOString(),
+            });
           }
         }
 
