@@ -76,7 +76,8 @@ export async function sendEmail(options: {
 }): Promise<SendResult> {
   const key = process.env["MENELOG_RESEND_API_KEY"];
   if (!key) return { ok: false, error: "Email is not configured yet" };
-  const from = process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <no-reply@menelog.site>";
+  const from = (process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <support@menelog.site>")
+    .replace(/no-?reply@menelog\.site/i, "support@menelog.site");
   const safeName = options.fromName.replace(/[<>"\n\r]/g, "").slice(0, 60) || "Mene:Log";
   const sender = from.includes("<") ? from : `${safeName} <${from}>`;
 

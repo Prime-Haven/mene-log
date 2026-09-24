@@ -54,22 +54,40 @@ export function MfaChallenge({ onDone }: { onDone: () => void }) {
   );
 }
 
+type EnrollData = { id: string; qr: string; secret: string };
+let enrollInFlight: Promise<EnrollData | null> | null = null;
+
+function toQrSrc(qr: string): string {
+  if (qr.startsWith("data:")) return qr;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr)}`;
+}
+
+/** One enrollment at a time, so a remount can't delete the QR the user is scanning. */
+function startEnroll(): Promise<EnrollData | null> {
+  if (enrollInFlight) return enrollInFlight;
+  enrollInFlight = (async () => {
+    const { data: f } = await supabase.auth.mfa.listFactors();
+    for (const u of f?.all ?? []) if (u.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: u.id });
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Mene:Log ${Date.now()}` });
+    if (error || !data) { enrollInFlight = null; return null; }
+    return { id: data.id, qr: toQrSrc(data.totp.qr_code), secret: data.totp.secret };
+  })();
+  return enrollInFlight;
+}
+
 /** Enrolls a new authenticator: shows a QR code, then confirms with a code. */
 export function MfaEnroll({ onDone }: { onDone: () => void }) {
-  const [enroll, setEnroll] = useState<{ id: string; qr: string; secret: string } | null>(null);
+  const [enroll, setEnroll] = useState<EnrollData | null>(null);
   const [failed, setFailed] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      // Clear any half-finished setup first.
-      const { data: f } = await supabase.auth.mfa.listFactors();
-      for (const u of f?.all ?? []) if (u.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: u.id });
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Mene:Log ${Date.now()}` });
-      if (error || !data) { if (!cancelled) setFailed(true); toast.error("Could not start setup. Sign out and sign in again."); return; }
-      if (!cancelled) setEnroll({ id: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
-    })();
+    startEnroll().then((d) => {
+      if (cancelled) return;
+      if (!d) { setFailed(true); toast.error("Could not start setup. Sign out and sign in again."); return; }
+      setEnroll(d);
+    });
     return () => { cancelled = true; };
   }, []);
   async function verify(e: React.FormEvent) {
@@ -79,6 +97,7 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
     const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: enroll.id, code });
     setBusy(false);
     if (error) { toast.error("That code didn't work. Try the latest one."); return; }
+    enrollInFlight = null;
     toast.success("Two-step sign-in is on");
     onDone();
   }
