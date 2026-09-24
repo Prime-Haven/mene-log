@@ -189,11 +189,11 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
     if (!tenant) {
       return { ok: false as const, reason: "forbidden" as const, message: "Church not found." };
     }
-    if (tenant.tier === "basic") {
+    if (tenant.tier !== "standard" && tenant.tier !== "premium") {
       return {
         ok: false as const,
         reason: "forbidden" as const,
-        message: "Extra member space is available on the Standard and Premium packages.",
+        message: "Extra member space is available on the Pro and Premium plans.",
       };
     }
 
