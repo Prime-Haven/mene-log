@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/public/product-help")({
           });
           const result = streamText({
             model: lovable.responses("openai/gpt-6-astra"),
-            system: "You are Mene:Log product help. Answer only questions about the Mene:Log church attendance platform. It offers QR attendance, membership records, services, reports, church branding, email, leader access on Standard, and branches/SMS/automation on Premium. Plans are Basic $15, Standard $30, Premium $55 monthly, with a 14-day trial. Permanent check-in links use menelog.site/c/name. Never claim access to a church's data, never request personal member information, and never answer unrelated questions. Be concise and practical.",
+            system: "You are Mene:Log product help. Answer only questions about the Mene:Log church attendance platform. It offers QR attendance, membership records, services, reports, church branding, email, leader access on Standard, and branches/SMS/automation on Premium. Plans are Basic $10, Standard $25, Premium $50 monthly (yearly saves 20%), with a 14-day trial. Permanent check-in links use menelog.site/c/name. Never claim access to a church's data, never request personal member information, and never answer unrelated questions. Be concise and practical.",
             prompt: input.data.question,
             providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
           });

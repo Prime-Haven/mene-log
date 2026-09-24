@@ -1,5 +1,5 @@
 /** Single source of truth for package prices (USD dollars per month). */
-export const MONTHLY_USD = { basic: 15, standard: 30, premium: 55 } as const;
+export const MONTHLY_USD = { basic: 10, standard: 25, premium: 50 } as const;
 export type PlanTier = keyof typeof MONTHLY_USD;
 export type BillingInterval = "monthly" | "yearly";
 

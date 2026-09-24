@@ -1,23 +1,46 @@
-/** Fixed rate set by the business: 1 USD = 10 GHS. Never use live rates. */
-export const USD_TO_GHS = 10;
+/**
+ * Visitor currency: ISO code plus the live USD→code rate.
+ * Prices are always stored in USD; display converts with `rate`.
+ */
+export type Currency = { code: string; rate: number; country: string | null };
 
-export type Currency = "USD" | "GHS";
+export const USD: Currency = { code: "USD", rate: 1, country: null };
 
-/** Convert a USD amount in cents to the smallest unit of the target currency. */
-export function toMinorUnits(usdCents: number, currency: Currency) {
-  return currency === "GHS" ? usdCents * USD_TO_GHS : usdCents;
+export function isGhana(c: Currency) {
+  return c.code === "GHS";
 }
 
-/** Format a USD dollar amount (e.g. 15) in the visitor's currency. */
+/** Format a USD dollar amount in the visitor's currency at the live rate. */
 export function formatUsd(usdDollars: number, currency: Currency) {
-  const value = currency === "GHS" ? usdDollars * USD_TO_GHS : usdDollars;
-  return currency === "GHS" ? `GH₵${value.toLocaleString()}` : `$${value.toLocaleString()}`;
+  const value = usdDollars * currency.rate;
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: currency.code,
+      maximumFractionDigits: value >= 100 ? 0 : 2,
+      minimumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    return `$${usdDollars.toLocaleString()}`;
+  }
 }
 
-export function currencySymbol(currency: Currency) {
-  return currency === "GHS" ? "GH₵" : "$";
+/** Countries whose card payments are charged in USD but shown locally. */
+export function isApproximate(c: Currency) {
+  return c.code !== "USD" && c.code !== "GHS";
 }
 
-export function currencyForCountry(country: string | null | undefined): Currency {
-  return (country ?? "").toUpperCase() === "GH" ? "GHS" : "USD";
+const COUNTRY_CURRENCY: Record<string, string> = {
+  GH: "GHS", US: "USD", GB: "GBP", NG: "NGN", KE: "KES", ZA: "ZAR", CA: "CAD", AU: "AUD",
+  NZ: "NZD", IN: "INR", JP: "JPY", CN: "CNY", CH: "CHF", SE: "SEK", NO: "NOK", DK: "DKK",
+  BR: "BRL", MX: "MXN", EG: "EGP", CI: "XOF", SN: "XOF", TG: "XOF", BJ: "XOF", BF: "XOF",
+  ML: "XOF", NE: "XOF", CM: "XAF", UG: "UGX", TZ: "TZS", RW: "RWF", ZM: "ZMW", SL: "SLE",
+  LR: "LRD", AE: "AED", SA: "SAR", PH: "PHP", SG: "SGD", KR: "KRW", PL: "PLN", TR: "TRY",
+  DE: "EUR", FR: "EUR", IT: "EUR", ES: "EUR", NL: "EUR", BE: "EUR", IE: "EUR", PT: "EUR",
+  AT: "EUR", FI: "EUR", GR: "EUR", LU: "EUR", SK: "EUR", SI: "EUR", EE: "EUR", LV: "EUR",
+  LT: "EUR", CY: "EUR", MT: "EUR", HR: "EUR",
+};
+
+export function currencyCodeForCountry(country: string | null | undefined): string {
+  return COUNTRY_CURRENCY[(country ?? "").toUpperCase()] ?? "USD";
 }

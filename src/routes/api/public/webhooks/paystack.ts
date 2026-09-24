@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { USD_TO_GHS } from "@/lib/currency";
 import { intervalFromReference } from "@/lib/pricing";
 
 /**
@@ -33,7 +32,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             paid_at?: string;
             amount?: number;
             currency?: string;
-            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string };
+            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number };
           };
         };
         try {
@@ -63,8 +62,16 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
         // Ghana renewals are charged in GHS at the flat rate; the stored price is in USD.
         let amount = event.data.amount;
         if (typeof amount === "number" && event.data.currency === "GHS") {
-          if (amount % USD_TO_GHS !== 0) return new Response("Amount mismatch", { status: 400 });
-          amount = amount / USD_TO_GHS;
+          // Metadata was set by our server at checkout (event is signature-verified).
+          const usdCents = Number(event.data.metadata?.usd_cents);
+          const rate = Number(event.data.metadata?.rate);
+          if (!Number.isFinite(usdCents) || !Number.isFinite(rate) || rate <= 0) {
+            return new Response("Amount mismatch", { status: 400 });
+          }
+          if (Math.abs(amount - Math.round(usdCents * rate)) > 1) {
+            return new Response("Amount mismatch", { status: 400 });
+          }
+          amount = usdCents;
         }
         const { error } = await supabaseAdmin.rpc("apply_successful_payment", {
           p_reference: event.data.reference,

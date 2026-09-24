@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { detectCurrency } from "./geo.server";
-import { toMinorUnits } from "./currency";
 import { MONTHLY_USD, priceUsdCents, referencePrefix } from "./pricing";
 
 /**
@@ -84,9 +83,12 @@ export const startPayment = createServerFn({ method: "POST" })
     }
 
     // The payment row keeps the canonical USD price; Ghana visitors are charged the flat-rate GHS amount.
-    const currency = await detectCurrency();
+    // Rate is recomputed on the server; Ghana pays GHS at today's rate, everyone else pays USD by card.
+    const visitor = await detectCurrency();
+    const currency = visitor.code === "GHS" ? "GHS" : "USD";
+    const rate = currency === "GHS" ? visitor.rate : 1;
     const usdAmount = priceUsdCents(data.tier, data.interval);
-    const amount = toMinorUnits(usdAmount, currency);
+    const amount = Math.round(usdAmount * rate);
     const reference = `${referencePrefix(data.interval)}_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
@@ -101,7 +103,7 @@ export const startPayment = createServerFn({ method: "POST" })
         currency,
         reference,
         channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
-        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval },
+        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval, usd_cents: usdAmount, rate },
       }),
     });
 
@@ -210,8 +212,9 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
       };
     }
 
-    const currency = await detectCurrency();
-    const spaceAmount = toMinorUnits(bundle.amountPesewas, currency);
+    const visitor = await detectCurrency();
+    const currency = visitor.code === "GHS" ? "GHS" : "USD";
+    const spaceAmount = Math.round(bundle.amountPesewas * (currency === "GHS" ? visitor.rate : 1));
     const reference = `space_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
     const { error: requestError } = await supabase.rpc("request_extra_space", {
