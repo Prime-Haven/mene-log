@@ -74,6 +74,7 @@ const faqs = [
 ];
 
 function LandingPage() {
+  const currency = useCurrency();
   const heroRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
