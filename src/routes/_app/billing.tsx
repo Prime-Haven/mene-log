@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
-import { startPayment, startSpacePurchase, EXTRA_SPACE_BUNDLES } from "@/lib/billing.functions";
+import { startPayment, startSpacePurchase, resendReceipt, EXTRA_SPACE_BUNDLES } from "@/lib/billing.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -62,6 +62,17 @@ function Billing() {
       window.location.href = result.authorization_url;
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not start payment"),
+  });
+
+  const receiptFn = useServerFn(resendReceipt);
+  const sendReceipt = useMutation({
+    mutationFn: async (reference: string) => {
+      const result = await receiptFn({ data: { tenant_id: tenant!.id, reference } });
+      if (!result.ok) throw new Error(result.message);
+      return result.email;
+    },
+    onSuccess: (email) => toast.success(`Receipt sent to ${email}`),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not send receipt"),
   });
 
   const buySpace = useServerFn(startSpacePurchase);
@@ -259,7 +270,14 @@ function Billing() {
                 {planLabel(p.tier)} · {intervalFromReference(p.reference)} · {formatUsd(Number(p.amount_kobo) / 100, currency)}
               </p>
             </div>
-            <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>
+            <div className="flex items-center gap-2">
+              {p.status === "success" && (
+                <Button size="sm" variant="outline" disabled={sendReceipt.isPending} onClick={() => sendReceipt.mutate(p.reference)}>
+                  Resend receipt
+                </Button>
+              )}
+              <Badge variant={p.status === "success" ? "default" : "outline"}>{p.status}</Badge>
+            </div>
           </div>
         ))}
         {(payments ?? []).length === 0 && (
