@@ -35,6 +35,7 @@ import { Route as AppServicesRouteImport } from './routes/_app/services'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppStructureRouteImport } from './routes/_app/structure'
 import { Route as CSubdomainRouteImport } from './routes/c.$subdomain'
+import { Route as LiveSubdomainRouteImport } from './routes/live.$subdomain'
 import { Route as ApiPublicAskMeneRouteImport } from './routes/api/public/ask-mene'
 import { Route as ApiPublicProductHelpRouteImport } from './routes/api/public/product-help'
 import { Route as ApiPublicCronMessagingRouteImport } from './routes/api/public/cron/messaging'
@@ -169,6 +170,11 @@ const CSubdomainRoute = CSubdomainRouteImport.update({
   path: '/c/$subdomain',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LiveSubdomainRoute = LiveSubdomainRouteImport.update({
+  id: '/live/$subdomain',
+  path: '/live/$subdomain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicAskMeneRoute = ApiPublicAskMeneRouteImport.update({
   id: '/api/public/ask-mene',
   path: '/api/public/ask-mene',
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/structure': typeof AppStructureRoute
   '/c/$subdomain': typeof CSubdomainRoute
+  '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
   '/api/public/product-help': typeof ApiPublicProductHelpRoute
   '/api/public/cron/messaging': typeof ApiPublicCronMessagingRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/structure': typeof AppStructureRoute
   '/c/$subdomain': typeof CSubdomainRoute
+  '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
   '/api/public/product-help': typeof ApiPublicProductHelpRoute
   '/api/public/cron/messaging': typeof ApiPublicCronMessagingRoute
@@ -281,6 +289,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/structure': typeof AppStructureRoute
   '/c/$subdomain': typeof CSubdomainRoute
+  '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
   '/api/public/product-help': typeof ApiPublicProductHelpRoute
   '/api/public/cron/messaging': typeof ApiPublicCronMessagingRoute
@@ -314,6 +323,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/structure'
     | '/c/$subdomain'
+    | '/live/$subdomain'
     | '/api/public/ask-mene'
     | '/api/public/product-help'
     | '/api/public/cron/messaging'
@@ -345,6 +355,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/structure'
     | '/c/$subdomain'
+    | '/live/$subdomain'
     | '/api/public/ask-mene'
     | '/api/public/product-help'
     | '/api/public/cron/messaging'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/structure'
     | '/c/$subdomain'
+    | '/live/$subdomain'
     | '/api/public/ask-mene'
     | '/api/public/product-help'
     | '/api/public/cron/messaging'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   SuperAdminRoute: typeof SuperAdminRoute
   TermsRoute: typeof TermsRoute
   CSubdomainRoute: typeof CSubdomainRoute
+  LiveSubdomainRoute: typeof LiveSubdomainRoute
   ApiPublicAskMeneRoute: typeof ApiPublicAskMeneRoute
   ApiPublicProductHelpRoute: typeof ApiPublicProductHelpRoute
   ApiPublicCronMessagingRoute: typeof ApiPublicCronMessagingRoute
@@ -584,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSubdomainRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/live/$subdomain': {
+      id: '/live/$subdomain'
+      path: '/live/$subdomain'
+      fullPath: '/live/$subdomain'
+      preLoaderRoute: typeof LiveSubdomainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ask-mene': {
       id: '/api/public/ask-mene'
       path: '/api/public/ask-mene'
@@ -668,6 +688,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperAdminRoute: SuperAdminRoute,
   TermsRoute: TermsRoute,
   CSubdomainRoute: CSubdomainRoute,
+  LiveSubdomainRoute: LiveSubdomainRoute,
   ApiPublicAskMeneRoute: ApiPublicAskMeneRoute,
   ApiPublicProductHelpRoute: ApiPublicProductHelpRoute,
   ApiPublicCronMessagingRoute: ApiPublicCronMessagingRoute,
