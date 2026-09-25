@@ -1,28 +1,26 @@
-# Official branding and search visibility
+# Official brand and search visibility
 
-## What I’ll change
-- Adopt the supplied Mene:Log artwork as the official platform identity:
-  - horizontal logo for headers, sign-in, onboarding, footer, and platform-owned screens
-  - compact symbol for the favicon, phone home-screen icon, and app icons
-  - preserve each church’s own uploaded logo inside its church workspace and public check-in page
-- Publish the chosen logo through the app’s asset system and add an absolute, crawlable logo reference for search engines.
-- Add structured information identifying Mene:Log as a church management software product owned by Prime Haven, with its official website and logo.
+## What will change
+- Use the supplied horizontal Mene:Log artwork as the official logo across the homepage, sign-in, onboarding, footer, and platform-owned screens.
+- Use the compact supplied emblem for the favicon, Apple touch icon, and installable app icons.
+- Keep each church's uploaded logo inside its workspace and public check-in page; only its fallback will use Mene:Log branding.
+- Add focused public pages for **church membership software** and **church check-in software**, linked from the homepage and footer.
+- Add accurate Organization, WebSite, and SoftwareApplication structured data identifying Mene:Log as a Prime Haven product.
+- Add `llms.txt` and explicit crawler guidance so AI systems can understand public product information without accessing private church or member records.
+- Update the sitemap, canonical URLs, social metadata, image descriptions, and public navigation.
 
-## Search opportunity work
-- Prioritize **church membership software** first: Semrush estimates 590 US searches/month with low difficulty (25/100).
-- Support **church management software** as the broad category: about 4,400 US searches/month, but high difficulty (66/100).
-- Build a focused **church check-in software** page as an attainable long-tail target: about 30 US searches/month with low difficulty (8/100).
-- Create useful, indexable pages for church membership software and church check-in software, link them from the main site, and add them to the sitemap.
-- Keep claims limited to features already present in Mene:Log.
+## Search strategy
+- Primary opportunity: **church membership software** (about 590 US searches/month; estimated difficulty 25/100).
+- Quick-win opportunity: **church check-in software** (about 30/month; estimated difficulty 8/100).
+- Broader long-term category: **church management software** (about 4,400/month; difficulty 66/100).
+- Pages will describe only capabilities already available in Mene:Log, avoiding unsupported marketing claims.
 
-## AI discovery
-- Keep public pages available to major search and AI crawlers.
-- Add a plain-language AI discovery file summarizing the product, official pages, ownership, and privacy boundaries.
-- Add machine-readable product, organization, and website information without exposing church or member data.
+## Technical details
+- Reusable responsive logo component with light/dark variants and accessible text.
+- Self-referencing canonical and Open Graph URLs on each indexable page.
+- JSON-LD references the official website and public logo files; no tenant data appears in markup.
+- Public discovery files allow product-page crawling only; application, check-in, live, authentication, and operator paths remain excluded from AI discovery.
+- Validate desktop/mobile rendering, icon dimensions, route metadata, structured data, sitemap entries, and production build before publishing.
 
-## Validation
-- Check desktop and mobile branding, icon rendering, metadata, structured information, sitemap, and AI discovery files.
-- Confirm the app builds cleanly and the public pages render correctly.
-
-## Important expectation
-These changes improve relevance, crawlability, brand recognition, and the chance of ranking. Google and AI systems decide rankings independently, so first position cannot be guaranteed or purchased through these changes.
+## Expected outcome
+These changes strengthen relevance, crawlability, and brand recognition. They cannot guarantee first position; rankings also depend on time, authority, links, competition, and content quality.
