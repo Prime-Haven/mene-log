@@ -55,8 +55,18 @@ export const saveSettings = createServerFn({ method: "POST" })
 
 /** Check a coupon for a plan (used by Billing before paying). */
 export const checkCoupon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ code: z.string().trim().toUpperCase().max(24), tier: z.enum(["basic", "standard", "premium"]) }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: membership, error } = await context.supabase
+      .from("tenant_users")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("status", "active")
+      .in("role", ["owner", "church_admin"])
+      .limit(1)
+      .maybeSingle();
+    if (error || !membership) throw new Error("Church billing access is required.");
     const { readSettings } = await import("./settings.server");
     const { findUsableCoupon } = await import("./coupons.server");
     const s = await readSettings(true);

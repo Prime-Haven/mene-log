@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { streamText, type UIMessage } from "ai";
 import { createLovableAiGatewayProvider, GEMINI_MODEL } from "@/lib/ai-gateway.server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
@@ -87,7 +87,10 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const result = streamText({
             model: gateway(GEMINI_MODEL),
             system,
-            messages: await convertToModelMessages(messages),
+            // Conversation roles are server-owned. The client may submit UI
+            // history for rendering, but only the latest validated user text
+            // is sent to the model.
+            messages: [{ role: "user", content: question }],
             maxOutputTokens: pro ? 1600 : 700,
           });
 
