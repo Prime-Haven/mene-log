@@ -207,7 +207,7 @@ function AppLayout() {
         )}
 
         <main className="mx-auto min-w-0 w-full max-w-[1440px] flex-1 px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8">
-          <motion.div key={pathname} initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.14, ease: "easeOut" }}><MfaGate required={tenant.require_mfa}><Outlet /></MfaGate></motion.div>
+          <motion.div key={pathname} initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.14, ease: "easeOut" }}><MfaGate required={tenant.require_mfa}>{current?.feature && !ctx.can(current.feature) ? <UpgradePanel feature={current.feature} canUpgrade={ctx.isOwner} /> : <Outlet />}</MfaGate></motion.div>
         </main>
       </div>
     </div>
