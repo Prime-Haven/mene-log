@@ -239,7 +239,7 @@ function CheckIn() {
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-sm rounded-3xl border border-white/15 bg-black/40 p-6 text-center shadow-2xl backdrop-blur-xl"
         >
-          {logoUrl && <img src={logoUrl} alt="" className="mx-auto mb-3 h-14 max-w-40 object-contain" />}
+          {logoUrl && <img src={logoUrl} alt={`${church?.name ?? "Church"} logo`} className="mx-auto mb-3 h-14 max-w-40 object-contain" />}
           <p className="font-display text-lg font-extrabold uppercase tracking-wide">{church?.name}</p>
           <div className="mx-auto mt-4 grid size-12 place-items-center rounded-2xl bg-success/15 text-success">
             <CheckCircle2 className="size-6" />
@@ -289,7 +289,7 @@ function CheckIn() {
       >
         <div className="text-center">
           {logoUrl && (
-            <img src={logoUrl} alt={church?.name ?? "Church"} className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]" />
+            <img src={logoUrl} alt={`${church?.name ?? "Church"} logo`} className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]" />
           )}
           <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight text-white sm:text-4xl">
             {church?.name ?? "Loading…"}
