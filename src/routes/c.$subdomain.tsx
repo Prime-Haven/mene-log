@@ -38,8 +38,8 @@ export const Route = createFileRoute("/c/$subdomain")({
     meta: [
       { title: "Check in — Mene:Log" },
       { name: "description", content: "Check in to today's service and get your personal QR code." },
-      { property: "og:title", content: "Check in" },
-      { property: "og:description", content: "Check in to today's service and get your QR code." },
+      { property: "og:title", content: "Church check-in — Mene:Log" },
+      { property: "og:description", content: "Check in to your church service in seconds and get your personal member QR code with Mene:Log." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -289,7 +289,7 @@ function CheckIn() {
       >
         <div className="text-center">
           {logoUrl && (
-            <img src={logoUrl} alt={`${church?.name} logo`} className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]" />
+            <img src={logoUrl} alt={church?.name ?? "Church"} className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]" />
           )}
           <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight text-white sm:text-4xl">
             {church?.name ?? "Loading…"}
