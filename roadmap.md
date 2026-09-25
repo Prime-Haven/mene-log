@@ -1,12 +1,12 @@
 # Roadmap
-- [ ] Platform settings store + console Settings area (profile/security, branding, pricing, sign-ups, emails, messaging, legal, homepage, data)
-- [ ] Pricing driven by settings (homepage, onboarding, billing, checkout)
-- [ ] Coupons (console create; Billing checkout applies)
-- [ ] Console: global search, notifications bell, live health tests, branches filter/panel
-- [ ] Branches: head office Add branch, branch requests from check-in, Branches page, branch = Pro features
-- [ ] Check-in pages by plan (leaders/watch live/branch register gated by plan config), parent link
-- [ ] Free plan QR only during trial
-- [ ] Member code shown on Members QR view
-- [ ] Mobile bottom tab bar (dashboard + console), install tip
+- [x] Platform settings + console Settings area
+- [x] Pricing driven by settings
+- [x] Discount codes
+- [x] Console: search, alerts bell, live health tests, branches filter/panel
+- [x] Branches: create, requests from check-in, Branches page, branches run as Pro
+- [x] Check-in pages by plan, head-office link
+- [x] Free plan QR only during trial
+- [x] Member code on Members QR view
+- [x] Mobile bottom menus (dashboard + console)
 - [ ] Browser checks
-- Blocked: daily schedule (database has no scheduler extension); WhatsApp/SMS consent waits on Twilio (skipped by user)
+- Blocked: daily schedule (no scheduler in database); SMS/WhatsApp (Twilio skipped)

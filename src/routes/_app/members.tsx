@@ -55,7 +55,7 @@ function Members() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [qr, setQr] = useState<{ id: string; name: string; dataUrl: string } | null>(null);
+  const [qr, setQr] = useState<{ id: string; name: string; dataUrl: string; token?: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
