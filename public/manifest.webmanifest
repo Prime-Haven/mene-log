@@ -1,7 +1,7 @@
 {
   "name": "Mene:Log Church Management",
   "short_name": "Mene:Log",
-  "description": "Church attendance, member care and reporting.",
+  "description": "Church membership, attendance, check-in, member care and reporting software.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

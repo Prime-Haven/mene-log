@@ -9,4 +9,7 @@
 - [x] Member code on Members QR view
 - [x] Mobile bottom menus (dashboard + console)
 - [ ] Browser checks
+- [x] Official Mene:Log logo, favicon and installable app icons
+- [x] Search pages for church membership and church check-in software
+- [x] Structured product identity and privacy-safe AI discovery
 - Blocked: daily schedule (no scheduler in database); SMS/WhatsApp (Twilio skipped)
