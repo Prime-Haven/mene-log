@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, Pencil, Trash2, Unlock } from "lucide-react";
+import { Lock, Pencil, Radio, Trash2, Unlock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,9 @@ export const Route = createFileRoute("/_app/services")({
 });
 
 function Services() {
-  const { tenant, membership } = useTenant();
+  const { tenant, membership, can } = useTenant();
+  const liveOn = can("watch_live");
+  const [live, setLive] = useState<{ id: string; url: string; min: number } | null>(null);
   const qc = useQueryClient();
   const [name, setName] = useState("Sunday Service");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -37,7 +39,7 @@ function Services() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, service_date, is_open, attendance(count)")
+        .select("id, name, service_date, is_open, stream_url, online_min_minutes, attendance(count), watch_sessions(count)")
         .order("service_date", { ascending: false })
         .limit(60);
       if (error) throw error;
@@ -98,6 +100,24 @@ function Services() {
       qc.invalidateQueries({ queryKey: ["services"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not delete service"),
+  });
+
+  const saveLive = useMutation({
+    mutationFn: async (v: { id: string; url: string; min: number }) => {
+      const url = v.url.trim();
+      if (url && !/^https:\/\/\S+$/i.test(url)) throw new Error("Stream link must start with https://");
+      const { error } = await supabase
+        .from("services")
+        .update({ stream_url: url || null, online_min_minutes: Math.max(1, Math.min(240, v.min)) })
+        .eq("id", v.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Live stream saved");
+      setLive(null);
+      qc.invalidateQueries({ queryKey: ["services"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save live stream"),
   });
 
   return (
@@ -168,9 +188,41 @@ function Services() {
                     <p className="font-semibold">{s.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {s.service_date} · {count} recorded
+                      {liveOn && s.stream_url && (
+                        <> · {(s.watch_sessions as unknown as Array<{ count: number }>)?.[0]?.count ?? 0} watched online</>
+                      )}
                     </p>
+                    {live?.id === s.id && (
+                      <form
+                        className="mt-3 flex flex-wrap items-end gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          saveLive.mutate(live);
+                        }}
+                      >
+                        <div className="space-y-1">
+                          <Label className="text-xs">Stream link (YouTube, Vimeo, Facebook…)</Label>
+                          <Input className="w-72" value={live.url} placeholder="https://youtube.com/live/…" onChange={(e) => setLive({ ...live, url: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Minutes to count as present</Label>
+                          <Input className="w-28" type="number" min={1} max={240} value={live.min} onChange={(e) => setLive({ ...live, min: Number(e.target.value) })} />
+                        </div>
+                        <Button type="submit" size="sm" disabled={saveLive.isPending}>Save</Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setLive(null)}>Cancel</Button>
+                      </form>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {liveOn && (
+                      <Button
+                        variant={s.stream_url ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setLive({ id: s.id, url: s.stream_url ?? "", min: s.online_min_minutes })}
+                      >
+                        <Radio className="size-4" /> {s.stream_url ? "Live on" : "Go live"}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
