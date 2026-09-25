@@ -217,7 +217,7 @@ function Overview({ d, go }: { d: Snapshot; go: (s: Section) => void }) {
   const endingSoon = trial.filter((x) => new Date(x.trial_ends_at!) < new Date(Date.now() + 7 * 864e5));
   const byTier = (["free", "basic", "standard", "premium"] as const).map((k) => ({ k, n: t.filter((x) => x.tier === k).length, rev: r.ok.filter((p) => p.tier === k).reduce((s, p) => s + paymentUsd(p), 0) }));
   return <>
-    <Title eyebrow="Platform overview" title="Good to see you, master" sub="Everything on Mene:Log at a glance. Church member records stay private — you see counts only." />
+    <Title eyebrow="Platform overview" title={`Good to see you, ${d.operators.find((o) => o.is_me)?.username ?? "operator"}`} sub="Everything on Mene:Log at a glance. Church member records stay private — you see counts only." />
     <Kpis items={[
       { label: "Churches registered", value: t.length, icon: Building2 }, { label: "Active", value: n("active"), icon: Activity },
       { label: "On trial", value: trial.length, icon: Hourglass }, { label: "Suspended · closed", value: `${n("suspended")} · ${n("closed")}`, icon: AlertTriangle, tone: "text-destructive" },
