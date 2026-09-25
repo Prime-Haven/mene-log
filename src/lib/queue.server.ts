@@ -73,6 +73,8 @@ export async function processQueue(limit = 100): Promise<{ sent: number; failed:
           }),
         });
       }
+    } else if (row.channel === "whatsapp") {
+      result = await sendWhatsapp({ to: row.recipient, body: `${row.church_name}: ${row.body}` });
     } else {
       result = smsConfigured()
         ? await sendSms({ to: row.recipient, body: row.body, sender: row.sms_sender })
