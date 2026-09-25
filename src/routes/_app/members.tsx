@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellOff, BellRing, Download, QrCode, Search, Trash2, Upload, UserPlus } from "lucide-react";
+import { BellOff, BellRing, Download, Lock, QrCode, Search, Trash2, Upload, UserPlus } from "lucide-react";
 import { labelledQr } from "@/lib/qr";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
