@@ -35,7 +35,7 @@ import { InstallMene } from "@/components/InstallMene";
 import { getBrandAssetUrl } from "@/lib/checkin.functions";
 import { ReviewPrompt } from "@/components/ReviewPrompt";
 import { planLabel } from "@/lib/pricing";
-import { Lock } from "lucide-react";
+import { Lock, Building2 } from "lucide-react";
 import type { Feature } from "@/lib/entitlements";
 import { UpgradePanel } from "@/components/FeatureGate";
 
@@ -87,8 +87,9 @@ const nav: NavItem[] = [
     show: (c) => c.isAdmin,
     feature: "structure",
   },
+  { to: "/branches", label: "Branches", icon: Building2, group: "Administration", show: (c) => c.isAdmin && !c.isBranch, feature: "branches" },
   { to: "/accounts", label: "Accounts", icon: UserCog, group: "Administration", show: (c) => c.isAdmin },
-  { to: "/billing", label: "Billing", icon: CreditCard, group: "Administration", show: (c) => c.isOwner },
+  { to: "/billing", label: "Billing", icon: CreditCard, group: "Administration", show: (c) => c.isOwner && !c.isBranch },
   { to: "/audit", label: "Audit log", icon: ScrollText, group: "Administration", show: (c) => c.isOwner, feature: "audit" },
   { to: "/settings", label: "Settings", icon: Settings, group: "Administration", show: (c) => c.isAdmin },
 ];
