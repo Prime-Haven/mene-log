@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ChurchCheckInSoftwareRouteImport } from './routes/church-check-in-software'
+import { Route as ChurchMembershipSoftwareRouteImport } from './routes/church-membership-software'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OnboardingCompleteRouteImport } from './routes/onboarding-complete'
 import { Route as PlatformRouteImport } from './routes/platform'
@@ -56,6 +58,17 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChurchCheckInSoftwareRoute = ChurchCheckInSoftwareRouteImport.update({
+  id: '/church-check-in-software',
+  path: '/church-check-in-software',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChurchMembershipSoftwareRoute =
+  ChurchMembershipSoftwareRouteImport.update({
+    id: '/church-membership-software',
+    path: '/church-membership-software',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -206,6 +219,8 @@ const ApiPublicWebhooksPaystackRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
+  '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
   '/onboarding-complete': typeof OnboardingCompleteRoute
   '/platform': typeof PlatformRoute
@@ -239,6 +254,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
+  '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
   '/onboarding-complete': typeof OnboardingCompleteRoute
   '/platform': typeof PlatformRoute
@@ -274,6 +291,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
+  '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
   '/onboarding-complete': typeof OnboardingCompleteRoute
   '/platform': typeof PlatformRoute
@@ -309,6 +328,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/church-check-in-software'
+    | '/church-membership-software'
     | '/onboarding'
     | '/onboarding-complete'
     | '/platform'
@@ -342,6 +363,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/church-check-in-software'
+    | '/church-membership-software'
     | '/onboarding'
     | '/onboarding-complete'
     | '/platform'
@@ -376,6 +399,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/church-check-in-software'
+    | '/church-membership-software'
     | '/onboarding'
     | '/onboarding-complete'
     | '/platform'
@@ -411,6 +436,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ChurchCheckInSoftwareRoute: typeof ChurchCheckInSoftwareRoute
+  ChurchMembershipSoftwareRoute: typeof ChurchMembershipSoftwareRoute
   OnboardingRoute: typeof OnboardingRoute
   OnboardingCompleteRoute: typeof OnboardingCompleteRoute
   PlatformRoute: typeof PlatformRoute
@@ -446,6 +473,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/church-check-in-software': {
+      id: '/church-check-in-software'
+      path: '/church-check-in-software'
+      fullPath: '/church-check-in-software'
+      preLoaderRoute: typeof ChurchCheckInSoftwareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/church-membership-software': {
+      id: '/church-membership-software'
+      path: '/church-membership-software'
+      fullPath: '/church-membership-software'
+      preLoaderRoute: typeof ChurchMembershipSoftwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -702,6 +743,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ChurchCheckInSoftwareRoute: ChurchCheckInSoftwareRoute,
+  ChurchMembershipSoftwareRoute: ChurchMembershipSoftwareRoute,
   OnboardingRoute: OnboardingRoute,
   OnboardingCompleteRoute: OnboardingCompleteRoute,
   PlatformRoute: PlatformRoute,
