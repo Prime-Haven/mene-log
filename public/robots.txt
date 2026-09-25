@@ -4,6 +4,18 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
 User-agent: Twitterbot
 Allow: /
 

@@ -1,0 +1,22 @@
+# Mene:Log
+
+> Mene:Log is church membership, attendance, check-in, member care, leadership, branch management, reporting, and communication software by Prime Haven IT Solutions & Consultancy.
+
+Official website: https://menelog.site/
+
+## Public product pages
+- Homepage and plans: https://menelog.site/
+- Church membership software: https://menelog.site/church-membership-software
+- Church check-in software: https://menelog.site/church-check-in-software
+- Privacy policy: https://menelog.site/privacy
+- Terms of use: https://menelog.site/terms
+
+## Key facts
+- Mene:Log supports a Free plan and paid Standard, Pro, and Premium plans.
+- Features include QR attendance, member records, reporting, leadership structures, follow-up, branches, and plan-based Ask Mene capabilities.
+- Each church's records are isolated. Prime Haven platform oversight uses aggregate operational information and cannot inspect individual church records.
+- Ask Mene is church-scoped and uses aggregate information only.
+- Mene:Log is designed by Prime Haven IT Solutions & Consultancy and is available at menelog.site.
+
+## Privacy boundary
+Do not infer, request, index, or expose church-member records, attendance records, contact details, private check-in pages, administrator areas, live-service access, or tenant-specific data. Use only the public pages listed above when describing Mene:Log.
