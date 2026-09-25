@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { planLabel } from "@/lib/pricing";
-import { consoleSnapshot, operatorAction } from "@/lib/operator.functions";
+import { consoleSnapshot, operatorAction, type OperatorActionInput } from "@/lib/operator.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,7 @@ const paymentUsd = (p: { amount_kobo: number; currency: string }) => (p.currency
 const yearly = (ref: string) => ref.startsWith("gchy");
 
 function downloadCsv(name: string, rows: Array<Record<string, unknown>>) {
-  if (!rows.length) return toast.error("Nothing to export");
+  if (!rows.length) { toast.error("Nothing to export"); return; }
   const cols = Object.keys(rows[0]!);
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(typeof r[c] === "object" ? JSON.stringify(r[c]) : r[c])).join(","))].join("\n");
@@ -100,7 +100,7 @@ function Platform() {
 
   const refresh = () => { qc.invalidateQueries({ queryKey: ["platform-snapshot"] }); qc.invalidateQueries({ queryKey: ["platform-reviews"] }); };
   const act = useMutation({
-    mutationFn: (input: Parameters<typeof operatorAction>[0]["data"]) => actionFn({ data: input }),
+    mutationFn: (input: OperatorActionInput) => actionFn({ data: input }),
     onSuccess: (r) => { toast.success(r?.message ?? "Done"); refresh(); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Action failed"),
   });
@@ -151,7 +151,7 @@ function Platform() {
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/85 px-4 backdrop-blur-xl sm:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu className="size-5" /></Button>
-          <p className="text-sm font-semibold">{NAV.flatMap((g) => g.items).find((i) => i.id === section)?.label}</p>
+          <p className="text-sm font-semibold">{(NAV.flatMap((g) => [...g.items]) as Array<{ id: string; label: string }>).find((i) => i.id === section)?.label}</p>
           <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{d ? `Updated ${fmtDateTime(d.generated_at)}` : ""}</span>
           <Button variant="outline" size="sm" onClick={refresh} disabled={snap.isFetching}><RefreshCw className={`size-4 ${snap.isFetching ? "animate-spin" : ""}`} /> Refresh</Button>
         </header>
@@ -183,7 +183,7 @@ function Platform() {
   );
 }
 
-type Act = ReturnType<typeof useMutation<{ ok: boolean; message: string } | undefined, Error, Parameters<typeof operatorAction>[0]["data"]>>;
+type Act = ReturnType<typeof useMutation<{ ok: boolean; message: string } | undefined, Error, OperatorActionInput>>;
 type Rpc = ReturnType<typeof useMutation<string, Error, { fn: string; args: Record<string, unknown>; done: string }>>;
 
 function Centered({ children }: { children: React.ReactNode }) { return <div className="grid min-h-[50vh] place-items-center text-sm text-muted-foreground">{children}</div>; }
@@ -459,7 +459,7 @@ function Account({ act }: { act: Act }) {
   const [cur, setCur] = useState(""); const [next, setNext] = useState(""); const [again, setAgain] = useState("");
   return <>
     <Title eyebrow="Security" title="My account" sub="Change the password you use with your username." />
-    <form className="surface max-w-md space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); if (next !== again) return toast.error("New passwords don't match"); act.mutate({ type: "change_password", current: cur, next }, { onSuccess: () => { setCur(""); setNext(""); setAgain(""); } }); }}>
+    <form className="surface max-w-md space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); if (next !== again) { toast.error("New passwords don't match"); return; } act.mutate({ type: "change_password", current: cur, next }, { onSuccess: () => { setCur(""); setNext(""); setAgain(""); } }); }}>
       <div className="space-y-2"><Label>Current password</Label><Input type="password" required value={cur} onChange={(e) => setCur(e.target.value)} /></div>
       <div className="space-y-2"><Label>New password</Label><Input type="password" required minLength={8} maxLength={72} value={next} onChange={(e) => setNext(e.target.value)} /></div>
       <div className="space-y-2"><Label>Repeat new password</Label><Input type="password" required value={again} onChange={(e) => setAgain(e.target.value)} /></div>

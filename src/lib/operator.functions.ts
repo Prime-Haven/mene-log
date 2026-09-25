@@ -70,7 +70,8 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
       db.from("messages").select("tenant_id,channel,status,created_at").gte("created_at", since30).limit(50000),
     ]);
 
-    const tenantList = (tenants ?? []) as Array<Record<string, any>>;
+    type TenantRow = { id: string; name: string; subdomain: string; tier: string; status: string; approval_status: string; trial_ends_at: string | null; contact_email: string | null; contact_phone: string | null; created_at: string; extra_member_slots: number; admin_notes: string | null; require_mfa: boolean; logo_path: string | null };
+    const tenantList = (tenants ?? []) as TenantRow[];
     const count = async (table: string, tenantId: string, extra?: (q: any) => any) => {
       let q = db.from(table).select("id", { count: "exact", head: true }).eq("tenant_id", tenantId);
       if (extra) q = extra(q);
@@ -125,7 +126,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
     }));
 
     const msgHealth: Record<string, { email_sent: number; sms_sent: number; failed: number; queued: number }> = {};
-    for (const m of (msgs ?? []) as Array<Record<string, string>>) {
+    for (const m of (msgs ?? []) as any[]) {
       const row = (msgHealth[m.tenant_id!] ??= { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 });
       if (m.status === "sent") row[m.channel === "sms" ? "sms_sent" : "email_sent"]++;
       else if (m.status === "failed") row.failed++;
@@ -143,14 +144,14 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
       db.from("messages").select("id", { count: "exact", head: true }).eq("status", "failed").gte("created_at", day),
       db.from("messages").select("id", { count: "exact", head: true }).eq("status", "queued").lt("scheduled_at", hourAgo),
     ]);
-    const lastPaid = ((payments ?? []) as Array<Record<string, any>>).find((p) => p.status === "success");
+    const lastPaid = ((payments ?? []) as any[]).find((p) => p.status === "success");
 
     return {
       generated_at: new Date().toISOString(),
-      tenants: tenantList.map((t) => ({ ...t, sub: ((subs ?? []) as any[]).find((s) => s.tenant_id === t.id) ?? null, usage: perTenant.find((p) => p.id === t.id)!, storage_bytes: tenantStorage[t.id] ?? 0, messaging: msgHealth[t.id] ?? { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 } })),
-      payments: payments ?? [],
-      space_requests: space ?? [],
-      audit: ((auditRows ?? []) as any[]).map((a) => ({ ...a, actor: opName[a.actor_user_id] ?? "operator" })),
+      tenants: tenantList.map((t) => ({ ...t, sub: ((subs ?? []) as Array<{ tenant_id: string; period_end: string; auto_renew: boolean; payment_method: string }>).find((s) => s.tenant_id === t.id) ?? null, usage: perTenant.find((p) => p.id === t.id) as { members: number; attendance: number; attendance30: number; services: number; staff: number; messages: number; leaders: number; rows: number; bytes: number; last_activity: string | null }, storage_bytes: tenantStorage[t.id] ?? 0, messaging: msgHealth[t.id] ?? { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 } })),
+      payments: (payments ?? []) as Array<{ id: string; tenant_id: string; reference: string; amount_kobo: number; currency: string; tier: string; status: string; channel: string | null; paid_at: string | null; created_at: string }>,
+      space_requests: (space ?? []) as Array<{ id: string; tenant_id: string; extra_slots: number; amount_cents: number; status: string; created_at: string }>,
+      audit: ((auditRows ?? []) as Array<{ id: string; actor_user_id: string; action: string; tenant_id: string | null; detail: unknown; created_at: string }>).map((a) => ({ ...a, actor: (opName[a.actor_user_id] ?? "operator") as string })),
       weekly: weekly.reverse(),
       storage,
       operators: operators.map((o) => ({ id: o.id, username: o.app_metadata.operator_username ?? o.email, last_sign_in_at: o.last_sign_in_at, created_at: o.created_at, is_me: o.id === context.userId })),
@@ -175,6 +176,8 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reset_operator"), user_id: z.string().uuid(), password: z.string() }),
   z.object({ type: z.literal("change_password"), current: z.string(), next: z.string() }),
 ]);
+
+export type OperatorActionInput = z.infer<typeof action>;
 
 export const operatorAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
