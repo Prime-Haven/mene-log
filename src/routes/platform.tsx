@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, BarChart3, Building2, Check, CircleDollarSign, ClipboardList, Database, Download, HeartPulse, KeyRound,
-  LayoutDashboard, LogOut, Mail, Megaphone, Menu, Pencil, Plus, RefreshCw, Search, ShieldCheck, Star, UserCog, Users, X, Hourglass,
+  LayoutDashboard, LogOut, Mail, Megaphone, Menu, Pencil, Plus, RefreshCw, Search, ShieldCheck, Star, UserCog, Users, X, Hourglass, ToggleRight, Lock,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { planLabel } from "@/lib/pricing";
+import { ENTITLEMENTS, FEATURE_KEYS, FEATURE_LABELS, LIMIT_KEYS, LIMIT_LABELS } from "@/lib/entitlements";
+import { usePlanConfig } from "@/hooks/useTenant";
 import { consoleSnapshot, operatorAction, type OperatorActionInput } from "@/lib/operator.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +66,7 @@ const NAV = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "churches", label: "Churches", icon: Building2 },
     { id: "pending", label: "Approvals", icon: Hourglass },
+    { id: "features", label: "Features", icon: ToggleRight },
   ] },
   { group: "Business", items: [
     { id: "revenue", label: "Revenue & billing", icon: CircleDollarSign },
@@ -164,6 +167,7 @@ function Platform() {
                 {section === "overview" && <Overview d={d} go={setSection} />}
                 {section === "churches" && <Churches d={d} act={act} rpc={rpc} />}
                 {section === "pending" && <Pending d={d} rpc={rpc} />}
+                {section === "features" && <Features />}
                 {section === "revenue" && <Revenue d={d} />}
                 {section === "growth" && <Growth d={d} />}
                 {section === "database" && <DatabaseView d={d} />}
@@ -466,4 +470,49 @@ function Account({ act }: { act: Act }) {
       <Button type="submit" disabled={act.isPending}>Change password</Button>
     </form>
   </>;
+}
+
+const TIERS: Tier[] = ["free", "basic", "standard", "premium"];
+
+function Features() {
+  const qc = useQueryClient();
+  const cfg = usePlanConfig();
+  const live = cfg.data;
+  const save = useMutation({
+    mutationFn: async ({ tier, key, value }: { tier: Tier; key: string; value: boolean | number }) => {
+      const { error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)("platform_set_plan_config", { p_tier: tier, p_key: key, p_value: value });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => { toast.success("Saved — churches on this plan see the change straight away"); qc.invalidateQueries({ queryKey: ["plan-config"] }); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save"),
+  });
+  const val = (tier: Tier, key: string) => {
+    const v = live?.[tier]?.[key];
+    return v ?? (ENTITLEMENTS[tier] as Record<string, boolean | number>)[key];
+  };
+  return (
+    <div className="space-y-4">
+      <div><h1 className="text-xl font-bold">Package features</h1><p className="mt-1 text-sm text-muted-foreground">Switch features on or off for each plan. Anything switched off shows with a padlock in that church's dashboard.</p></div>
+      {!live && <div className="surface flex items-start gap-3 border-destructive/30 p-4 text-sm"><Lock className="mt-0.5 size-4 text-destructive" /><div><p className="font-semibold">Switches are read-only until the database update is run</p><p className="text-muted-foreground">Run <code>premium-upgrade.sql</code> in the SQL editor. The values below are the current defaults.</p></div></div>}
+      <div className="surface overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground"><th className="p-3">Feature</th>{TIERS.map((t) => <th key={t} className="p-3 text-center">{planLabel(t)}</th>)}</tr></thead>
+          <tbody>
+            {FEATURE_KEYS.map((k) => (
+              <tr key={k} className="border-b last:border-0 hover:bg-muted/30">
+                <td className="p-3 font-medium">{FEATURE_LABELS[k]}</td>
+                {TIERS.map((t) => <td key={t} className="p-3 text-center"><Switch checked={val(t, k) === true} disabled={!live || save.isPending} onCheckedChange={(v) => save.mutate({ tier: t, key: k, value: v })} aria-label={`${FEATURE_LABELS[k]} on ${planLabel(t)}`} /></td>)}
+              </tr>
+            ))}
+            {LIMIT_KEYS.map((k) => (
+              <tr key={k} className="border-b bg-muted/20 last:border-0">
+                <td className="p-3 font-medium">{LIMIT_LABELS[k]}</td>
+                {TIERS.map((t) => <td key={t} className="p-2"><Input type="number" min={0} className="mx-auto h-8 w-24 text-center" defaultValue={Number(val(t, k))} disabled={!live} onBlur={(e) => { const n = Math.max(0, Math.floor(Number(e.target.value))); if (n !== Number(val(t, k))) save.mutate({ tier: t, key: k, value: n }); }} /></td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
