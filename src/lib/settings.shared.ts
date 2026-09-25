@@ -22,10 +22,8 @@ export const settingsSchema = z.object({
   pricing: z.object({
     monthly: z.object({ basic: z.number().min(1).max(10000), standard: z.number().min(1).max(10000), premium: z.number().min(1).max(10000) }),
     yearly_discount: z.object({ basic: z.number().min(0).max(0.9), standard: z.number().min(0).max(0.9), premium: z.number().min(0).max(0.9) }),
-    trial_days: z.number().int().min(0).max(90),
   }),
   signups: z.object({
-    require_approval: z.boolean(),
     blocked_domains: z.array(z.string().trim().toLowerCase().max(80)).max(200),
     maintenance: z.boolean(),
     maintenance_message: z.string().max(300),
@@ -51,8 +49,8 @@ export type PlatformSettings = z.infer<typeof settingsSchema>;
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
   branding: { platform_name: "Mene:Log", tagline: "Every person counted, every person cared for.", support_email: "support@menelog.site", support_phone: "", primary_color: "#3b82f6" },
-  pricing: { monthly: { basic: 10, standard: 25, premium: 50 }, yearly_discount: { basic: 0.08, standard: 0.1, premium: 0.15 }, trial_days: 14 },
-  signups: { require_approval: true, blocked_domains: [], maintenance: false, maintenance_message: "" },
+  pricing: { monthly: { basic: 10, standard: 25, premium: 50 }, yearly_discount: { basic: 0.08, standard: 0.1, premium: 0.15 } },
+  signups: { blocked_domains: [], maintenance: false, maintenance_message: "" },
   email: { sender_name: "Mene:Log", reply_to: "support@menelog.site", footer_text: "" },
   messaging: { quiet_start: 21, quiet_end: 7, default_absence_threshold: 3 },
   legal: { terms_extra: "", privacy_extra: "" },
