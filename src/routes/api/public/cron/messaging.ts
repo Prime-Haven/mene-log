@@ -28,6 +28,8 @@ export const Route = createFileRoute("/api/public/cron/messaging")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { processQueue } = await import("@/lib/queue.server");
 
+        // Trials that ended without payment drop to Free forever (no-op until premium-upgrade.sql is run).
+        await (supabaseAdmin.rpc as unknown as (f: string) => Promise<unknown>)("revert_expired_trials").catch(() => null);
         const { data: automations, error } = await supabaseAdmin.rpc("run_daily_automations");
         if (error) {
           console.error("[cron] automations failed", error.message);
