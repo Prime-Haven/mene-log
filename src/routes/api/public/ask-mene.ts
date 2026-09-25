@@ -66,7 +66,6 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const apiKey = process.env["LOVABLE_API_KEY"];
           if (!apiKey) return Response.json({ error: "Ask Mene is not configured yet." }, { status: 503 });
 
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data: conversation, error: conversationError } = await supabaseAdmin
             .from("ask_mene_conversations")
             .upsert({ tenant_id: tenantId, updated_by: claims.claims.sub }, { onConflict: "tenant_id" })
@@ -83,11 +82,14 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           });
 
           const gateway = createLovableAiGatewayProvider(apiKey);
+          const system = pro
+            ? `You are Ask Mene:Log Pro, a thorough church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. Give a fuller analysis: start with a one-line headline, then structured sections with exact figures, week-on-week trends, and 2-3 concrete recommended actions. If the snapshot cannot answer, say so plainly.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`
+            : `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`;
           const result = streamText({
             model: gateway(GEMINI_MODEL),
-            system: `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`,
+            system,
             messages: await convertToModelMessages(messages),
-            maxOutputTokens: 700,
+            maxOutputTokens: pro ? 1600 : 700,
           });
 
           void supabaseAdmin.from("audit_events").insert({
