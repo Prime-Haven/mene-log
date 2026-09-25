@@ -62,7 +62,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
     const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
 
     const [{ data: tenants }, { data: subs }, { data: payments }, { data: space }, { data: auditRows }, { data: msgs }] = await Promise.all([
-      db.from("tenants").select("id,name,subdomain,tier,status,approval_status,trial_ends_at,contact_email,contact_phone,created_at,extra_member_slots,admin_notes,require_mfa,logo_path").order("created_at", { ascending: false }).limit(1000),
+      db.from("tenants").select("id,name,subdomain,tier,status,approval_status,trial_ends_at,contact_email,contact_phone,created_at,extra_member_slots,admin_notes,require_mfa,logo_path,parent_tenant_id").order("created_at", { ascending: false }).limit(1000),
       db.from("subscriptions").select("tenant_id,tier,period_start,period_end,auto_renew,payment_method"),
       db.from("payments").select("id,tenant_id,reference,amount_kobo,currency,tier,status,channel,paid_at,created_at").order("created_at", { ascending: false }).limit(3000),
       db.from("space_requests").select("id,tenant_id,extra_slots,amount_cents,status,created_at").order("created_at", { ascending: false }).limit(500),
@@ -70,7 +70,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
       db.from("messages").select("tenant_id,channel,status,created_at").gte("created_at", since30).limit(50000),
     ]);
 
-    type TenantRow = { id: string; name: string; subdomain: string; tier: string; status: string; approval_status: string; trial_ends_at: string | null; contact_email: string | null; contact_phone: string | null; created_at: string; extra_member_slots: number; admin_notes: string | null; require_mfa: boolean; logo_path: string | null };
+    type TenantRow = { id: string; name: string; subdomain: string; tier: string; status: string; approval_status: string; trial_ends_at: string | null; contact_email: string | null; contact_phone: string | null; created_at: string; extra_member_slots: number; admin_notes: string | null; require_mfa: boolean; logo_path: string | null; parent_tenant_id: string | null };
     const tenantList = (tenants ?? []) as TenantRow[];
     const count = async (table: string, tenantId: string, extra?: (q: any) => any) => {
       let q = db.from(table).select("id", { count: "exact", head: true }).eq("tenant_id", tenantId);
