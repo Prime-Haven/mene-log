@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MfaChallenge, MfaEnroll } from "@/components/TwoStep";
+import { useServerFn } from "@tanstack/react-start";
+import { operatorSignIn } from "@/lib/operator.functions";
 
 export const Route = createFileRoute("/super-admin")({
   head: () => ({ meta: [
@@ -26,7 +28,8 @@ export const Route = createFileRoute("/super-admin")({
 function SuperAdminSignIn() {
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [email, setEmail] = useState("");
+  const signIn = useServerFn(operatorSignIn);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<"password" | "enroll" | "challenge">("password");
@@ -51,7 +54,9 @@ function SuperAdminSignIn() {
     event.preventDefault();
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const result = await signIn({ data: { username, password } });
+      if (!result.ok) throw new Error(result.error);
+      const { error } = await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
       if (error) throw error;
       if (!(await continueOperator())) {
         await supabase.auth.signOut();
@@ -78,7 +83,7 @@ function SuperAdminSignIn() {
           </div>
         ) : (
         <form onSubmit={submit} className="mt-7 space-y-4">
-          <div className="space-y-2"><Label htmlFor="operator-email">Operator email</Label><Input id="operator-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></div>
+          <div className="space-y-2"><Label htmlFor="operator-username">Username</Label><Input id="operator-username" autoComplete="username" autoCapitalize="none" required maxLength={60} value={username} onChange={(event) => setUsername(event.target.value)} /></div>
           <div className="space-y-2"><Label htmlFor="operator-password">Password</Label><Input id="operator-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></div>
           <Button type="submit" className="h-11 w-full" disabled={busy}>{busy ? "Checking access…" : "Sign in securely"}<ArrowRight /></Button>
         </form>
