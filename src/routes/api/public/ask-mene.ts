@@ -30,13 +30,30 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const { data: claims } = await client.auth.getClaims(token);
           if (!claims?.claims?.sub) return Response.json({ error: "Your session has expired." }, { status: 401 });
 
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+          // Premium churches get the fuller assistant: longer memory, longer
+          // questions and deeper answers. The switch lives in plan_config.
+          const { data: tenantRow } = await supabaseAdmin
+            .from("tenants")
+            .select("tier")
+            .eq("id", tenantId)
+            .single();
+          const { data: planRows } = await supabaseAdmin.from("plan_config").select("tier, config");
+          const planConfig = Object.fromEntries(
+            (planRows ?? []).map((r) => [r.tier, r.config as Record<string, boolean | number>]),
+          );
+          const tier = (tenantRow?.tier ?? "free") as string;
+          const pro = planConfig[tier]?.["ask_mene_pro"] === true;
+
           const body = (await request.json()) as { tenantId?: string; messages?: UIMessage[] };
           const tenantId = body.tenantId?.trim();
-          const messages = Array.isArray(body.messages) ? body.messages.slice(-16) : [];
+          const messages = Array.isArray(body.messages) ? body.messages.slice(pro ? -40 : -16) : [];
           const latest = [...messages].reverse().find((message) => message.role === "user");
           const question = latest ? textOf(latest) : "";
-          if (!tenantId || !question || question.length > 800) {
-            return Response.json({ error: "Ask one question of up to 800 characters." }, { status: 400 });
+          const maxQuestion = pro ? 2000 : 800;
+          if (!tenantId || !question || question.length > maxQuestion) {
+            return Response.json({ error: `Ask one question of up to ${maxQuestion} characters.` }, { status: 400 });
           }
 
           const { data: allowed, error: limitError } = await client.rpc("ask_mene_allow_request", { p_tenant: tenantId });
