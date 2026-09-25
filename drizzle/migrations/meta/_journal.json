@@ -148,6 +148,13 @@
       "when": 1790203545210,
       "tag": "0020_leader_dashboard_volatile",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790310495744,
+      "tag": "0021_restrict_plan_config_reads",
+      "breakpoints": true
     }
   ]
 }
