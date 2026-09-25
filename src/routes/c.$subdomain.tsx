@@ -19,6 +19,7 @@ import {
   Mail,
   User,
   Phone,
+  Building2,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -81,7 +82,7 @@ function CheckIn() {
   const loadLeaders = useServerFn(getPublicLeaders);
   const loadLeaderTypes = useServerFn(getPublicLeaderTypes);
   const reduceMotion = useReducedMotion();
-  const [tab, setTab] = useState<"member" | "leader">("member");
+  const [tab, setTab] = useState<"member" | "leader" | "branch">("member");
 
   const { data: church } = useQuery({
     queryKey: ["branding", subdomain],
