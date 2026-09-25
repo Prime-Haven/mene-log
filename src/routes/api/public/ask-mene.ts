@@ -32,13 +32,14 @@ export const Route = createFileRoute("/api/public/ask-mene")({
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+          const body = (await request.json()) as { tenantId?: string; messages?: UIMessage[] };
+          const tenantId = body.tenantId?.trim() ?? "";
+
           // Premium churches get the fuller assistant: longer memory, longer
           // questions and deeper answers. The switch lives in plan_config.
-          const { data: tenantRow } = await supabaseAdmin
-            .from("tenants")
-            .select("tier")
-            .eq("id", tenantId)
-            .single();
+          const { data: tenantRow } = tenantId
+            ? await supabaseAdmin.from("tenants").select("tier").eq("id", tenantId).single()
+            : { data: null };
           const { data: planRows } = await supabaseAdmin.from("plan_config").select("tier, config");
           const planConfig = Object.fromEntries(
             (planRows ?? []).map((r) => [r.tier, r.config as Record<string, boolean | number>]),
@@ -46,8 +47,6 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const tier = (tenantRow?.tier ?? "free") as string;
           const pro = planConfig[tier]?.["ask_mene_pro"] === true;
 
-          const body = (await request.json()) as { tenantId?: string; messages?: UIMessage[] };
-          const tenantId = body.tenantId?.trim();
           const messages = Array.isArray(body.messages) ? body.messages.slice(pro ? -40 : -16) : [];
           const latest = [...messages].reverse().find((message) => message.role === "user");
           const question = latest ? textOf(latest) : "";
