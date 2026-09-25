@@ -162,7 +162,7 @@ function Platform() {
           <span className="ml-auto hidden text-xs text-muted-foreground xl:inline">{d ? `Updated ${fmtDateTime(d.generated_at)}` : ""}</span>
           <Button variant="outline" size="sm" onClick={refresh} disabled={snap.isFetching}><RefreshCw className={`size-4 ${snap.isFetching ? "animate-spin" : ""}`} /> Refresh</Button>
         </header>
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <main className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:pb-6">
           {snap.isLoading ? <Centered>Gathering platform figures…</Centered> : snap.isError || !d ? (
             <div className="surface p-8 text-center"><AlertTriangle className="mx-auto size-6 text-destructive" /><p className="mt-3 font-semibold">Could not load the console</p><p className="mt-1 text-sm text-muted-foreground">{snap.error instanceof Error ? snap.error.message : "Try again."}</p><Button className="mt-4" onClick={refresh}>Try again</Button></div>
           ) : (
@@ -186,6 +186,13 @@ function Platform() {
             </AnimatePresence>
           )}
         </main>
+        <nav aria-label="Console quick navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+          {NAV.flatMap((g) => g.items).filter((i) => ["overview", "churches", "pending", "health", "account"].includes(i.id)).map((i) => (
+            <button key={i.id} onClick={() => setSection(i.id as Section)} className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${section === i.id ? "text-primary" : "text-muted-foreground"}`}>
+              <i.icon className="size-5" /><span className="truncate">{i.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
     </div>
   );
