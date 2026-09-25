@@ -10,13 +10,15 @@ import {
   renderEmail,
   sendEmail,
   sendSms,
+  sendWhatsapp,
   smsConfigured,
+  whatsappConfigured,
 } from "@/lib/messaging.server";
 
 type Claimed = {
   id: string;
   tenant_id: string;
-  channel: "email" | "sms";
+  channel: "email" | "sms" | "whatsapp";
   recipient: string;
   subject: string | null;
   body: string;
@@ -36,7 +38,7 @@ async function logoUrlFor(path: string | null): Promise<string | null> {
 }
 
 export async function processQueue(limit = 100): Promise<{ sent: number; failed: number }> {
-  if (!emailConfigured() && !smsConfigured()) return { sent: 0, failed: 0 };
+  if (!emailConfigured() && !smsConfigured() && !whatsappConfigured()) return { sent: 0, failed: 0 };
 
   const { data, error } = await supabaseAdmin.rpc("claim_pending_messages", { p_limit: limit });
   if (error || !data) {
