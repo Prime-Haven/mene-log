@@ -11,6 +11,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { useState } from "react";
 import { BillingToggle } from "@/components/BillingToggle";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, intervalFromReference, planLabel, type BillingInterval } from "@/lib/pricing";
 import { FEATURE_LABELS, type Feature } from "@/lib/entitlements";
 
@@ -54,10 +55,12 @@ function Billing() {
   const pay = useServerFn(startPayment);
   const currency = useCurrency();
   const [interval, setInterval] = useState<BillingInterval>("monthly");
+  usePlatformSettings();
+  const [coupon, setCoupon] = useState("");
 
   const renew = useMutation({
     mutationFn: async (tier: "basic" | "standard" | "premium") => {
-      const result = await pay({ data: { tenant_id: tenant!.id, tier, interval } });
+      const result = await pay({ data: { tenant_id: tenant!.id, tier, interval, ...(coupon.trim() ? { coupon: coupon.trim() } : {}) } });
       if (!result.ok) throw new Error(result.message);
       window.location.href = result.authorization_url;
     },

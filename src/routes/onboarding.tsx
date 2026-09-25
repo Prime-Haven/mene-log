@@ -1,3 +1,4 @@
+import { useServerFn } from "@tanstack/react-start";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,8 @@ import { passwordIsStrong } from "@/lib/password";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import { checkSignupAllowed } from "@/lib/settings.functions";
 import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, type BillingInterval, type PlanTier } from "@/lib/pricing";
 
 export const Route = createFileRoute("/onboarding")({
@@ -54,24 +57,24 @@ const tierCopy: Array<{
   {
     id: "basic",
     name: "Standard",
-    price: `$${MONTHLY_USD.basic}`,
-    priceNum: MONTHLY_USD.basic,
+    get price() { return `$${MONTHLY_USD.basic}`; },
+    get priceNum() { return MONTHLY_USD.basic; },
     blurb: "Single-site congregation ready for digital attendance.",
     features: ["Branded QR check-in", "Full member registry", "Excel imports & exports", "Core attendance reports"],
   },
   {
     id: "standard",
     name: "Pro",
-    price: `$${MONTHLY_USD.standard}`,
-    priceNum: MONTHLY_USD.standard,
+    get price() { return `$${MONTHLY_USD.standard}`; },
+    get priceNum() { return MONTHLY_USD.standard; },
     blurb: "Structured churches with departments and cell leaders.",
     features: ["Everything in Standard", "Leader portal & access codes", "Department & cell groups", "Email broadcast engine"],
   },
   {
     id: "premium",
     name: "Premium",
-    price: `$${MONTHLY_USD.premium}`,
-    priceNum: MONTHLY_USD.premium,
+    get price() { return `$${MONTHLY_USD.premium}`; },
+    get priceNum() { return MONTHLY_USD.premium; },
     blurb: "Multi-branch ministries needing full control and automation.",
     features: ["Everything in Pro", "Multiple church branches", "SMS notifications", "Automated follow-up reminders"],
   },
@@ -85,6 +88,8 @@ function toHandle(value: string) {
 
 function Onboarding() {
   const currency = useCurrency();
+  usePlatformSettings();
+  const signupCheck = useServerFn(checkSignupAllowed);
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const navigate = useNavigate();
   const { session, loading } = useAuth();
@@ -162,6 +167,8 @@ function Onboarding() {
     setBusy(true);
     try {
       if (!hasSession) {
+        const allowed = await signupCheck({ data: { email } });
+        if (!allowed.ok) { toast.error(allowed.message); return; }
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
