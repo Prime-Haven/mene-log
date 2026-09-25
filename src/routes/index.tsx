@@ -20,6 +20,7 @@ import { useRef, useState } from "react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { MONTHLY_USD, yearlyUsd, yearlyPerMonthUsd, YEARLY_DISCOUNT, type BillingInterval, type AnyTier, type PlanTier } from "@/lib/pricing";
 
 import heroVideo from "@/assets/mene-worship-hero.webm";
@@ -78,6 +79,7 @@ const faqs = [
 
 function LandingPage() {
   const currency = useCurrency();
+  const settings = usePlatformSettings();
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const heroRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -89,6 +91,9 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {settings?.homepage.banner && (
+        <div className="fixed inset-x-0 bottom-0 z-40 bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground md:top-0 md:bottom-auto">{settings.homepage.banner}</div>
+      )}
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between rounded-2xl border border-white/20 bg-deep/80 px-4 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-6">
           <Link to="/" aria-label="Mene:Log home" className="flex items-center gap-2.5">
@@ -219,7 +224,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <HomepageStats />
+        {settings?.homepage.show_stats !== false && <HomepageStats />}
 
         <section id="features" className="bg-background px-5 py-24 sm:py-28">
           <div className="mx-auto max-w-7xl">

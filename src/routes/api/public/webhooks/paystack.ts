@@ -34,7 +34,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             amount?: number;
             currency?: string;
             customer?: { email?: string };
-            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number };
+            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number; coupon?: string | null };
           };
         };
         try {
@@ -98,6 +98,17 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
         if (error) {
           console.error("paystack_webhook_apply_failed", error.message);
           return new Response("Could not record payment", { status: 500 });
+        }
+
+        // Count a discount code use once the payment has cleared.
+        const couponCode = event.data.metadata?.coupon;
+        if (couponCode) {
+          try {
+            const { readSettings, writeSettings } = await import("@/lib/settings.server");
+            const s = await readSettings(true);
+            const c = s.coupons.find((x) => x.code === couponCode);
+            if (c) { c.uses += 1; await writeSettings(s); }
+          } catch (e) { console.error("coupon_count_failed", e); }
         }
 
         // Yearly plans: the payment records one period; stretch it to a full year (idempotent).

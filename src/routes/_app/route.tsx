@@ -35,7 +35,7 @@ import { InstallMene } from "@/components/InstallMene";
 import { getBrandAssetUrl } from "@/lib/checkin.functions";
 import { ReviewPrompt } from "@/components/ReviewPrompt";
 import { planLabel } from "@/lib/pricing";
-import { Lock } from "lucide-react";
+import { Lock, Building2 } from "lucide-react";
 import type { Feature } from "@/lib/entitlements";
 import { UpgradePanel } from "@/components/FeatureGate";
 
@@ -87,8 +87,9 @@ const nav: NavItem[] = [
     show: (c) => c.isAdmin,
     feature: "structure",
   },
+  { to: "/branches", label: "Branches", icon: Building2, group: "Administration", show: (c) => c.isAdmin && !c.isBranch, feature: "branches" },
   { to: "/accounts", label: "Accounts", icon: UserCog, group: "Administration", show: (c) => c.isAdmin },
-  { to: "/billing", label: "Billing", icon: CreditCard, group: "Administration", show: (c) => c.isOwner },
+  { to: "/billing", label: "Billing", icon: CreditCard, group: "Administration", show: (c) => c.isOwner && !c.isBranch },
   { to: "/audit", label: "Audit log", icon: ScrollText, group: "Administration", show: (c) => c.isOwner, feature: "audit" },
   { to: "/settings", label: "Settings", icon: Settings, group: "Administration", show: (c) => c.isAdmin },
 ];
@@ -206,9 +207,25 @@ function AppLayout() {
           </div>
         )}
 
-        <main className="mx-auto min-w-0 w-full max-w-[1440px] flex-1 px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8">
+        <main className="mx-auto min-w-0 w-full max-w-[1440px] flex-1 px-4 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-6 sm:py-6 lg:px-8">
           <motion.div key={pathname} initial={reduceMotion ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.14, ease: "easeOut" }}><MfaGate required={tenant.require_mfa}>{current?.feature && !ctx.can(current.feature) ? <UpgradePanel feature={current.feature} canUpgrade={ctx.isOwner} /> : <Outlet />}</MfaGate></motion.div>
         </main>
+        <nav aria-label="Quick navigation" className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+          <div className="mx-auto grid max-w-md grid-cols-5">
+            {nav.filter((i) => i.show(ctx) && ["/dashboard", "/scan", "/members", "/my-members", "/services", "/reports"].includes(i.to)).slice(0, 4).map((i) => {
+              const on = pathname.startsWith(i.to);
+              return (
+                <Link key={i.to} to={i.to} className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${on ? "text-primary" : "text-muted-foreground"}`}>
+                  <i.icon className="size-5" />
+                  <span className="max-w-full truncate px-1">{i.label.replace("Scan & check in", "Check in").replace("Attendance register", "Register")}</span>
+                </Link>
+              );
+            })}
+            <button onClick={() => setMobileOpen(true)} className="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground">
+              <Menu className="size-5" /><span>More</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );

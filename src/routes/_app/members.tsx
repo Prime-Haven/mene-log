@@ -55,7 +55,7 @@ function Members() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [qr, setQr] = useState<{ id: string; name: string; dataUrl: string } | null>(null);
+  const [qr, setQr] = useState<{ id: string; name: string; dataUrl: string; token?: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -123,7 +123,7 @@ function Members() {
       if (error) throw error;
       const r = data as unknown as { token: string; kind: string };
       const dataUrl = await labelledQr(r.token, tenant?.name ?? "", member.full_name, r.kind === "leader" ? "Leader" : "Member");
-      return { id: member.id, name: member.full_name, dataUrl };
+      return { id: member.id, name: member.full_name, dataUrl, token: r.token };
     },
     onSuccess: (res) => setQr(res),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not open this code"),
@@ -134,7 +134,7 @@ function Members() {
       if (!qr) return null;
       const { data, error } = await supabase.rpc("issue_qr_token", { p_member: qr.id });
       if (error) throw error;
-      return { ...qr, dataUrl: await labelledQr(String(data), tenant?.name ?? "", qr.name) };
+      return { ...qr, token: String(data), dataUrl: await labelledQr(String(data), tenant?.name ?? "", qr.name) };
     },
     onSuccess: (res) => { if (res) { setQr(res); toast.success("New code issued — the old one no longer works"); } },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not reset"),
@@ -524,6 +524,7 @@ function Members() {
             </DialogDescription>
           </DialogHeader>
           {qr && <img src={qr.dataUrl} alt="Member QR code" className="mx-auto rounded-md" />}
+          {qr?.token && <div className="text-center"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Member code (for Watch Live)</p><p className="select-all break-all font-mono text-xs">{qr.token}</p></div>}
           <DialogFooter>
             <Button asChild variant="outline">
               <a href={qr?.dataUrl} download={`${qr?.name}-qr.png`}>

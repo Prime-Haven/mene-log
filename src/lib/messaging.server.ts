@@ -121,8 +121,13 @@ export async function sendEmail(options: {
   if (!key) return { ok: false, error: "Email is not configured yet" };
   const from = (process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <support@menelog.site>")
     .replace(/no-?reply@menelog\.site/i, "support@menelog.site");
-  const safeName = options.fromName.replace(/[<>"\n\r]/g, "").slice(0, 60) || "Mene:Log";
-  const sender = from.includes("<") ? from : `${safeName} <${from}>`;
+  const { readSettings } = await import("./settings.server");
+  const settings = await readSettings();
+  const address = from.match(/<([^>]+)>/)?.[1] ?? from;
+  const brandName = settings.email.sender_name.replace(/[<>"\n\r]/g, "").slice(0, 60) || "Mene:Log";
+  const safeName = options.fromName.replace(/[<>"\n\r]/g, "").slice(0, 60) || brandName;
+  const sender = `${safeName === "Mene:Log" ? brandName : safeName} <${address}>`;
+  const replyTo = options.replyTo || settings.email.reply_to || null;
 
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -136,7 +141,7 @@ export async function sendEmail(options: {
         to: [options.to],
         subject: options.subject,
         html: options.html,
-        ...(options.replyTo ? { reply_to: options.replyTo } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
     const text = await response.text();

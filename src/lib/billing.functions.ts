@@ -27,6 +27,7 @@ const schema = z.object({
   tenant_id: z.string().uuid(),
   tier: z.enum(["basic", "standard", "premium"]),
   interval: z.enum(["monthly", "yearly"]).default("monthly"),
+  coupon: z.string().trim().toUpperCase().max(24).optional(),
 });
 
 const spaceSchema = z.object({
@@ -87,7 +88,19 @@ export const startPayment = createServerFn({ method: "POST" })
     const visitor = await detectCurrency();
     const currency = visitor.code === "GHS" ? "GHS" : "USD";
     const rate = currency === "GHS" ? visitor.rate : 1;
-    const usdAmount = priceUsdCents(data.tier, data.interval);
+    const { readSettings } = await import("./settings.server");
+    const { applyPricing } = await import("./pricing");
+    const settings = await readSettings(true);
+    applyPricing(settings.pricing);
+    let usdAmount = priceUsdCents(data.tier, data.interval);
+    let couponCode: string | null = null;
+    if (data.coupon) {
+      const { findUsableCoupon } = await import("./coupons.server");
+      const c = findUsableCoupon(settings.coupons, data.coupon, data.tier);
+      if (!c) return { ok: false as const, reason: "coupon" as const, message: "That discount code isn't valid for this plan." };
+      usdAmount = Math.max(100, Math.round(usdAmount * (1 - c.percent / 100)));
+      couponCode = c.code;
+    }
     const amount = Math.round(usdAmount * rate);
     const reference = `${referencePrefix(data.interval)}_${data.tenant_id.slice(0, 8)}_${Date.now().toString(36)}`;
 
@@ -103,7 +116,7 @@ export const startPayment = createServerFn({ method: "POST" })
         currency,
         reference,
         channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
-        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval, usd_cents: usdAmount, rate },
+        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval, usd_cents: usdAmount, rate, coupon: couponCode },
       }),
     });
 

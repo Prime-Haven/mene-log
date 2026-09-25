@@ -33,6 +33,7 @@ export type Membership = {
     quiet_hour_end: number;
     absence_threshold: number;
     require_mfa: boolean;
+    parent_tenant_id: string | null;
   };
 };
 
@@ -44,7 +45,7 @@ export function useTenant() {
       const { data, error } = await supabase
         .from("tenant_users")
         .select(
-          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa)",
+          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa, parent_tenant_id)",
         )
         .eq("status", "active")
         .order("created_at", { ascending: true })
@@ -87,6 +88,7 @@ export function useTenant() {
     features: tier ? { ...ENTITLEMENTS[tier], ...(live ?? {}) } : null,
     hasStructure: can("structure"),
     hasBranches: can("branches"),
+    isBranch: !!query.data?.tenant.parent_tenant_id,
   };
 }
 

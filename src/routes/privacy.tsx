@@ -1,3 +1,4 @@
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/SiteFooter";
 import { ShieldCheck, Lock, EyeOff, Server, Database, CheckCircle2 } from "lucide-react";
@@ -101,6 +102,7 @@ const sections: Array<{ title: string; icon?: any; body: string[] }> = [
 ];
 
 function PrivacyPage() {
+  const settings = usePlatformSettings();
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 px-5 py-4 backdrop-blur-xl">
@@ -157,6 +159,9 @@ function PrivacyPage() {
               </div>
             </section>
           ))}
+          {settings?.legal.privacy_extra && (
+            <section className="mt-10 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{settings.legal.privacy_extra}</section>
+          )}
         </div>
       </main>
 
