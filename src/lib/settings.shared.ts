@@ -31,7 +31,6 @@ export const settingsSchema = z.object({
   email: z.object({
     sender_name: z.string().trim().min(2).max(60),
     reply_to: z.string().trim().email().or(z.literal("")),
-    footer_text: z.string().max(300),
   }),
   messaging: z.object({
     quiet_start: z.number().int().min(0).max(23),
@@ -51,7 +50,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   branding: { platform_name: "Mene:Log", tagline: "Every person counted, every person cared for.", support_email: "support@menelog.site", support_phone: "", primary_color: "#3b82f6" },
   pricing: { monthly: { basic: 10, standard: 25, premium: 50 }, yearly_discount: { basic: 0.08, standard: 0.1, premium: 0.15 } },
   signups: { blocked_domains: [], maintenance: false, maintenance_message: "" },
-  email: { sender_name: "Mene:Log", reply_to: "support@menelog.site", footer_text: "" },
+  email: { sender_name: "Mene:Log", reply_to: "support@menelog.site" },
   messaging: { quiet_start: 21, quiet_end: 7, default_absence_threshold: 3 },
   legal: { terms_extra: "", privacy_extra: "" },
   homepage: { show_stats: true, banner: "" },

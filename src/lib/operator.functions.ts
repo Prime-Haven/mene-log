@@ -175,6 +175,9 @@ const action = z.discriminatedUnion("type", [
   z.object({ type: z.literal("remove_operator"), user_id: z.string().uuid() }),
   z.object({ type: z.literal("reset_operator"), user_id: z.string().uuid(), password: z.string() }),
   z.object({ type: z.literal("change_password"), current: z.string(), next: z.string() }),
+  z.object({ type: z.literal("test_email"), to: z.string().trim().email().max(160) }),
+  z.object({ type: z.literal("apply_messaging_defaults") }),
+  z.object({ type: z.literal("detach_branch"), tenant_id: z.string().uuid() }),
 ]);
 
 export type OperatorActionInput = z.infer<typeof action>;
@@ -272,6 +275,28 @@ export const operatorAction = createServerFn({ method: "POST" })
         await audit(me, "operator.password_reset", { username: target.app_metadata.operator_username });
         return { ok: true, message: "Password reset" };
       }
+      case "test_email": {
+        const { renderEmail, sendEmail } = await import("./messaging.server");
+        const html = renderEmail({ churchName: "Prime Haven · Mene:Log", brandPrimary: "#3b82f6", logoUrl: null, subject: "Your Mene:Log email is working", body: "This is a test email from the Prime Haven console. If you can read this, email delivery is working." });
+        const r = await sendEmail({ to: data.to, subject: "Your Mene:Log email is working", html, fromName: "Mene:Log", replyTo: null });
+        await audit(me, "platform.test_email", { to: data.to, ok: r.ok });
+        if (!r.ok) throw new Error(r.error ?? "Email could not be sent");
+        return { ok: true, message: `Test email sent to ${data.to}` };
+      }
+      case "apply_messaging_defaults": {
+        const { readSettings } = await import("./settings.server");
+        const s = await readSettings(true);
+        const { error } = await db.from("tenants").update({ quiet_hour_start: s.messaging.quiet_start, quiet_hour_end: s.messaging.quiet_end, absence_threshold: s.messaging.default_absence_threshold }).neq("status", "closed");
+        if (error) throw new Error("Could not apply to churches.");
+        await audit(me, "platform.messaging_defaults_applied", s.messaging);
+        return { ok: true, message: "Quiet hours and absence alerts applied to every church" };
+      }
+      case "detach_branch": {
+        const { error } = await db.from("tenants").update({ parent_tenant_id: null }).eq("id", data.tenant_id);
+        if (error) throw new Error("Could not detach this branch.");
+        await audit(me, "branch.detached", {}, data.tenant_id);
+        return { ok: true, message: "Branch is now a standalone church" };
+      }
       case "change_password": {
         if (!validOperatorPassword(data.next)) throw new Error("New password must be 8 to 72 characters.");
         const self = (await listOperatorUsers()).find((o) => o.id === me);
@@ -281,4 +306,30 @@ export const operatorAction = createServerFn({ method: "POST" })
         return { ok: true, message: "Password changed" };
       }
     }
+  });
+
+/* ---------------- Live service checks ---------------- */
+export const healthCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertOperator(context);
+    const timed = async (fn: () => Promise<boolean>) => {
+      const t = Date.now();
+      try { const ok = await fn(); return { ok, ms: Date.now() - t }; } catch { return { ok: false, ms: Date.now() - t }; }
+    };
+    const resend = process.env["MENELOG_RESEND_API_KEY"];
+    const paystack = process.env["PAYSTACK_SECRET_KEY"];
+    const ai = process.env["LOVABLE_API_KEY"];
+    const [email, payments, assistant, database] = await Promise.all([
+      timed(async () => !!resend && (await fetch("https://api.resend.com/domains", { headers: { Authorization: `Bearer ${resend}` } })).ok),
+      timed(async () => !!paystack && (await fetch("https://api.paystack.co/transaction?perPage=1", { headers: { Authorization: `Bearer ${paystack}` } })).ok),
+      timed(async () => {
+        if (!ai) return false;
+        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${ai}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "google/gemini-3.8-flash", messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 5 }) });
+        return r.ok;
+      }),
+      timed(async () => { const db = await admin(); const { error } = await db.from("tenants").select("id", { head: true, count: "exact" }); return !error; }),
+    ]);
+    await audit(context.userId, "platform.health_check", { email: email.ok, payments: payments.ok, ai: assistant.ok, database: database.ok });
+    return { checked_at: new Date().toISOString(), email, payments, assistant, database };
   });
