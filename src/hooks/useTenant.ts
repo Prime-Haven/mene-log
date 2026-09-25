@@ -60,6 +60,14 @@ export function useTenant() {
   const tier = query.data?.tenant.tier;
   const isAdmin = role === "owner" || role === "church_admin";
 
+  // Live switches set by Prime Haven in the console. Falls back to the built-in defaults.
+  const planConfig = usePlanConfig();
+  const live = tier ? planConfig.data?.[tier] : undefined;
+  const can = (feature: Feature) =>
+    live && typeof live[feature] === "boolean" ? live[feature] === true : hasFeature(tier, feature);
+  const limit = (key: Limit) =>
+    live && typeof live[key] === "number" ? Number(live[key]) : limitOf(tier, key);
+
   return {
     ...query,
     membership: query.data ?? null,
@@ -71,14 +79,33 @@ export function useTenant() {
     canManageMembers: isAdmin || role === "branch_admin",
     canSeeReports: role !== "usher" && role !== "leader",
     /** Does this church's package include a capability? */
-    can: (feature: Feature) => hasFeature(tier, feature),
-    limit: (key: Limit) => limitOf(tier, key),
+    can,
+    limit,
     /** member_limit plus any extra space this church has purchased; other limits pass through unchanged. */
     limitWithExtras: (key: Limit) =>
-      limitOf(tier, key) +
-      (key === "member_limit" ? (query.data?.tenant.extra_member_slots ?? 0) : 0),
-    features: tier ? ENTITLEMENTS[tier] : null,
-    hasStructure: hasFeature(tier, "structure"),
-    hasBranches: hasFeature(tier, "branches"),
+      limit(key) + (key === "member_limit" ? (query.data?.tenant.extra_member_slots ?? 0) : 0),
+    features: tier ? { ...ENTITLEMENTS[tier], ...(live ?? {}) } : null,
+    hasStructure: can("structure"),
+    hasBranches: can("branches"),
   };
+}
+
+export type PlanConfig = Partial<Record<Tier, Record<string, boolean | number>>>;
+
+/** Per-plan feature switches from the database (null until the table exists). */
+export function usePlanConfig() {
+  return useQuery({
+    queryKey: ["plan-config"],
+    staleTime: 60_000,
+    retry: false,
+    queryFn: async (): Promise<PlanConfig | null> => {
+      const { data, error } = await (supabase as unknown as {
+        from: (t: string) => { select: (c: string) => Promise<{ data: Array<{ tier: Tier; config: Record<string, boolean | number> }> | null; error: unknown }> };
+      })
+        .from("plan_config")
+        .select("tier, config");
+      if (error || !data) return null;
+      return Object.fromEntries(data.map((r) => [r.tier, r.config])) as PlanConfig;
+    },
+  });
 }
