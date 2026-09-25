@@ -145,7 +145,7 @@ function AppLayout() {
   const Navigation = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       <div className="flex h-[76px] items-center gap-3 border-b border-sidebar-border px-4">
-        {logoUrl ? <img src={logoUrl} alt="Church logo" className="size-10 shrink-0 rounded-lg border border-sidebar-border object-contain" /> : <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-accent)]"><QrCode className="size-4.5" /></span>}
+        {logoUrl ? <img src={logoUrl} alt={tenant.name} className="size-10 shrink-0 rounded-lg border border-sidebar-border object-contain" /> : <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-accent)]"><QrCode className="size-4.5" /></span>}
         {(!collapsed || mobile) && <span className="min-w-0"><span className="block truncate font-display text-sm font-bold">{tenant.name}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{planLabel(tenant.tier)} plan</span></span>}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4">

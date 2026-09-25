@@ -48,6 +48,8 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:image", content: "https://menelog.site/og-image.jpg" },
+      { name: "twitter:image", content: "https://menelog.site/og-image.jpg" },
       { name: "robots", content: "index, follow" },
     ],
   }),
@@ -183,6 +185,7 @@ function LandingPage() {
            <motion.div style={{ y: contentY, opacity: contentOpacity }} className="relative mx-auto flex h-full max-w-7xl items-end justify-center px-5 pb-24 text-center sm:pb-20">
              <div className="max-w-3xl text-deep-foreground">
               <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/70">Made for churches. Built for people.</p>
+              <h1 className="sr-only">Mene:Log — church attendance and membership, made simple</h1>
               <VerseTyper />
                <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-deep-foreground/80 sm:text-lg">
                  Mene:Log brings attendance, membership, leadership and communication together so your church can care with clarity.

@@ -58,13 +58,14 @@ export function VerseTyper() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1
+      <p
+        role="text"
         className="min-h-[9.5rem] font-display text-[clamp(1.6rem,4.6vw,3.6rem)] font-bold leading-[1.1] text-deep-foreground sm:min-h-[11rem]"
         aria-label={`Daniel 5:25 — ${DANIEL_VERSES[0]!.text}`}
       >
         <span>{shown}</span>
         {!reduced && <span className="ml-1 inline-block w-[0.06em] animate-pulse bg-deep-foreground align-middle" style={{ height: "0.9em" }} />}
-      </h1>
+      </p>
       <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-deep-foreground/60">
         Daniel 5:25 · {label}
       </p>

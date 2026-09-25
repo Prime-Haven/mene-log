@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#fafbfc" },
-      { title: "Mene:Log" },
+      { title: "Mene:Log — Church Attendance and Membership" },
       {
         name: "description",
         content: "Church attendance, membership records and reporting for Ghanaian churches.",
       },
       { name: "author", content: "Prime Haven IT Solutions & Consultancy" },
-      { property: "og:title", content: "Mene:Log" },
+      { property: "og:title", content: "Mene:Log — Church Attendance and Membership" },
       {
         property: "og:description",
         content: "Church attendance, membership records and reporting for Ghanaian churches.",
