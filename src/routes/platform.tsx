@@ -433,7 +433,7 @@ function AuditView({ d }: { d: Snapshot }) {
   const list = d.audit.filter((a) => `${a.action} ${a.actor} ${a.tenant_id ? names[a.tenant_id] ?? "" : ""}`.toLowerCase().includes(q.toLowerCase()));
   return <>
     <Title eyebrow="Accountability" title="Audit log" sub="Every operator sign-in and action.">
-      <Button variant="outline" onClick={() => downloadCsv("platform-audit.csv", list.map((a) => ({ when: a.created_at, operator: a.actor, action: a.action, church: a.tenant_id ? names[a.tenant_id] : "", detail: a.detail })))}><Download className="size-4" /> Export</Button>
+      <Button variant="outline" onClick={() => downloadCsv("platform-audit.csv", list.map((a) => ({ when: a.created_at, operator: a.actor, action: a.action, church: a.tenant_id ? names[a.tenant_id] : "", detail: JSON.stringify(a.detail) })))}><Download className="size-4" /> Export</Button>
     </Title>
     <div className="relative mb-3"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search actions, operators or churches" value={q} onChange={(e) => setQ(e.target.value)} /></div>
     <div className="surface divide-y">{list.map((a) => <div key={a.id} className="flex flex-wrap justify-between gap-2 p-3 text-sm"><div><p className="font-mono text-xs font-semibold">{a.action}</p><p className="text-xs text-muted-foreground">{a.actor}{a.tenant_id ? ` · ${names[a.tenant_id] ?? "church"}` : ""}</p></div><span className="text-xs text-muted-foreground">{fmtDateTime(a.created_at)}</span></div>)}{!list.length && <Empty>No events.</Empty>}</div>
