@@ -13,7 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { planLabel } from "@/lib/pricing";
 import { ENTITLEMENTS, FEATURE_KEYS, FEATURE_LABELS, LIMIT_KEYS, LIMIT_LABELS } from "@/lib/entitlements";
 import { usePlanConfig } from "@/hooks/useTenant";
-import { consoleSnapshot, operatorAction, type OperatorActionInput } from "@/lib/operator.functions";
+import { ConsoleSettings } from "@/components/platform/ConsoleSettings";
+import { ConsoleSearch, ConsoleBell } from "@/components/platform/ConsoleTools";
+import { healthCheck, consoleSnapshot, operatorAction, type OperatorActionInput } from "@/lib/operator.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -82,7 +84,7 @@ const NAV = [
     { id: "operators", label: "Operators", icon: UserCog },
     { id: "audit", label: "Audit log", icon: ClipboardList },
     { id: "health", label: "System health", icon: HeartPulse },
-    { id: "account", label: "My account", icon: KeyRound },
+    { id: "account", label: "Settings", icon: KeyRound },
   ] },
 ] as const;
 type Section = (typeof NAV)[number]["items"][number]["id"];
@@ -155,7 +157,9 @@ function Platform() {
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/85 px-4 backdrop-blur-xl sm:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open menu"><Menu className="size-5" /></Button>
           <p className="text-sm font-semibold">{(NAV.flatMap((g) => [...g.items]) as Array<{ id: string; label: string }>).find((i) => i.id === section)?.label}</p>
-          <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{d ? `Updated ${fmtDateTime(d.generated_at)}` : ""}</span>
+          {d && <ConsoleSearch d={d} go={(sec) => setSection(sec as Section)} />}
+          {d && <ConsoleBell d={d} pendingReviews={pendingReviews} go={(sec) => setSection(sec as Section)} />}
+          <span className="ml-auto hidden text-xs text-muted-foreground xl:inline">{d ? `Updated ${fmtDateTime(d.generated_at)}` : ""}</span>
           <Button variant="outline" size="sm" onClick={refresh} disabled={snap.isFetching}><RefreshCw className={`size-4 ${snap.isFetching ? "animate-spin" : ""}`} /> Refresh</Button>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -177,7 +181,7 @@ function Platform() {
                 {section === "operators" && <Operators d={d} act={act} />}
                 {section === "audit" && <AuditView d={d} />}
                 {section === "health" && <Health d={d} />}
-                {section === "account" && <Account act={act} />}
+                {section === "account" && <ConsoleSettings act={act} username={d.operators.find((o) => o.is_me)?.username ?? "operator"} lastSignIn={d.operators.find((o) => o.is_me)?.last_sign_in_at ?? null} />}
               </motion.div>
             </AnimatePresence>
           )}
@@ -236,9 +240,9 @@ function Overview({ d, go }: { d: Snapshot; go: (s: Section) => void }) {
 }
 
 function Churches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc }) {
-  const [q, setQ] = useState(""); const [tier, setTier] = useState("all"); const [status, setStatus] = useState("all"); const [approval, setApproval] = useState("all");
+  const [q, setQ] = useState(""); const [tier, setTier] = useState("all"); const [status, setStatus] = useState("all"); const [approval, setApproval] = useState("all"); const [kind, setKind] = useState("all");
   const [open, setOpen] = useState<string | null>(null); const [form, setForm] = useState<Form | null>(null);
-  const list = useMemo(() => d.tenants.filter((c) => (tier === "all" || c.tier === tier) && (status === "all" || c.status === status) && (approval === "all" || c.approval_status === approval) && `${c.name} ${c.subdomain} ${c.contact_email ?? ""}`.toLowerCase().includes(q.toLowerCase())), [d, q, tier, status, approval]);
+  const list = useMemo(() => d.tenants.filter((c) => (tier === "all" || c.tier === tier) && (status === "all" || c.status === status) && (approval === "all" || c.approval_status === approval) && (kind === "all" || (kind === "branch" ? !!c.parent_tenant_id : kind === "head" ? d.tenants.some((x) => x.parent_tenant_id === c.id) : !c.parent_tenant_id)) && `${c.name} ${c.subdomain} ${c.contact_email ?? ""}`.toLowerCase().includes(q.toLowerCase())), [d, q, tier, status, approval, kind]);
   const approvals = [...new Set(d.tenants.map((t) => t.approval_status))];
   const selected = d.tenants.find((t) => t.id === open) ?? null;
   const save = () => {
@@ -250,15 +254,16 @@ function Churches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc }) {
     <Title eyebrow="Registry" title="Churches" sub={`${list.length} of ${d.tenants.length} churches`}>
       <div className="flex gap-2"><Button variant="outline" onClick={() => downloadCsv("churches.csv", list.map((c) => ({ name: c.name, subdomain: c.subdomain, plan: planLabel(c.tier), status: c.status, approval: c.approval_status, members: c.usage.members, staff: c.usage.staff, db_bytes: c.usage.bytes, created: c.created_at, email: c.contact_email })))}><Download className="size-4" /> Export</Button><Button onClick={() => setForm({ ...emptyForm })}><Plus className="size-4" /> New church</Button></div>
     </Title>
-    <div className="surface mb-3 grid gap-2 p-3 md:grid-cols-[1fr_150px_150px_170px]">
+    <div className="surface mb-3 grid gap-2 p-3 md:grid-cols-[1fr_150px_150px_170px_150px]">
       <div className="relative"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search name, address or email" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       <Select value={tier} onValueChange={setTier}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All plans</SelectItem>{(["free", "basic", "standard", "premium"] as const).map((k) => <SelectItem key={k} value={k}>{planLabel(k)}</SelectItem>)}</SelectContent></Select>
       <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem>{["active", "grace", "suspended", "closed"].map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent></Select>
       <Select value={approval} onValueChange={setApproval}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All approvals</SelectItem>{approvals.map((s) => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}</SelectContent></Select>
+      <Select value={kind} onValueChange={setKind}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All churches</SelectItem><SelectItem value="main">Main churches</SelectItem><SelectItem value="head">With branches</SelectItem><SelectItem value="branch">Branches only</SelectItem></SelectContent></Select>
     </div>
     <div className="surface divide-y overflow-hidden">
       {list.map((c) => <button key={c.id} onClick={() => setOpen(c.id)} className="grid w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/50 sm:grid-cols-[1fr_auto_auto_auto_auto]">
-        <div><p className="font-semibold">{c.name}</p><p className="text-xs text-muted-foreground">/c/{c.subdomain} · joined {fmtDate(c.created_at)}</p></div>
+        <div><p className="font-semibold">{c.name}</p><p className="text-xs text-muted-foreground">/c/{c.subdomain} · joined {fmtDate(c.created_at)}{c.parent_tenant_id ? ` · branch of ${d.tenants.find((x) => x.id === c.parent_tenant_id)?.name ?? "a church"}` : ""}{d.tenants.some((x) => x.parent_tenant_id === c.id) ? ` · ${d.tenants.filter((x) => x.parent_tenant_id === c.id).length} branches` : ""}</p></div>
         <p className="text-xs text-muted-foreground">{c.usage.members} members · {fmtBytes(c.usage.bytes + c.storage_bytes)}</p>
         <Badge variant="secondary">{planLabel(c.tier)}</Badge>
         <Badge variant={c.status === "active" ? "default" : "outline"} className="capitalize">{c.status}</Badge>
@@ -295,6 +300,10 @@ function ChurchDetail({ c, d, act, rpc, edit }: { c: Tenant; d: Snapshot; act: A
   const setStatus = (next: Status, verb: string) => { if (window.confirm(`${verb} ${c.name}?`)) rpc.mutate({ fn: "platform_set_tenant_status", args: { p_tenant: c.id, p_status: next }, done: `Church ${next}` }); };
   return <>
     <SheetHeader><SheetTitle>{c.name}</SheetTitle><SheetDescription>/c/{c.subdomain} · account and health only</SheetDescription></SheetHeader>
+    {(c.parent_tenant_id || d.tenants.some((x) => x.parent_tenant_id === c.id)) && <div className="mt-4 rounded-lg border p-3 text-sm">
+      {c.parent_tenant_id ? <div className="flex items-center justify-between gap-2"><span>Branch of <b>{d.tenants.find((x) => x.id === c.parent_tenant_id)?.name ?? "—"}</b> · works as Pro</span><Button size="sm" variant="outline" onClick={() => { if (window.confirm(`Make ${c.name} a standalone church?`)) act.mutate({ type: "detach_branch", tenant_id: c.id }); }}>Detach</Button></div>
+        : <><p className="font-semibold">Branches</p>{d.tenants.filter((x) => x.parent_tenant_id === c.id).map((b) => <p key={b.id} className="mt-1 flex justify-between text-xs"><span>{b.name} · /c/{b.subdomain}</span><span className="text-muted-foreground">{b.usage.members} members · {b.usage.attendance30} check-ins (30d)</span></p>)}</>}
+    </div>}
     <div className="mt-5 grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-4">
       {row("Plan", planLabel(c.tier))}{row("Status", <span className="capitalize">{c.status}</span>)}
       {row("Approval", c.approval_status.replace(/_/g, " "))}{row("Trial ends", fmtDate(c.trial_ends_at))}
@@ -453,22 +462,14 @@ function Health({ d }: { d: Snapshot }) {
     { k: "Ask Mene:Log AI", ok: h.ai, note: h.ai ? "Connected" : "Not configured" },
     { k: "SMS", ok: h.sms, note: h.sms ? "Connected" : "Not configured yet" },
   ];
+  const checkFn = useServerFn(healthCheck);
+  const live = useMutation({ mutationFn: () => checkFn(), onError: (e) => toast.error(e instanceof Error ? e.message : "Check failed") });
+  const r = live.data;
+  const liveRows = r ? [["Database", r.database], ["Email (Resend)", r.email], ["Payments (Paystack)", r.payments], ["Ask Mene:Log AI", r.assistant]] as const : [];
   return <>
-    <Title eyebrow="Operations" title="System health" />
+    <Title eyebrow="Operations" title="System health"><Button onClick={() => live.mutate()} disabled={live.isPending}><RefreshCw className={`size-4 ${live.isPending ? "animate-spin" : ""}`} /> {live.isPending ? "Testing…" : "Run live test"}</Button></Title>
+    {r && <div className="surface mb-4 p-4"><p className="text-sm font-semibold">Live test · {fmtDateTime(r.checked_at)}</p><div className="mt-2 grid gap-2 sm:grid-cols-4">{liveRows.map(([k, v]) => <div key={k} className={`rounded-lg border p-3 text-sm ${v.ok ? "border-success/40" : "border-destructive/40"}`}><p className="font-medium">{k}</p><p className={`text-xs ${v.ok ? "text-success" : "text-destructive"}`}>{v.ok ? `Working · ${v.ms} ms` : "Not responding"}</p></div>)}</div></div>}
     <div className="grid gap-3 sm:grid-cols-2">{items.map((i) => <div key={i.k} className="surface flex items-start gap-3 p-4"><span className={`mt-1 size-2.5 shrink-0 rounded-full ${i.ok ? "bg-success" : "bg-destructive"}`} /><div><p className="font-semibold">{i.k}</p><p className="text-xs text-muted-foreground">{i.note}</p></div></div>)}</div>
-  </>;
-}
-
-function Account({ act }: { act: Act }) {
-  const [cur, setCur] = useState(""); const [next, setNext] = useState(""); const [again, setAgain] = useState("");
-  return <>
-    <Title eyebrow="Security" title="My account" sub="Change the password you use with your username." />
-    <form className="surface max-w-md space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); if (next !== again) { toast.error("New passwords don't match"); return; } act.mutate({ type: "change_password", current: cur, next }, { onSuccess: () => { setCur(""); setNext(""); setAgain(""); } }); }}>
-      <div className="space-y-2"><Label>Current password</Label><Input type="password" required value={cur} onChange={(e) => setCur(e.target.value)} /></div>
-      <div className="space-y-2"><Label>New password</Label><Input type="password" required minLength={8} maxLength={72} value={next} onChange={(e) => setNext(e.target.value)} /></div>
-      <div className="space-y-2"><Label>Repeat new password</Label><Input type="password" required value={again} onChange={(e) => setAgain(e.target.value)} /></div>
-      <Button type="submit" disabled={act.isPending}>Change password</Button>
-    </form>
   </>;
 }
 
