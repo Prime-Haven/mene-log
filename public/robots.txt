@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://menelog.site/sitemap.xml
+Sitemap: https://www.menelog.site/sitemap.xml

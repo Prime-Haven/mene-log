@@ -96,6 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "index, follow" },
       { name: "referrer", content: "strict-origin-when-cross-origin" },
+      { name: "google-site-verification", content: "F2LMTdLfHwoQAHdDFUS38TlOIGU9vMoP4qt1bA3HuLk" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
