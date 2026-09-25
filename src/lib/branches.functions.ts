@@ -180,14 +180,16 @@ export const getCheckinContext = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ subdomain: z.string().trim().toLowerCase().max(40) }).parse(d))
   .handler(async ({ data }) => {
     const db = await adminDb();
-    const { data: t } = await db.from("tenants").select("id, tier, parent_tenant_id").eq("subdomain", data.subdomain).maybeSingle();
+    const { data: t } = await db.from("tenants").select("id, tier, parent_tenant_id, trial_ends_at").eq("subdomain", data.subdomain).maybeSingle();
     if (!t) return null;
-    const [leaders, watchLive, branchesOn] = await Promise.all([
+    const inTrial = !!t.trial_ends_at && new Date(t.trial_ends_at).getTime() > Date.now();
+    const [qr, leaders, watchLive, branchesOn] = await Promise.all([
+      featureOn(t.tier, "qr", t.tier !== "free").then((v) => v || inTrial),
       featureOn(t.tier, "leaders", t.tier === "standard" || t.tier === "premium"),
       featureOn(t.tier, "watch_live", t.tier === "premium"),
       featureOn(t.tier, "branches", t.tier === "premium"),
     ]);
     const parent = t.parent_tenant_id ? (await db.from("tenants").select("name, subdomain").eq("id", t.parent_tenant_id).maybeSingle()).data : null;
     const branches = !t.parent_tenant_id ? ((await db.from("tenants").select("name, subdomain").eq("parent_tenant_id", t.id).eq("status", "active")).data ?? []) : [];
-    return { leaders, watchLive, acceptsBranches: branchesOn && !t.parent_tenant_id, parent, branches };
+    return { qr, leaders, watchLive, acceptsBranches: branchesOn && !t.parent_tenant_id, parent, branches };
   });
