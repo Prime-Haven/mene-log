@@ -1,3 +1,4 @@
+import { getCheckinContext, requestBranch } from "@/lib/branches.functions";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -114,7 +115,10 @@ function CheckIn() {
     queryFn: () => loadAsset({ data: { path: church!.background_path! } }),
   });
 
-  const leaderAreaOpen = church?.tier === "standard" || church?.tier === "premium";
+  const { data: ctx } = useQuery({ queryKey: ["checkin-context", subdomain], queryFn: () => getCheckinContext({ data: { subdomain } }), staleTime: 60_000 });
+  const leaderAreaOpen = ctx ? ctx.leaders : church?.tier === "standard" || church?.tier === "premium";
+  const showQr = ctx ? ctx.qr : church?.tier !== "free";
+  const tabCount = 1 + (leaderAreaOpen ? 1 : 0) + (ctx?.acceptsBranches ? 1 : 0);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -241,6 +245,9 @@ function CheckIn() {
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold">You're checked in!</h1>
           <p className="mt-1 text-sm text-muted-foreground">{done.service}</p>
+          {!showQr ? (
+            <p className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white/80">You're on the register. An usher will mark your attendance at the service — just give them your name.</p>
+          ) : <>
           <div className="mt-6 rounded-2xl bg-white p-4">
             <img src={done.qr} alt="Your member check-in QR code" className="mx-auto aspect-square w-full max-w-[240px]" />
           </div>
@@ -251,10 +258,11 @@ function CheckIn() {
               ? "iPhone: press and hold the code above, then tap “Save to Photos”. Show it at the door next time."
               : "Your code has downloaded. Show it at the door next time for instant check-in."}
           </p>
+          </>}
           <div className="mt-6 flex flex-col gap-2">
-            <Button onClick={saveQr} className="gap-2 rounded-xl">
+            {showQr && <Button onClick={saveQr} className="gap-2 rounded-xl">
               <Download className="size-4" /> Save member code
-            </Button>
+            </Button>}
             <Button variant="outline" onClick={() => setDone(null)} className="rounded-xl">
               Check in another person
             </Button>
@@ -292,7 +300,7 @@ function CheckIn() {
             {church?.welcome_message ||
               "Fill in your details below to check in and receive your personal QR code."}
           </p>
-          {church?.tier === "premium" && (
+          {(ctx ? ctx.watchLive : church?.tier === "premium") && (
             <Link
               to="/live/$subdomain"
               params={{ subdomain }}
@@ -301,10 +309,13 @@ function CheckIn() {
               <span className="size-2 animate-pulse rounded-full bg-destructive-foreground" /> Watch Live
             </Link>
           )}
+          {ctx?.parent && (
+            <p className="mt-3 text-xs text-white/60">A branch of <Link to="/c/$subdomain" params={{ subdomain: ctx.parent.subdomain }} className="font-semibold text-white underline-offset-2 hover:underline">{ctx.parent.name}</Link></p>
+          )}
         </div>
 
-        {/* Member / Leader tab switch */}
-         <div className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/30 p-1.5 shadow-md backdrop-blur-xl ${leaderAreaOpen ? "grid-cols-2" : "grid-cols-1"}`}>
+        {/* Member / Leader / Branch tab switch */}
+         <div className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/30 p-1.5 shadow-md backdrop-blur-xl ${tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
            <Button
             type="button"
              variant="ghost"
@@ -329,9 +340,23 @@ function CheckIn() {
           >
             <UserCog className="size-4" /> Leader Area
            </Button>}
+           {ctx?.acceptsBranches && <Button
+            type="button"
+             variant="ghost"
+            onClick={() => setTab("branch")}
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
+              tab === "branch"
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Building2 className="size-4" /> Branches
+           </Button>}
         </div>
 
-        {tab === "leader" ? (
+        {tab === "branch" && ctx?.acceptsBranches ? (
+          <BranchArea parent={subdomain} churchName={church?.name ?? "this church"} branches={ctx.branches} />
+        ) : tab === "leader" ? (
           <LeaderArea subdomain={subdomain} churchName={church?.name ?? "this church"} leaderTypes={leaderTypes} />
         ) : (
           <form onSubmit={onSubmit} className="mt-6 rounded-3xl border border-white/15 bg-black/35 space-y-4 p-5 sm:p-6 shadow-xl backdrop-blur-xl">
@@ -542,6 +567,52 @@ function CheckIn() {
            Powered by Mene:Log · Protected by the privacy guarantee · No public directory access
         </p>
       </motion.div>
+    </div>
+  );
+}
+
+function BranchArea({ parent, churchName, branches }: { parent: string; churchName: string; branches: Array<{ name: string; subdomain: string }> }) {
+  const [f, setF] = useState({ name: "", subdomain: "", city: "", contact_name: "", email: "", phone: "" });
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: k === "subdomain" ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") : e.target.value });
+  async function submit(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true);
+    try {
+      const r = await requestBranch({ data: { parent, ...f } });
+      if (r.ok) setSent(r.message); else toast.error(r.message);
+    } catch { toast.error("Please check the details and try again."); }
+    setBusy(false);
+  }
+  return (
+    <div className="mt-6 space-y-4">
+      {branches.length > 0 && (
+        <div className="rounded-3xl border border-white/15 bg-black/35 p-5 backdrop-blur-xl">
+          <p className="text-sm font-semibold">Check in at a branch</p>
+          <div className="mt-3 grid gap-2">
+            {branches.map((b) => (
+              <Link key={b.subdomain} to="/c/$subdomain" params={{ subdomain: b.subdomain }} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10">
+                <span className="font-medium">{b.name}</span><span className="text-xs text-white/60">/c/{b.subdomain}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+      {sent ? (
+        <div className="rounded-3xl border border-white/15 bg-black/35 p-6 text-center backdrop-blur-xl"><CheckCircle2 className="mx-auto size-8 text-success" /><p className="mt-3 text-sm">{sent}</p></div>
+      ) : (
+        <form onSubmit={submit} className="space-y-3 rounded-3xl border border-white/15 bg-black/35 p-5 shadow-xl backdrop-blur-xl sm:p-6">
+          <p className="text-sm font-semibold">Register a branch of {churchName}</p>
+          <p className="text-xs text-white/60">The head office reviews every request before the branch goes live.</p>
+          <Input required placeholder="Branch name" value={f.name} onChange={set("name")} maxLength={120} />
+          <Input required placeholder="Check-in address, e.g. grace-kumasi" value={f.subdomain} onChange={set("subdomain")} minLength={3} maxLength={40} />
+          <Input required placeholder="Town or city" value={f.city} onChange={set("city")} maxLength={80} />
+          <Input required placeholder="Branch leader's full name" value={f.contact_name} onChange={set("contact_name")} maxLength={120} />
+          <Input required type="email" placeholder="Branch leader's email" value={f.email} onChange={set("email")} />
+          <Input required type="tel" placeholder="Phone number" value={f.phone} onChange={set("phone")} minLength={9} maxLength={20} />
+          <Button type="submit" disabled={busy} className="w-full rounded-xl">{busy ? "Sending…" : "Send branch request"}</Button>
+        </form>
+      )}
     </div>
   );
 }
