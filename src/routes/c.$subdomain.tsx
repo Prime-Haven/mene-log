@@ -134,7 +134,7 @@ function CheckIn() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ qr: string; returning: boolean; service: string; file: string } | null>(null);
+  const [done, setDone] = useState<{ qr: string; token: string; returning: boolean; service: string; file: string } | null>(null);
   const isiPhone = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
@@ -199,7 +199,7 @@ function CheckIn() {
       }
       const qr = await labelledQr(result.token, church?.name ?? "", form.full_name);
       const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      setDone({ qr, returning: result.returning, service: result.service, file: `${slug(church?.name ?? "church")}-${slug(form.full_name)}-qr.png` });
+      setDone({ qr, token: result.token, returning: result.returning, service: result.service, file: `${slug(church?.name ?? "church")}-${slug(form.full_name)}-qr.png` });
     } catch {
       setError("Something went wrong. Please ask an usher for help.");
     } finally {
@@ -244,6 +244,8 @@ function CheckIn() {
           <div className="mt-6 rounded-2xl bg-white p-4">
             <img src={done.qr} alt="Your member check-in QR code" className="mx-auto aspect-square w-full max-w-[240px]" />
           </div>
+          <p className="mt-3 text-[11px] uppercase tracking-wide text-muted-foreground">Member code (for Watch Live)</p>
+          <p className="select-all break-all font-mono text-xs text-white/90">{done.token}</p>
           <p className="mt-4 text-xs text-muted-foreground">
             {isiPhone
               ? "iPhone: press and hold the code above, then tap “Save to Photos”. Show it at the door next time."
@@ -290,6 +292,15 @@ function CheckIn() {
             {church?.welcome_message ||
               "Fill in your details below to check in and receive your personal QR code."}
           </p>
+          {church?.tier === "premium" && (
+            <Link
+              to="/live/$subdomain"
+              params={{ subdomain }}
+              className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-destructive/80 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg backdrop-blur transition-transform hover:scale-105"
+            >
+              <span className="size-2 animate-pulse rounded-full bg-destructive-foreground" /> Watch Live
+            </Link>
+          )}
         </div>
 
         {/* Member / Leader tab switch */}
