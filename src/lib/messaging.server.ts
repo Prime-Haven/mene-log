@@ -5,7 +5,7 @@
  * nothing, so nothing is silently lost.
  */
 
-export type Channel = "email" | "sms";
+export type Channel = "email" | "sms" | "whatsapp";
 
 export type SendResult = {
   ok: boolean;
@@ -17,8 +17,51 @@ export function emailConfigured(): boolean {
   return !!process.env["MENELOG_RESEND_API_KEY"];
 }
 
+function twilioConfigured(): boolean {
+  return !!process.env["TWILIO_ACCOUNT_SID"] && !!process.env["TWILIO_AUTH_TOKEN"];
+}
+
 export function smsConfigured(): boolean {
-  return !!process.env["ARKESEL_API_KEY"];
+  return (twilioConfigured() && !!process.env["TWILIO_SMS_FROM"]) || !!process.env["ARKESEL_API_KEY"];
+}
+
+export function whatsappConfigured(): boolean {
+  return twilioConfigured() && !!process.env["TWILIO_WHATSAPP_FROM"];
+}
+
+async function twilioSend(to: string, from: string, body: string): Promise<SendResult> {
+  const sid = process.env["TWILIO_ACCOUNT_SID"]!;
+  const token = process.env["TWILIO_AUTH_TOKEN"]!;
+  try {
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ To: to, From: from, Body: body.slice(0, 1500) }),
+    });
+    const json = (await response.json().catch(() => ({}))) as { sid?: string; message?: string };
+    if (!response.ok) {
+      console.error(`[messaging] Twilio failed [${response.status}]: ${json.message ?? ""}`);
+      return { ok: false, error: `Message provider error ${response.status}` };
+    }
+    return { ok: true, providerId: json.sid };
+  } catch (error) {
+    console.error("[messaging] Twilio request threw", error);
+    return { ok: false, error: "Could not reach the message provider" };
+  }
+}
+
+const e164 = (v: string) => {
+  const d = v.replace(/[^\d+]/g, "");
+  return d.startsWith("+") ? d : `+${d.replace(/^0/, "233")}`;
+};
+
+export async function sendWhatsapp(options: { to: string; body: string }): Promise<SendResult> {
+  if (!whatsappConfigured()) return { ok: false, error: "WhatsApp is not configured yet" };
+  const from = process.env["TWILIO_WHATSAPP_FROM"]!.replace(/^whatsapp:/, "");
+  return twilioSend(`whatsapp:${e164(options.to)}`, `whatsapp:${from}`, options.body);
 }
 
 function escapeHtml(value: string): string {
@@ -121,6 +164,9 @@ export async function sendSms(options: {
   body: string;
   sender: string | null;
 }): Promise<SendResult> {
+  if (twilioConfigured() && process.env["TWILIO_SMS_FROM"]) {
+    return twilioSend(e164(options.to), process.env["TWILIO_SMS_FROM"], options.body);
+  }
   const key = process.env["ARKESEL_API_KEY"];
   if (!key) return { ok: false, error: "Text messaging is not configured yet" };
   const sender = (options.sender ?? process.env["ARKESEL_SENDER_ID"] ?? "MeneLog")

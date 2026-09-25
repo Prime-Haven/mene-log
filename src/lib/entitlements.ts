@@ -14,6 +14,10 @@ export type Feature =
   | "reports_basic"
   | "reports_advanced"
   | "ask_mene"
+  | "ask_mene_pro"
+  | "whatsapp"
+  | "watch_live"
+  | "leader_hierarchy"
   | "structure"
   | "groups"
   | "branches"
@@ -51,6 +55,10 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     broadcasts: false,
     automations: false,
     audit: false,
+    ask_mene_pro: false,
+    whatsapp: false,
+    watch_live: false,
+    leader_hierarchy: false,
     staff_seats: 1,
     member_limit: 150,
     daily_messages: 0,
@@ -75,6 +83,10 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     broadcasts: false,
     automations: false,
     audit: true,
+    ask_mene_pro: false,
+    whatsapp: false,
+    watch_live: false,
+    leader_hierarchy: false,
     staff_seats: 3,
     member_limit: 500,
     daily_messages: 200,
@@ -99,6 +111,10 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     broadcasts: true,
     automations: true,
     audit: true,
+    ask_mene_pro: false,
+    whatsapp: false,
+    watch_live: false,
+    leader_hierarchy: false,
     staff_seats: 10,
     member_limit: 3000,
     daily_messages: 1000,
@@ -123,6 +139,10 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     broadcasts: true,
     automations: true,
     audit: true,
+    ask_mene_pro: true,
+    whatsapp: true,
+    watch_live: true,
+    leader_hierarchy: true,
     staff_seats: 40,
     member_limit: 25000,
     daily_messages: 5000,
@@ -149,6 +169,10 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   reports_basic: "Reports",
   reports_advanced: "Advanced reports",
   ask_mene: "Ask Mene:Log AI",
+  ask_mene_pro: "Ask Mene:Log AI (full Gemini chat)",
+  whatsapp: "WhatsApp messaging",
+  watch_live: "Watch Live with online attendance",
+  leader_hierarchy: "Leader hierarchy",
   structure: "Leadership structure",
   groups: "Groups",
   branches: "Multiple branches",
@@ -169,3 +193,11 @@ export function requiredTier(feature: Feature): Tier {
   if (ENTITLEMENTS.standard[feature]) return "standard";
   return "premium";
 }
+
+export const FEATURE_KEYS = Object.keys(FEATURE_LABELS) as Feature[];
+export const LIMIT_KEYS: Limit[] = ["staff_seats", "member_limit", "daily_messages"];
+export const LIMIT_LABELS: Record<Limit, string> = {
+  staff_seats: "Staff seats",
+  member_limit: "Member limit",
+  daily_messages: "Messages per day",
+};
