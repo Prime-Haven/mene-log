@@ -31,6 +31,7 @@ import { ReviewCarousel } from "@/components/ReviewCarousel";
 import { SiteFooter } from "@/components/SiteFooter";
 import { HomepageStats } from "@/components/HomepageStats";
 import { PublicAskMene } from "@/components/PublicAskMene";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -47,11 +48,13 @@ export const Route = createFileRoute("/")({
         content: "QR check-in, membership, communication and reporting for churches in Ghana.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://menelog.site/" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:image", content: "https://menelog.site/og-image.jpg" },
       { name: "twitter:image", content: "https://menelog.site/og-image.jpg" },
       { name: "robots", content: "index, follow" },
     ],
+    links: [{ rel: "canonical", href: "https://menelog.site/" }],
   }),
   component: LandingPage,
 });
@@ -99,14 +102,13 @@ function LandingPage() {
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between rounded-2xl border border-white/20 bg-deep/80 px-4 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-6">
           <Link to="/" aria-label="Mene:Log home" className="flex items-center gap-2.5">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/30">
-              <span className="size-3.5 rounded-sm bg-primary-foreground" />
-            </span>
-            <span className="font-display text-lg font-bold tracking-tight text-deep-foreground">Mene:Log</span>
+            <MeneLogLogo variant="light" className="h-9 max-w-36" />
           </Link>
           <nav className="hidden items-center gap-8 text-xs font-semibold text-white/80 md:flex">
             <a href="#why" className="transition-colors hover:text-white">Why Mene:Log</a>
             <a href="#features" className="transition-colors hover:text-white">Features</a>
+            <Link to="/church-membership-software" className="transition-colors hover:text-white">Membership</Link>
+            <Link to="/church-check-in-software" className="transition-colors hover:text-white">Check-in</Link>
             <a href="#pricing" className="transition-colors hover:text-white">Plans</a>
             <a href="#faq" className="transition-colors hover:text-white">FAQ</a>
             <Link to="/terms" className="transition-colors hover:text-white">Terms</Link>

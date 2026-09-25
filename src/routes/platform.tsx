@@ -27,6 +27,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { staggerContainer, fadeUp } from "@/lib/animations";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/platform")({ ssr: false, head: () => ({ meta: [
   { title: "Prime Haven console — Mene:Log" },
@@ -202,7 +203,7 @@ type Act = ReturnType<typeof useMutation<{ ok: boolean; message: string } | unde
 type Rpc = ReturnType<typeof useMutation<string, Error, { fn: string; args: Record<string, unknown>; done: string }>>;
 
 function Centered({ children }: { children: React.ReactNode }) { return <div className="grid min-h-[50vh] place-items-center text-sm text-muted-foreground">{children}</div>; }
-function Brand() { return <div className="flex items-center gap-2.5 px-1"><span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground"><ShieldCheck className="size-4" /></span><div><p className="font-display text-sm font-bold">Prime Haven</p><p className="text-[10px] uppercase tracking-widest text-deep-foreground/55">Mene:Log console</p></div></div>; }
+function Brand() { return <div className="px-1"><MeneLogLogo variant="light" className="h-9 max-w-36" /><p className="mt-1 text-[10px] uppercase tracking-widest text-deep-foreground/55">Prime Haven console</p></div>; }
 function Title({ eyebrow, title, sub, children }: { eyebrow: string; title: string; sub?: string; children?: React.ReactNode }) {
   return <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-eyebrow">{eyebrow}</p><h1 className="mt-1 font-display text-2xl font-bold">{title}</h1>{sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}</div>{children}</div>;
 }

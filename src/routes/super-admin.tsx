@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { MfaChallenge, MfaEnroll } from "@/components/TwoStep";
 import { useServerFn } from "@tanstack/react-start";
 import { operatorSignIn } from "@/lib/operator.functions";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/super-admin")({
   head: () => ({ meta: [
@@ -72,7 +73,7 @@ function SuperAdminSignIn() {
   return (
     <main className="grid min-h-screen place-items-center bg-deep px-5 py-10 text-deep-foreground">
       <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-lg border border-deep-foreground/15 bg-background p-7 text-foreground shadow-2xl">
-        <div className="grid size-11 place-items-center rounded-lg bg-primary text-primary-foreground"><ShieldCheck className="size-5" /></div>
+        <MeneLogLogo className="h-11 max-w-44" />
         <p className="mt-6 text-eyebrow">Restricted entrance</p>
         <h1 className="mt-2 font-display text-3xl font-bold">Prime Haven console</h1>
         <p className="mt-2 text-sm text-muted-foreground">Manage church accounts, packages, billing health, and reviews. Church member records are never available here.</p>

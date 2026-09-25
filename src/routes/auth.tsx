@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordField } from "@/components/PasswordField";
 import { passwordIsStrong } from "@/lib/password";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ mode: z.enum(["signin", "signup"]).optional() }),
@@ -89,10 +90,7 @@ function AuthPage() {
         />
 
         <Link to="/" className="relative flex items-center gap-3 font-display text-xl font-bold">
-          <span className="grid size-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-            <QrCode className="size-5" />
-          </span>
-          Mene:Log
+          <MeneLogLogo variant="light" className="h-10 max-w-40" />
         </Link>
 
         <div className="relative max-w-lg space-y-6">
@@ -125,10 +123,7 @@ function AuthPage() {
       <div className="relative flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
           <Link to="/" className="mb-8 inline-flex items-center gap-2 font-display text-lg font-bold lg:hidden">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md">
-              <QrCode className="size-4.5" />
-            </span>
-            Mene:Log
+            <MeneLogLogo className="h-9 max-w-36" />
           </Link>
 
           <motion.div

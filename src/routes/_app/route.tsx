@@ -38,6 +38,7 @@ import { planLabel } from "@/lib/pricing";
 import { Lock, Building2 } from "lucide-react";
 import type { Feature } from "@/lib/entitlements";
 import { UpgradePanel } from "@/components/FeatureGate";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -145,7 +146,7 @@ function AppLayout() {
   const Navigation = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       <div className="flex h-[76px] items-center gap-3 border-b border-sidebar-border px-4">
-        {logoUrl ? <img src={logoUrl} alt={tenant.name} className="size-10 shrink-0 rounded-lg border border-sidebar-border object-contain" /> : <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-accent)]"><QrCode className="size-4.5" /></span>}
+        {logoUrl ? <img src={logoUrl} alt={`${tenant.name} logo`} className="size-10 shrink-0 rounded-lg border border-sidebar-border object-contain" /> : <MeneLogLogo compact className="size-10 shrink-0" />}
         {(!collapsed || mobile) && <span className="min-w-0"><span className="block truncate font-display text-sm font-bold">{tenant.name}</span><span className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{planLabel(tenant.tier)} plan</span></span>}
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4">
@@ -182,7 +183,7 @@ function AppLayout() {
           <div className="flex h-16 items-center gap-3 px-4 pt-[env(safe-area-inset-top)]">
             <Button variant="outline" size="icon" className="size-10 shrink-0" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu className="size-5" /></Button>
             <span className="flex items-center gap-2 font-display text-sm font-bold">
-              {logoUrl ? <img src={logoUrl} alt="" className="size-8 rounded-lg object-contain" /> : <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground"><QrCode className="size-3.5" /></span>}
+              {logoUrl ? <img src={logoUrl} alt={`${tenant.name} logo`} className="size-8 rounded-lg object-contain" /> : <MeneLogLogo compact className="size-8 shrink-0" />}
               <span className="truncate">{tenant.name}</span>
             </span>
             <span className="ml-auto max-w-28 truncate text-xs font-semibold text-muted-foreground">{current?.label}</span>

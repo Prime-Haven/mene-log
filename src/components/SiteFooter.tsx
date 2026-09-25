@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 /** Shared public footer for the homepage, Terms and Privacy pages. */
 export function SiteFooter() {
@@ -7,7 +8,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl border-t border-deep-foreground/15 pt-9">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-sm">
-            <span className="font-display text-xl font-bold text-deep-foreground">Mene:Log</span>
+            <MeneLogLogo variant="light" className="h-9" />
             <p className="mt-3 text-sm leading-relaxed text-deep-foreground/55">
               Attendance, membership and care records for churches — one clear record from the door to
               the week ahead.
@@ -17,6 +18,8 @@ export function SiteFooter() {
             <a href="/#features" className="hover:text-deep-foreground">Features</a>
             <a href="/#pricing" className="hover:text-deep-foreground">Plans</a>
             <a href="/#faq" className="hover:text-deep-foreground">Questions</a>
+            <Link to="/church-membership-software" className="hover:text-deep-foreground">Membership software</Link>
+            <Link to="/church-check-in-software" className="hover:text-deep-foreground">Check-in software</Link>
             <Link to="/terms" className="hover:text-deep-foreground">Terms of Use</Link>
             <Link to="/privacy" className="hover:text-deep-foreground">Privacy Policy</Link>
             <Link to="/auth" search={{ mode: "signin" }} className="hover:text-deep-foreground">Sign in</Link>
