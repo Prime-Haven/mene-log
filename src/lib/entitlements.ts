@@ -28,7 +28,8 @@ export type Feature =
   | "sms"
   | "broadcasts"
   | "automations"
-  | "audit";
+  | "audit"
+  | "import";
 
 export type Limit = "staff_seats" | "member_limit" | "daily_messages";
 
@@ -59,6 +60,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     whatsapp: false,
     watch_live: false,
     leader_hierarchy: false,
+    import: false,
     staff_seats: 1,
     member_limit: 150,
     daily_messages: 0,
@@ -87,6 +89,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     whatsapp: false,
     watch_live: false,
     leader_hierarchy: false,
+    import: true,
     staff_seats: 3,
     member_limit: 500,
     daily_messages: 200,
@@ -115,6 +118,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     whatsapp: false,
     watch_live: false,
     leader_hierarchy: false,
+    import: true,
     staff_seats: 10,
     member_limit: 3000,
     daily_messages: 1000,
@@ -143,6 +147,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     whatsapp: true,
     watch_live: true,
     leader_hierarchy: true,
+    import: true,
     staff_seats: 40,
     member_limit: 25000,
     daily_messages: 5000,
@@ -184,6 +189,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   broadcasts: "Broadcasts",
   automations: "Automatic messages",
   audit: "Activity log",
+  import: "Bulk member import",
 };
 
 /** The cheapest package that unlocks a capability. */

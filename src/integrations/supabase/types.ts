@@ -437,8 +437,10 @@ export type Database = {
           full_name: string
           id: string
           leader_type_id: string | null
+          level_id: string | null
           location: string | null
           member_id: string | null
+          parent_leader_id: string | null
           phone: string | null
           photo_path: string | null
           status: Database["public"]["Enums"]["account_status"]
@@ -452,8 +454,10 @@ export type Database = {
           full_name: string
           id?: string
           leader_type_id?: string | null
+          level_id?: string | null
           location?: string | null
           member_id?: string | null
+          parent_leader_id?: string | null
           phone?: string | null
           photo_path?: string | null
           status?: Database["public"]["Enums"]["account_status"]
@@ -467,8 +471,10 @@ export type Database = {
           full_name?: string
           id?: string
           leader_type_id?: string | null
+          level_id?: string | null
           location?: string | null
           member_id?: string | null
+          parent_leader_id?: string | null
           phone?: string | null
           photo_path?: string | null
           status?: Database["public"]["Enums"]["account_status"]
@@ -484,10 +490,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leader_profiles_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "structure_levels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leader_profiles_member_id_fkey"
             columns: ["member_id"]
             isOneToOne: false
             referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leader_profiles_parent_leader_id_fkey"
+            columns: ["parent_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leader_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -615,6 +635,7 @@ export type Database = {
           residential_area: string | null
           status: Database["public"]["Enums"]["member_status"]
           tenant_id: string
+          whatsapp_opt_out: boolean
         }
         Insert: {
           branch_id?: string | null
@@ -638,6 +659,7 @@ export type Database = {
           residential_area?: string | null
           status?: Database["public"]["Enums"]["member_status"]
           tenant_id: string
+          whatsapp_opt_out?: boolean
         }
         Update: {
           branch_id?: string | null
@@ -661,6 +683,7 @@ export type Database = {
           residential_area?: string | null
           status?: Database["public"]["Enums"]["member_status"]
           tenant_id?: string
+          whatsapp_opt_out?: boolean
         }
         Relationships: [
           {
@@ -821,6 +844,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plan_config: {
+        Row: {
+          config: Json
+          tier: Database["public"]["Enums"]["tenant_tier"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          tier: Database["public"]["Enums"]["tenant_tier"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          tier?: Database["public"]["Enums"]["tenant_tier"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       platform_admins: {
         Row: {
@@ -1031,7 +1075,9 @@ export type Database = {
           id: string
           is_open: boolean
           name: string
+          online_min_minutes: number
           service_date: string
+          stream_url: string | null
           tenant_id: string
         }
         Insert: {
@@ -1040,7 +1086,9 @@ export type Database = {
           id?: string
           is_open?: boolean
           name: string
+          online_min_minutes?: number
           service_date: string
+          stream_url?: string | null
           tenant_id: string
         }
         Update: {
@@ -1049,7 +1097,9 @@ export type Database = {
           id?: string
           is_open?: boolean
           name?: string
+          online_min_minutes?: number
           service_date?: string
+          stream_url?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -1308,6 +1358,7 @@ export type Database = {
           logo_path: string | null
           name: string
           package_selected: string | null
+          parent_tenant_id: string | null
           payment_reference: string | null
           quiet_hour_end: number
           quiet_hour_start: number
@@ -1338,6 +1389,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           package_selected?: string | null
+          parent_tenant_id?: string | null
           payment_reference?: string | null
           quiet_hour_end?: number
           quiet_hour_start?: number
@@ -1368,6 +1420,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           package_selected?: string | null
+          parent_tenant_id?: string | null
           payment_reference?: string | null
           quiet_hour_end?: number
           quiet_hour_start?: number
@@ -1381,7 +1434,67 @@ export type Database = {
           trial_ends_at?: string | null
           welcome_message?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_parent_tenant_id_fkey"
+            columns: ["parent_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_sessions: {
+        Row: {
+          id: string
+          last_ping: string
+          member_id: string
+          seconds: number
+          service_id: string
+          started_at: string
+          tenant_id: string
+        }
+        Insert: {
+          id?: string
+          last_ping?: string
+          member_id: string
+          seconds?: number
+          service_id: string
+          started_at?: string
+          tenant_id: string
+        }
+        Update: {
+          id?: string
+          last_ping?: string
+          member_id?: string
+          seconds?: number
+          service_id?: string
+          started_at?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_sessions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watch_sessions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watch_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1584,6 +1697,14 @@ export type Database = {
           status: string
         }[]
       }
+      platform_set_plan_config: {
+        Args: {
+          p_key: string
+          p_tier: Database["public"]["Enums"]["tenant_tier"]
+          p_value: Json
+        }
+        Returns: undefined
+      }
       platform_set_review_status: {
         Args: { p_review: string; p_status: string }
         Returns: undefined
@@ -1718,6 +1839,7 @@ export type Database = {
         Args: { p_service: string; p_token: string }
         Returns: Json
       }
+      revert_expired_trials: { Args: never; Returns: number }
       run_daily_automations: { Args: never; Returns: Json }
       self_checkin: {
         Args: {
@@ -1859,7 +1981,12 @@ export type Database = {
         | "leader"
         | "usher"
         | "platform_admin"
-      attendance_method: "scan" | "self_checkin" | "manual" | "corrected"
+      attendance_method:
+        | "scan"
+        | "self_checkin"
+        | "manual"
+        | "corrected"
+        | "online"
       gender_type: "male" | "female" | "other"
       member_status: "first_timer" | "active" | "archived" | "anonymised"
       pay_method: "card" | "momo"
@@ -2001,7 +2128,13 @@ export const Constants = {
         "usher",
         "platform_admin",
       ],
-      attendance_method: ["scan", "self_checkin", "manual", "corrected"],
+      attendance_method: [
+        "scan",
+        "self_checkin",
+        "manual",
+        "corrected",
+        "online",
+      ],
       gender_type: ["male", "female", "other"],
       member_status: ["first_timer", "active", "archived", "anonymised"],
       pay_method: ["card", "momo"],

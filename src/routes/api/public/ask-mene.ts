@@ -30,13 +30,29 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const { data: claims } = await client.auth.getClaims(token);
           if (!claims?.claims?.sub) return Response.json({ error: "Your session has expired." }, { status: 401 });
 
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
           const body = (await request.json()) as { tenantId?: string; messages?: UIMessage[] };
-          const tenantId = body.tenantId?.trim();
-          const messages = Array.isArray(body.messages) ? body.messages.slice(-16) : [];
+          const tenantId = body.tenantId?.trim() ?? "";
+
+          // Premium churches get the fuller assistant: longer memory, longer
+          // questions and deeper answers. The switch lives in plan_config.
+          const { data: tenantRow } = tenantId
+            ? await supabaseAdmin.from("tenants").select("tier").eq("id", tenantId).single()
+            : { data: null };
+          const { data: planRows } = await supabaseAdmin.from("plan_config").select("tier, config");
+          const planConfig = Object.fromEntries(
+            (planRows ?? []).map((r) => [r.tier, r.config as Record<string, boolean | number>]),
+          );
+          const tier = (tenantRow?.tier ?? "free") as string;
+          const pro = planConfig[tier]?.["ask_mene_pro"] === true;
+
+          const messages = Array.isArray(body.messages) ? body.messages.slice(pro ? -40 : -16) : [];
           const latest = [...messages].reverse().find((message) => message.role === "user");
           const question = latest ? textOf(latest) : "";
-          if (!tenantId || !question || question.length > 800) {
-            return Response.json({ error: "Ask one question of up to 800 characters." }, { status: 400 });
+          const maxQuestion = pro ? 2000 : 800;
+          if (!tenantId || !question || question.length > maxQuestion) {
+            return Response.json({ error: `Ask one question of up to ${maxQuestion} characters.` }, { status: 400 });
           }
 
           const { data: allowed, error: limitError } = await client.rpc("ask_mene_allow_request", { p_tenant: tenantId });
@@ -49,7 +65,6 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const apiKey = process.env["LOVABLE_API_KEY"];
           if (!apiKey) return Response.json({ error: "Ask Mene is not configured yet." }, { status: 503 });
 
-          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data: conversation, error: conversationError } = await supabaseAdmin
             .from("ask_mene_conversations")
             .upsert({ tenant_id: tenantId, updated_by: claims.claims.sub }, { onConflict: "tenant_id" })
@@ -66,11 +81,14 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           });
 
           const gateway = createLovableAiGatewayProvider(apiKey);
+          const system = pro
+            ? `You are Ask Mene:Log Pro, a thorough church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. Give a fuller analysis: start with a one-line headline, then structured sections with exact figures, week-on-week trends, and 2-3 concrete recommended actions. If the snapshot cannot answer, say so plainly.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`
+            : `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`;
           const result = streamText({
             model: gateway(GEMINI_MODEL),
-            system: `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`,
+            system,
             messages: await convertToModelMessages(messages),
-            maxOutputTokens: 700,
+            maxOutputTokens: pro ? 1600 : 700,
           });
 
           void supabaseAdmin.from("audit_events").insert({
