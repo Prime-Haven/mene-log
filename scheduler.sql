@@ -12,7 +12,7 @@ select cron.schedule(
   '0 6 * * *',
   $$
   select net.http_post(
-    url := 'https://project--fa7ecf51-3d30-4b07-a318-3138a21a6cf2.lovable.app/api/public/cron/messaging',
+    url := 'https://www.menelog.site/api/public/cron/messaging',
     headers := '{"Content-Type":"application/json","x-menelog-cron-secret":"PASTE_YOUR_CRON_SECRET"}'::jsonb,
     body := '{}'::jsonb
   );
