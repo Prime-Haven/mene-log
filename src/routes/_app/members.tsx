@@ -51,7 +51,7 @@ type MemberRow = {
 };
 
 function Members() {
-  const { tenant, membership, isAdmin, canManageMembers } = useTenant();
+  const { tenant, membership, isAdmin, canManageMembers, can } = useTenant();
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -301,20 +301,30 @@ function Members() {
           )}
           {canManageMembers && (
             <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) importRows.mutate(file);
-                  e.target.value = "";
-                }}
-              />
-              <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importRows.isPending}>
-                <Upload className="size-4" /> Import CSV
-              </Button>
+              {can("import") ? (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) importRows.mutate(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importRows.isPending}>
+                    <Upload className="size-4" /> Import CSV
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" asChild>
+                  <Link to="/billing">
+                    <Lock className="size-4" /> Import CSV — upgrade
+                  </Link>
+                </Button>
+              )}
               <Button onClick={() => setAddOpen(true)}>
                 <UserPlus className="size-4" /> Add member
               </Button>
