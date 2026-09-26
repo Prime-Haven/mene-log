@@ -203,7 +203,7 @@ type Act = ReturnType<typeof useMutation<{ ok: boolean; message: string } | unde
 type Rpc = ReturnType<typeof useMutation<string, Error, { fn: string; args: Record<string, unknown>; done: string }>>;
 
 function Centered({ children }: { children: React.ReactNode }) { return <div className="grid min-h-[50vh] place-items-center text-sm text-muted-foreground">{children}</div>; }
-function Brand() { return <div className="px-1"><MeneLogLogo variant="light" className="h-9 max-w-36" /><p className="mt-1 text-[10px] uppercase tracking-widest text-deep-foreground/55">Prime Haven console</p></div>; }
+function Brand() { return <div className="px-1"><MeneLogLogo variant="light" className="h-10 max-w-48" /><p className="mt-1 text-[10px] uppercase tracking-widest text-deep-foreground/55">Prime Haven console</p></div>; }
 function Title({ eyebrow, title, sub, children }: { eyebrow: string; title: string; sub?: string; children?: React.ReactNode }) {
   return <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-eyebrow">{eyebrow}</p><h1 className="mt-1 font-display text-2xl font-bold">{title}</h1>{sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}</div>{children}</div>;
 }

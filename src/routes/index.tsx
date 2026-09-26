@@ -102,7 +102,7 @@ function LandingPage() {
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between rounded-2xl border border-white/20 bg-deep/80 px-4 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-6">
           <Link to="/" aria-label="Mene:Log home" className="flex items-center gap-2.5">
-            <MeneLogLogo variant="light" className="h-9 max-w-36" />
+            <MeneLogLogo variant="light" className="h-10 max-w-48" />
           </Link>
           <nav className="hidden items-center gap-8 text-xs font-semibold text-white/80 md:flex">
             <a href="#why" className="transition-colors hover:text-white">Why Mene:Log</a>

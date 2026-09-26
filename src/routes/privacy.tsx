@@ -108,7 +108,7 @@ function PrivacyPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 px-5 py-4 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <Link to="/" aria-label="Mene:Log home"><MeneLogLogo className="h-8 max-w-32" /></Link>
+          <Link to="/" aria-label="Mene:Log home"><MeneLogLogo className="h-10 max-w-48" /></Link>
           <div className="flex items-center gap-4 text-xs font-semibold">
             <Link to="/terms" className="text-muted-foreground hover:text-foreground">Terms of Use</Link>
             <Link to="/auth" className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground">Sign in</Link>
