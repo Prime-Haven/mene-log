@@ -40,12 +40,12 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Mene:Log gives churches QR check-in, a complete membership registry, leadership structure and clear attendance reports.",
+          "Mene:Log is church management software for secure membership records, QR check-in, attendance tracking, member care, branches, leadership and reports.",
       },
       { property: "og:title", content: "Mene:Log — church attendance and membership, made simple" },
       {
         property: "og:description",
-        content: "QR check-in, membership, communication and reporting for churches in Ghana.",
+        content: "Secure church membership, QR check-in, attendance, member care, branch management, leadership and reporting in one platform.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://menelog.site/" },

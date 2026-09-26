@@ -1,14 +1,19 @@
 {
+  "id": "/",
   "name": "Mene:Log Church Management",
   "short_name": "Mene:Log",
-  "description": "Church membership, attendance, check-in, member care and reporting software.",
+  "description": "Secure church management for membership, QR check-in, attendance, member care, branches, leadership and reports.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#fafbfc",
   "theme_color": "#3b82f6",
+  "categories": ["business", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
