@@ -264,7 +264,7 @@ function Onboarding() {
         <p className="text-eyebrow">
           Step {step + 1} of {STEPS.length} · {STEPS[step]}
         </p>
-        <Link to="/" aria-label="Mene:Log home"><MeneLogLogo variant="light" className="h-10 max-w-40" /></Link>
+        <Link to="/" aria-label="Mene:Log home"><MeneLogLogo variant="light" className="h-12 max-w-56" /></Link>
       </div>
 
         <h1 className="mt-5 max-w-2xl font-display text-4xl font-bold text-deep-foreground sm:text-5xl">Set up your church on Mene:Log</h1>

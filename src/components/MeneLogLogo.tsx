@@ -1,5 +1,5 @@
-import darkLogo from "@/assets/mene-log-logo-dark.png.asset.json";
-import lightLogo from "@/assets/mene-log-logo-light.png.asset.json";
+import darkLogo from "@/assets/mene-log-logo-dark-cropped.png.asset.json";
+import lightLogo from "@/assets/mene-log-logo-light-cropped.png.asset.json";
 import symbol from "@/assets/mene-log-symbol-dark.png.asset.json";
 
 type Props = {

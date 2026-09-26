@@ -8,7 +8,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl border-t border-deep-foreground/15 pt-9">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-sm">
-            <MeneLogLogo variant="light" className="h-9" />
+            <MeneLogLogo variant="light" className="h-10 max-w-48" />
             <p className="mt-3 text-sm leading-relaxed text-deep-foreground/55">
               Attendance, membership and care records for churches — one clear record from the door to
               the week ahead.

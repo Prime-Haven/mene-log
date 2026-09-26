@@ -17,7 +17,7 @@ export function ProductPage({ eyebrow, title, intro, highlights, workflow }: Pro
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 px-5 py-4 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-5">
-          <Link to="/" aria-label="Mene:Log home"><MeneLogLogo className="h-9 max-w-36" /></Link>
+          <Link to="/" aria-label="Mene:Log home"><MeneLogLogo className="h-10 max-w-48" /></Link>
           <nav className="hidden items-center gap-6 text-sm font-semibold md:flex">
             <Link to="/church-membership-software" className="text-muted-foreground hover:text-foreground">Membership</Link>
             <Link to="/church-check-in-software" className="text-muted-foreground hover:text-foreground">Check-in</Link>

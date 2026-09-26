@@ -73,7 +73,7 @@ function SuperAdminSignIn() {
   return (
     <main className="grid min-h-screen place-items-center bg-deep px-5 py-10 text-deep-foreground">
       <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-lg border border-deep-foreground/15 bg-background p-7 text-foreground shadow-2xl">
-        <MeneLogLogo className="h-11 max-w-44" />
+        <MeneLogLogo className="h-12 max-w-56" />
         <p className="mt-6 text-eyebrow">Restricted entrance</p>
         <h1 className="mt-2 font-display text-3xl font-bold">Prime Haven console</h1>
         <p className="mt-2 text-sm text-muted-foreground">Manage church accounts, packages, billing health, and reviews. Church member records are never available here.</p>

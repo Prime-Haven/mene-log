@@ -90,7 +90,7 @@ function AuthPage() {
         />
 
         <Link to="/" className="relative flex items-center gap-3 font-display text-xl font-bold">
-          <MeneLogLogo variant="light" className="h-10 max-w-40" />
+          <MeneLogLogo variant="light" className="h-12 max-w-56" />
         </Link>
 
         <div className="relative max-w-lg space-y-6">
@@ -123,7 +123,7 @@ function AuthPage() {
       <div className="relative flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
           <Link to="/" className="mb-8 inline-flex items-center gap-2 font-display text-lg font-bold lg:hidden">
-            <MeneLogLogo className="h-9 max-w-36" />
+            <MeneLogLogo className="h-10 max-w-48" />
           </Link>
 
           <motion.div
