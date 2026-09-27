@@ -25,7 +25,7 @@ export function PublicAskMene() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, busy]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
