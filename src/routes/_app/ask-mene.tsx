@@ -14,10 +14,18 @@ import { PromptInput, PromptInputBody, PromptInputFooter, PromptInputSubmit, Pro
 import { Reasoning, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { PageTransition, StaggerItem, StaggerList } from "@/components/Animated";
+import { SafeRender } from "@/components/SafeRender";
 
 export const Route = createFileRoute("/_app/ask-mene")({
   head: () => ({ meta: [{ title: "Ask Mene:Log — Mene:Log" }, { name: "robots", content: "noindex" }] }),
   component: AskMene,
+  errorComponent: ({ reset }) => (
+    <div className="surface p-8 text-center">
+      <h1 className="font-display text-xl font-bold">Ask Mene:Log hit a snag</h1>
+      <p className="mt-2 text-sm text-muted-foreground">Your conversation is saved. Reload to continue.</p>
+      <Button className="mt-4" onClick={() => { reset(); window.location.reload(); }}>Reload Ask Mene:Log</Button>
+    </div>
+  ),
 });
 
 const starters = [
@@ -103,7 +111,7 @@ function AskMene() {
               <ConversationEmptyState icon={<BrainCircuit className="size-8" />} title="Ask a question grounded in your records" description="Mene:Log sees aggregate church statistics, never individual member details.">
                 <div className="space-y-5"><span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary"><Sparkles className="size-5" /></span><StaggerList className="grid gap-2 sm:grid-cols-2">{starters.map((starter) => <StaggerItem key={starter}><Button variant="outline" className="h-full w-full justify-start whitespace-normal p-3 text-left text-xs" onClick={() => ask(starter)}>{starter}</Button></StaggerItem>)}</StaggerList></div>
               </ConversationEmptyState>
-            ) : chat.messages.map((message) => <Message key={message.id} from={message.role}><MessageContent>{message.role === "assistant" ? <MessageResponse isAnimating={busy && message.id === chat.messages.at(-1)?.id}>{textOf(message)}</MessageResponse> : textOf(message)}</MessageContent></Message>)}
+            ) : chat.messages.map((message) => <Message key={message.id} from={message.role}><MessageContent>{message.role === "assistant" ? <SafeRender resetKey={busy ? "live" : textOf(message).length} fallback={<p className="whitespace-pre-wrap text-sm">{textOf(message)}</p>}><MessageResponse isAnimating={busy && message.id === chat.messages.at(-1)?.id}>{textOf(message)}</MessageResponse></SafeRender> : textOf(message)}</MessageContent></Message>)}
             {chat.status === "submitted" && <Reasoning isStreaming><ReasoningTrigger getThinkingMessage={() => <Shimmer>Reading your church trends…</Shimmer>} /></Reasoning>}
           </ConversationContent>
           <ConversationScrollButton />
