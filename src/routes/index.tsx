@@ -36,13 +36,13 @@ import { MeneLogLogo } from "@/components/MeneLogLogo";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Mene:Log — church attendance and membership, made simple" },
+      { title: "Mene:Log — Church Attendance and membership, made simple" },
       {
         name: "description",
         content:
           "Mene:Log is church management software for secure membership records, QR check-in, attendance tracking, member care, branches, leadership and reports.",
       },
-      { property: "og:title", content: "Mene:Log — church attendance and membership, made simple" },
+      { property: "og:title", content: "Mene:Log — Church Attendance and membership, made simple" },
       {
         property: "og:description",
         content: "Secure church membership, QR check-in, attendance, member care, branch management, leadership and reporting in one platform.",
@@ -71,7 +71,7 @@ const features = [
 const tiers = [
   { id: "free" as AnyTier, name: "Free", blurb: "Free forever for any church getting started.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel export"], missing: ["Excel import", "Reports", "Email", "Ask Mene:Log AI", "Leadership structure", "Multiple branches"] },
   { id: "basic" as AnyTier, name: "Standard", blurb: "For a single-site church ready to move beyond paper.", features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel import and export", "Core reports and email"], missing: ["Leadership structure", "Multiple branches"] },
-  { id: "standard" as AnyTier, name: "Pro", blurb: "For churches led through ministries, units or departments.", features: ["Everything in Standard", "Leadership and groups", "Leader access", "Email broadcasts", "Deeper insights"], missing: ["Multiple branches", "Text messaging"] , featured: true},
+  { id: "standard" as AnyTier, name: "Pro", blurb: "For churches led through ministries, units or departments.", features: ["Everything in Standard", "Leadership and groups", "Leader access", "Email broadcasts", "Deeper insights"], missing: ["Multiple branches", "Text messaging"], featured: true },
   { id: "premium" as AnyTier, name: "Premium", blurb: "For multi-branch and cell-structured ministries.", features: ["Everything in Pro", "Multiple branches", "Text messaging", "Automated follow-up", "Advanced reports and audit"], missing: [] },
 ];
 
@@ -181,18 +181,18 @@ function LandingPage() {
             playsInline
             aria-hidden="true"
           />
-           <div className="absolute inset-0 bg-deep/65" />
-           <div aria-hidden className="motion-blur motion-blur-large" />
+          <div className="absolute inset-0 bg-deep/65" />
+          <div aria-hidden className="motion-blur motion-blur-large" />
           <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--deep)_0%,transparent_55%)] opacity-70" />
-           <motion.div style={{ y: contentY, opacity: contentOpacity }} className="relative mx-auto flex h-full max-w-7xl items-end justify-center px-5 pb-24 text-center sm:pb-20">
-             <div className="max-w-3xl text-deep-foreground">
+          <motion.div style={{ y: contentY, opacity: contentOpacity }} className="relative mx-auto flex h-full max-w-7xl items-end justify-center px-5 pb-24 text-center sm:pb-20">
+            <div className="max-w-3xl text-deep-foreground">
               <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/70">Made for churches. Built for people.</p>
-              <h1 className="sr-only">Mene:Log — church attendance and membership, made simple</h1>
+              <h1 className="sr-only">Mene:Log — Church Attendance and membership, made simple</h1>
               <VerseTyper />
-               <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-deep-foreground/80 sm:text-lg">
-                 Mene:Log brings attendance, membership, leadership and communication together so your church can care with clarity.
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-deep-foreground/80 sm:text-lg">
+                Mene:Log brings attendance, membership, leadership and communication together so your church can care with clarity.
               </p>
-               <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-12 bg-primary px-6 text-primary-foreground hover:bg-primary/90">
                   <Link to="/onboarding">Create your church <ArrowRight /></Link>
                 </Button>
@@ -208,7 +208,7 @@ function LandingPage() {
         </div>
       </section>
 
-       <main className="relative z-10 -mt-[28svh]">
+      <main className="relative z-10 -mt-[28svh]">
         <section id="why" className="px-3 sm:px-5">
           <div className="mx-auto max-w-7xl rounded-t-lg border-x border-t border-deep-foreground/20 bg-deep/80 px-5 py-14 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-10 lg:px-14">
             <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
@@ -276,8 +276,8 @@ function LandingPage() {
                   {tier.id === "free" ? (
                     <div className="mt-4"><span className="font-display text-5xl font-bold text-foreground">Free</span><p className="mt-1 text-xs text-muted-foreground">Free forever · no card needed</p></div>
                   ) : (<>
-                  <div className="mt-4 flex flex-wrap items-end"><span className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{formatUsd(interval === "yearly" ? yearlyUsd(tier.id as PlanTier) : MONTHLY_USD[tier.id as PlanTier], currency)}</span><span className={`mb-1.5 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
-                  {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}><b>Save {Math.round(YEARLY_DISCOUNT[tier.id as PlanTier] * 100)}%</b> · {formatUsd(yearlyPerMonthUsd(tier.id as PlanTier), currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id as PlanTier], currency)}/month</p>}
+                    <div className="mt-4 flex flex-wrap items-end"><span className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}>{formatUsd(interval === "yearly" ? yearlyUsd(tier.id as PlanTier) : MONTHLY_USD[tier.id as PlanTier], currency)}</span><span className={`mb-1.5 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}>{interval === "yearly" ? "/year" : "/month"}</span></div>
+                    {interval === "yearly" && <p className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}><b>Save {Math.round(YEARLY_DISCOUNT[tier.id as PlanTier] * 100)}%</b> · {formatUsd(yearlyPerMonthUsd(tier.id as PlanTier), currency)}/month billed yearly · was {formatUsd(MONTHLY_USD[tier.id as PlanTier], currency)}/month</p>}
                   </>)}
                   <p className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{tier.blurb}</p>
                   <div className={`my-7 h-px ${tier.featured ? "bg-primary-foreground/20" : "bg-border"}`} />
@@ -286,7 +286,7 @@ function LandingPage() {
                     {tier.missing.map((feature) => <li key={feature} className={`flex gap-2.5 ${tier.featured ? "text-primary-foreground/45" : "text-muted-foreground"}`}><X className="mt-0.5 size-4 shrink-0" />{feature}</li>)}
                   </ul>
                   <Button asChild variant={tier.featured ? "secondary" : "outline"} className="mt-8 h-11">
-                     <Link to="/onboarding">Choose {tier.name} <ArrowRight /></Link>
+                    <Link to="/onboarding">Choose {tier.name} <ArrowRight /></Link>
                   </Button>
                 </article>
               ))}
@@ -323,7 +323,7 @@ function LandingPage() {
           <div className="mx-auto max-w-4xl">
             <h2 className="font-display text-4xl font-bold text-primary-foreground sm:text-6xl">Ready before next Sunday.</h2>
             <p className="mx-auto mt-5 max-w-xl text-primary-foreground/70">Create your church, add a service and welcome your first member in minutes.</p>
-             <Button asChild size="lg" className="mt-8 h-12 bg-deep text-deep-foreground hover:bg-deep/90"><Link to="/onboarding">Start with Mene:Log <ArrowRight /></Link></Button>
+            <Button asChild size="lg" className="mt-8 h-12 bg-deep text-deep-foreground hover:bg-deep/90"><Link to="/onboarding">Start with Mene:Log <ArrowRight /></Link></Button>
           </div>
         </section>
       </main>

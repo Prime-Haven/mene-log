@@ -128,7 +128,7 @@ function TermsPage() {
           Terms of Use
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-           Comprehensive operational, subscription, data stewardship, and acceptable use terms governing churches and leadership accounts on Mene:Log.
+          Comprehensive operational, subscription, data stewardship, and acceptable use terms governing churches and leadership accounts on Mene:Log.
         </p>
 
         <div className="mt-12 space-y-10">
