@@ -1263,6 +1263,78 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_backup_jobs: {
+        Row: {
+          byte_size: number
+          checksum: string | null
+          completed_at: string | null
+          created_at: string
+          error_summary: string | null
+          expires_at: string | null
+          id: string
+          kind: string
+          record_counts: Json
+          requested_by: string
+          schema_version: number
+          source_backup_id: string | null
+          started_at: string | null
+          status: string
+          storage_path: string | null
+          tenant_id: string
+        }
+        Insert: {
+          byte_size?: number
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_summary?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          record_counts?: Json
+          requested_by: string
+          schema_version?: number
+          source_backup_id?: string | null
+          started_at?: string | null
+          status?: string
+          storage_path?: string | null
+          tenant_id: string
+        }
+        Update: {
+          byte_size?: number
+          checksum?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_summary?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          record_counts?: Json
+          requested_by?: string
+          schema_version?: number
+          source_backup_id?: string | null
+          started_at?: string | null
+          status?: string
+          storage_path?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_backup_jobs_source_backup_id_fkey"
+            columns: ["source_backup_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_backup_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_backup_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_leader_access: {
         Row: {
           code: string
@@ -1344,6 +1416,8 @@ export type Database = {
         Row: {
           absence_threshold: number
           admin_notes: string | null
+          approval_reason: string | null
+          approval_risk_flags: Json
           approval_status: string
           approved_at: string | null
           background_path: string | null
@@ -1351,6 +1425,7 @@ export type Database = {
           brand_primary: string
           contact_email: string | null
           contact_phone: string | null
+          correction_requested_at: string | null
           created_at: string
           extra_member_slots: number
           group_vocabulary: string
@@ -1375,6 +1450,8 @@ export type Database = {
         Insert: {
           absence_threshold?: number
           admin_notes?: string | null
+          approval_reason?: string | null
+          approval_risk_flags?: Json
           approval_status?: string
           approved_at?: string | null
           background_path?: string | null
@@ -1382,6 +1459,7 @@ export type Database = {
           brand_primary?: string
           contact_email?: string | null
           contact_phone?: string | null
+          correction_requested_at?: string | null
           created_at?: string
           extra_member_slots?: number
           group_vocabulary?: string
@@ -1406,6 +1484,8 @@ export type Database = {
         Update: {
           absence_threshold?: number
           admin_notes?: string | null
+          approval_reason?: string | null
+          approval_risk_flags?: Json
           approval_status?: string
           approved_at?: string | null
           background_path?: string | null
@@ -1413,6 +1493,7 @@ export type Database = {
           brand_primary?: string
           contact_email?: string | null
           contact_phone?: string | null
+          correction_requested_at?: string | null
           created_at?: string
           extra_member_slots?: number
           group_vocabulary?: string
@@ -1675,6 +1756,10 @@ export type Database = {
         }
         Returns: string
       }
+      platform_flag_church: {
+        Args: { p_reason: string; p_tenant: string }
+        Returns: undefined
+      }
       platform_grant_space: {
         Args: { p_slots: number; p_tenant: string }
         Returns: undefined
@@ -1683,6 +1768,10 @@ export type Database = {
       platform_reject_church: {
         Args: { p_reason?: string; p_tenant: string }
         Returns: boolean
+      }
+      platform_request_correction: {
+        Args: { p_reason: string; p_tenant: string }
+        Returns: undefined
       }
       platform_reviews: {
         Args: never
