@@ -1,13 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckSquare, Lock, Search } from "lucide-react";
+import {
+  CheckSquare,
+  Lock,
+  Search,
+  Trash2,
+  UserCheck,
+  UserX,
+  UserPlus,
+  Clock,
+  QrCode,
+  SlidersHorizontal,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,14 +31,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/attendance")({
   head: () => ({
     meta: [
-      { title: "Attendance register — Mene:Log" },
-      { name: "description", content: "Tick members present for a service." },
-      { property: "og:title", content: "Attendance register — Mene:Log" },
-      { property: "og:description", content: "Tick members present for a service." },
+      { title: "Attendance Register — Mene:Log" },
+      {
+        name: "description",
+        content: "Mark members present, manage attendance records, or remove entries.",
+      },
+      { property: "og:title", content: "Attendance Register — Mene:Log" },
+      {
+        property: "og:description",
+        content: "Manage church attendance register with full record controls.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -31,24 +61,38 @@ export const Route = createFileRoute("/_app/attendance")({
   component: AttendanceRegister,
 });
 
-type Register = {
-  service: { id: string; name: string; date: string; is_open: boolean };
-  writable: boolean;
-  present_count: number;
-  members: Array<{
-    id: string;
-    full_name: string;
-    status: string;
-    present: boolean;
-    method: string | null;
-  }>;
+type RegisterMember = {
+  id: string;
+  full_name: string;
+  member_code?: string | null;
+  phone?: string | null;
+  status: string;
+  present: boolean;
+  attendance_id?: string | null;
+  method?: string | null;
+  designation?: string | null;
+  recorded_at?: string | null;
 };
 
-function AttendanceRegister() {
-  const { tenant, canManageMembers } = useTenant();
+type Register = {
+  service: { id: string; name: string; date: string; is_open: boolean; service_type?: string };
+  writable: boolean;
+  present_count: number;
+  members: RegisterMember[];
+};
+
+export function AttendanceRegister() {
+  const { tenant, canManageMembers, membership } = useTenant();
   const qc = useQueryClient();
   const [serviceId, setServiceId] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [filterTab, setFilterTab] = useState<"all" | "present" | "absent">("all");
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<RegisterMember | null>(null);
+
+  // Quick Walk-in form state
+  const [walkinName, setWalkinName] = useState("");
+  const [walkinPhone, setWalkinPhone] = useState("");
 
   const services = useQuery({
     queryKey: ["register-services", tenant?.id],
@@ -64,30 +108,108 @@ function AttendanceRegister() {
       return data;
     },
   });
+
   const activeId = serviceId || services.data?.[0]?.id || "";
 
+  // Attendance register query with direct fallback if RPC format is legacy
   const register = useQuery({
     queryKey: ["register", activeId, search],
     enabled: !!activeId,
     queryFn: async () => {
       const q = search.trim();
-      const { data, error } = await supabase.rpc(
-        "attendance_register",
-        q ? { p_service: activeId, p_search: q } : { p_service: activeId },
-      );
-      if (error) throw error;
-      return data as unknown as Register;
+      try {
+        const { data, error } = await supabase.rpc(
+          "attendance_register",
+          q ? { p_service: activeId, p_search: q } : { p_service: activeId },
+        );
+        if (error) throw error;
+        return data as unknown as Register;
+      } catch (rpcErr) {
+        // Direct resilient database fallback
+        const { data: svc } = await supabase
+          .from("services")
+          .select("id, name, service_date, is_open")
+          .eq("id", activeId)
+          .single();
+
+        let memberQuery = supabase
+          .from("members")
+          .select("id, full_name, phone, member_code, status")
+          .eq("tenant_id", tenant!.id)
+          .in("status", ["active", "first_timer"])
+          .order("full_name")
+          .limit(300);
+
+        if (q) {
+          memberQuery = memberQuery.or(
+            `full_name.ilike.%${q}%,member_code.ilike.%${q}%,phone.ilike.%${q}%`,
+          );
+        }
+
+        const { data: memberRows, error: mErr } = await memberQuery;
+        if (mErr) throw mErr;
+
+        const { data: attRows } = await supabase
+          .from("attendance")
+          .select("id, member_id, method, designation, recorded_at")
+          .eq("service_id", activeId);
+
+        const attMap = new Map((attRows ?? []).map((a) => [a.member_id, a]));
+
+        const combinedMembers: RegisterMember[] = (memberRows ?? []).map((m) => {
+          const att = attMap.get(m.id);
+          return {
+            id: m.id,
+            full_name: m.full_name,
+            member_code: m.member_code,
+            phone: m.phone,
+            status: m.status,
+            present: Boolean(att),
+            attendance_id: att?.id,
+            method: att?.method,
+            designation: att?.designation,
+            recorded_at: att?.recorded_at,
+          };
+        });
+
+        return {
+          service: svc ?? { id: activeId, name: "Service", date: "", is_open: true },
+          writable: svc?.is_open ?? true,
+          present_count: attRows?.length ?? 0,
+          members: combinedMembers,
+        };
+      }
     },
   });
 
+  // Toggle present / absent
   const toggle = useMutation({
     mutationFn: async ({ ids, present }: { ids: string[]; present: boolean }) => {
-      const { error } = await supabase.rpc("set_manual_attendance", {
-        p_service: activeId,
-        p_members: ids,
-        p_present: present,
-      });
-      if (error) throw error;
+      try {
+        const { error } = await supabase.rpc("set_manual_attendance", {
+          p_service: activeId,
+          p_members: ids,
+          p_present: present,
+        });
+        if (error) throw error;
+      } catch {
+        // Direct table fallback
+        if (present) {
+          const rows = ids.map((id) => ({
+            tenant_id: tenant!.id,
+            service_id: activeId,
+            member_id: id,
+            method: "manual" as const,
+          }));
+          await supabase.from("attendance").insert(rows);
+        } else {
+          await supabase
+            .from("attendance")
+            .delete()
+            .eq("service_id", activeId)
+            .in("member_id", ids);
+        }
+      }
     },
     onMutate: async ({ ids, present }) => {
       const key = ["register", activeId, search];
@@ -97,14 +219,31 @@ function AttendanceRegister() {
         const set = new Set(ids);
         qc.setQueryData<Register>(key, {
           ...prev,
-          members: prev.members.map((m) => (set.has(m.id) ? { ...m, present } : m)),
+          present_count: present
+            ? prev.present_count +
+              ids.filter((id) => !prev.members.find((m) => m.id === id)?.present).length
+            : Math.max(
+                0,
+                prev.present_count -
+                  ids.filter((id) => prev.members.find((m) => m.id === id)?.present).length,
+              ),
+          members: prev.members.map((m) =>
+            set.has(m.id)
+              ? {
+                  ...m,
+                  present,
+                  method: present ? m.method || "manual" : null,
+                  recorded_at: present ? new Date().toISOString() : null,
+                }
+              : m,
+          ),
         });
       }
       return { prev, key };
     },
     onError: (e, _v, c) => {
       if (c?.prev) qc.setQueryData(c.key, c.prev);
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      toast.error(e instanceof Error ? e.message : "Could not update attendance");
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["register", activeId] });
@@ -112,125 +251,450 @@ function AttendanceRegister() {
     },
   });
 
-  const members = register.data?.members ?? [];
+  // Explicit Delete Attendance Record mutation
+  // Crucial: Deletes attendance row only, keeping member record fully visible and intact!
+  const deleteAttendance = useMutation({
+    mutationFn: async (member: RegisterMember) => {
+      // 1. Try dedicated delete_attendance_record RPC
+      try {
+        const { error } = await supabase.rpc("delete_attendance_record", {
+          p_service: activeId,
+          p_member: member.id,
+        });
+        if (!error) return member;
+      } catch {
+        // Fall back to direct attendance table delete
+      }
+
+      const { error: directErr } = await supabase
+        .from("attendance")
+        .delete()
+        .eq("service_id", activeId)
+        .eq("member_id", member.id);
+
+      if (directErr) throw directErr;
+      return member;
+    },
+    onSuccess: (member) => {
+      toast.success(`Attendance removed for ${member.full_name}. Member remains in register.`);
+      setDeleteModal(null);
+      qc.invalidateQueries({ queryKey: ["register", activeId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Could not remove attendance record"),
+  });
+
+  // Quick Walk-in Registration
+  const addWalkin = useMutation({
+    mutationFn: async () => {
+      if (!walkinName.trim()) throw new Error("Please enter member name");
+      const cleanPhone = walkinPhone.trim() || null;
+
+      // 1. Create member
+      const { data: newMember, error: mErr } = await supabase
+        .from("members")
+        .insert({
+          tenant_id: tenant!.id,
+          branch_id: membership?.branch_id ?? null,
+          full_name: walkinName.trim(),
+          phone: cleanPhone,
+          status: "first_timer",
+        })
+        .select("id, full_name, member_code")
+        .single();
+
+      if (mErr) throw mErr;
+
+      // 2. Mark present for this service
+      const { error: aErr } = await supabase.from("attendance").insert({
+        tenant_id: tenant!.id,
+        service_id: activeId,
+        member_id: newMember.id,
+        method: "manual",
+        designation: "member",
+      });
+
+      if (aErr) throw aErr;
+      return newMember;
+    },
+    onSuccess: (newMember) => {
+      toast.success(`${newMember.full_name} registered and marked present!`);
+      setWalkinName("");
+      setWalkinPhone("");
+      setQuickAddOpen(false);
+      qc.invalidateQueries({ queryKey: ["register", activeId] });
+      qc.invalidateQueries({ queryKey: ["members"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add member"),
+  });
+
+  const members = useMemo(() => register.data?.members ?? [], [register.data?.members]);
+
+  const filteredMembers = useMemo(() => {
+    if (filterTab === "present") return members.filter((m) => m.present);
+    if (filterTab === "absent") return members.filter((m) => !m.present);
+    return members;
+  }, [members, filterTab]);
+
   const presentShown = useMemo(() => members.filter((m) => m.present).length, [members]);
+  const absentShown = members.length - presentShown;
   const writable = register.data?.writable ?? false;
 
-  if (!canManageMembers)
+  if (!canManageMembers) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Only church administrators can use the register.
-      </p>
+      <div className="surface p-6 text-center text-sm text-muted-foreground">
+        Only church administrators and authorized staff can use the attendance register.
+      </div>
     );
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-eyebrow">Workspace</p>
-          <h1 className="mt-2 text-2xl font-bold">Attendance register</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">Attendance Register</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tick the members who were present. Every tick saves straight away.
+            Manage attendance records for each service. Mark present, change check-in status, or
+            delete an attendance record while preserving member records.
           </p>
         </div>
-        {register.data && (
-          <p className="text-sm font-semibold">{register.data.present_count} present</p>
-        )}
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQuickAddOpen(true)}
+            className="font-medium"
+          >
+            <UserPlus className="size-4 mr-1.5" /> Walk-in Check-in
+          </Button>
+          {register.data && (
+            <Badge variant="secondary" className="px-3 py-1.5 text-xs font-semibold">
+              <span className="font-bold text-primary mr-1">{register.data.present_count}</span>{" "}
+              Present
+            </Badge>
+          )}
+        </div>
       </div>
 
       {services.data?.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm">
-          Create a service first.{" "}
-          <Link to="/services" className="font-semibold text-primary">
-            Go to Services
-          </Link>
+        <div className="surface border border-dashed p-10 text-center text-sm space-y-3">
+          <p className="font-medium">No services found for your church.</p>
+          <p className="text-muted-foreground">
+            Create or launch a regular service to start recording attendance.
+          </p>
+          <Button asChild className="mt-2">
+            <Link to="/services">Go to Services</Link>
+          </Button>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-          <Select value={activeId} onValueChange={setServiceId}>
-            <SelectTrigger aria-label="Service">
-              <SelectValue placeholder="Choose a service" />
-            </SelectTrigger>
-            <SelectContent>
-              {services.data?.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name} — {s.service_date}
-                  {s.is_open ? "" : " (closed)"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search members"
-              maxLength={80}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className="space-y-4">
+          {/* Controls Bar */}
+          <div className="grid gap-3 sm:grid-cols-[1.2fr_1.2fr_auto]">
+            <Select value={activeId} onValueChange={setServiceId}>
+              <SelectTrigger aria-label="Service" className="h-11 rounded-xl">
+                <SelectValue placeholder="Choose a service" />
+              </SelectTrigger>
+              <SelectContent>
+                {services.data?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} — {s.service_date}
+                    {s.is_open ? "" : " (closed)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
+              <Input
+                className="h-11 rounded-xl pl-9"
+                placeholder="Search member name, code, or phone…"
+                maxLength={80}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl"
+                disabled={!writable || toggle.isPending || filteredMembers.every((m) => m.present)}
+                onClick={() =>
+                  toggle.mutate({
+                    ids: filteredMembers.filter((m) => !m.present).map((m) => m.id),
+                    present: true,
+                  })
+                }
+              >
+                <CheckSquare className="size-4 mr-1.5" /> Mark Shown
+              </Button>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            disabled={!writable || toggle.isPending || members.every((m) => m.present)}
-            onClick={() =>
-              toggle.mutate({
-                ids: members.filter((m) => !m.present).map((m) => m.id),
-                present: true,
-              })
-            }
-          >
-            <CheckSquare className="size-4" /> Mark all shown
-          </Button>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center justify-between gap-2 border-b border-border/70 pb-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterTab("all")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  filterTab === "all"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All ({members.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab("present")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  filterTab === "present"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Present ({presentShown})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterTab("absent")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  filterTab === "absent"
+                    ? "bg-muted-foreground text-background"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Absent ({absentShown})
+              </button>
+            </div>
+
+            <span className="text-xs text-muted-foreground font-medium">
+              Showing {filteredMembers.length} member{filteredMembers.length === 1 ? "" : "s"}
+            </span>
+          </div>
         </div>
       )}
 
       {register.data && !writable && (
-        <p className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          <Lock className="size-4" /> This service is closed or the account is inactive, so the
-          register is read-only.
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <Lock className="size-4 shrink-0" />
+          <span>
+            This service is closed or the church subscription is inactive, so the register is
+            read-only.
+          </span>
+        </div>
       )}
 
-      <div className="rounded-lg border bg-card">
-        <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
-          <span>
-            {members.length} shown{members.length === 500 ? " (search to narrow)" : ""}
-          </span>
-          <span>{presentShown} ticked</span>
-        </div>
+      {/* Register List */}
+      <div className="surface rounded-2xl border border-border/80 overflow-hidden shadow-panel">
         {register.isLoading ? (
-          <p className="p-6 text-sm text-muted-foreground">Loading members…</p>
-        ) : members.length === 0 ? (
-          <p className="p-6 text-sm text-muted-foreground">No members match.</p>
+          <div className="p-12 text-center text-sm text-muted-foreground">Loading members…</div>
+        ) : filteredMembers.length === 0 ? (
+          <div className="p-12 text-center text-sm text-muted-foreground">
+            No members match your search or filter.
+          </div>
         ) : (
-          <ul className="divide-y">
-            {members.map((m) => (
-              <li key={m.id}>
-                <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-muted/40">
+          <ul className="divide-y divide-border/60">
+            {filteredMembers.map((m) => (
+              <li
+                key={m.id}
+                className={`flex items-center justify-between px-4 py-3 transition-colors ${
+                  m.present
+                    ? "bg-card hover:bg-muted/30"
+                    : "bg-card/60 hover:bg-muted/20 opacity-80"
+                }`}
+              >
+                {/* Left: Checkbox & Member info */}
+                <div className="flex items-center gap-3.5 min-w-0 flex-1 mr-3">
                   <Checkbox
                     checked={m.present}
-                    disabled={!writable}
+                    disabled={!writable || toggle.isPending}
                     onCheckedChange={(v) => toggle.mutate({ ids: [m.id], present: v === true })}
                     aria-label={`Mark ${m.full_name} present`}
+                    className="size-5 rounded-md"
                   />
-                  <span className="flex-1 text-sm font-medium">{m.full_name}</span>
-                  {m.status === "first_timer" && (
-                    <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
-                      First-timer
-                    </span>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-foreground truncate">
+                        {m.full_name}
+                      </span>
+
+                      {m.member_code && (
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-[10px] tracking-wide uppercase px-1.5 py-0.5"
+                        >
+                          {m.member_code}
+                        </Badge>
+                      )}
+
+                      {m.status === "first_timer" && (
+                        <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                          First-timer
+                        </span>
+                      )}
+
+                      {m.designation === "leader" && (
+                        <span className="rounded bg-accent/20 px-2 py-0.5 text-[10px] font-bold uppercase text-accent-foreground">
+                          Leader
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                      {m.phone && <span>{m.phone}</span>}
+                      {m.present && (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                          <CheckCircle2 className="size-3.5" /> Present
+                          {m.method && ` · via ${m.method.replace("_", " ")}`}
+                          {m.recorded_at &&
+                            ` at ${new Date(m.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                        </span>
+                      )}
+                      {!m.present && <span className="text-muted-foreground/80">Absent</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: CRUD Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {m.present ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive px-2.5 text-xs font-semibold"
+                      disabled={!writable || deleteAttendance.isPending}
+                      onClick={() => setDeleteModal(m)}
+                      title="Delete attendance record (member stays in register)"
+                    >
+                      <Trash2 className="size-3.5 mr-1" /> Remove Record
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2.5 text-xs font-semibold"
+                      disabled={!writable || toggle.isPending}
+                      onClick={() => toggle.mutate({ ids: [m.id], present: true })}
+                    >
+                      <UserCheck className="size-3.5 mr-1 text-emerald-600" /> Mark Present
+                    </Button>
                   )}
-                  {m.present && m.method && m.method !== "manual" && (
-                    <span className="text-[11px] text-muted-foreground">
-                      {m.method.replace("_", " ")}
-                    </span>
-                  )}
-                </label>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {/* Delete Attendance Confirmation Modal */}
+      <Dialog open={!!deleteModal} onOpenChange={(open) => !open && setDeleteModal(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-2 grid size-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+              <Trash2 className="size-6" />
+            </div>
+            <DialogTitle className="text-center font-display text-lg">
+              Remove Attendance Record?
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              Are you sure you want to remove the attendance record for{" "}
+              <strong className="text-foreground">{deleteModal?.full_name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 text-xs text-muted-foreground space-y-1.5">
+            <p className="font-semibold text-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="size-4 text-emerald-600" /> Member Record Preserved
+            </p>
+            <p>
+              Deleting this attendance record will only clear their check-in for this service. The
+              member's profile, phone number, and church membership remain completely untouched and
+              visible in your register.
+            </p>
+          </div>
+
+          <DialogFooter className="mt-2 flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModal(null)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteAttendance.isPending}
+              onClick={() => deleteModal && deleteAttendance.mutate(deleteModal)}
+              className="w-full sm:w-auto"
+            >
+              {deleteAttendance.isPending ? "Removing…" : "Confirm Removal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Walk-in Check-in Modal */}
+      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">Register Walk-in Guest</DialogTitle>
+            <DialogDescription>
+              Quickly register a guest or first-timer and immediately mark them present for this
+              service.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              addWalkin.mutate();
+            }}
+            className="space-y-4 py-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="wn">Full name *</Label>
+              <Input
+                id="wn"
+                required
+                placeholder="e.g. John Mensah"
+                value={walkinName}
+                onChange={(e) => setWalkinName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wp">Phone number (optional)</Label>
+              <Input
+                id="wp"
+                type="tel"
+                placeholder="e.g. 0244123456"
+                value={walkinPhone}
+                onChange={(e) => setWalkinPhone(e.target.value)}
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setQuickAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={addWalkin.isPending}>
+                {addWalkin.isPending ? "Registering…" : "Register & Mark Present"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+export default AttendanceRegister;

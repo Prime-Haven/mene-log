@@ -50,6 +50,7 @@ export const Route = createFileRoute("/_app/members")({
 type MemberRow = {
   id: string;
   full_name: string;
+  member_code: string | null;
   phone: string | null;
   email: string | null;
   date_of_birth: string | null;
@@ -73,6 +74,7 @@ function Members() {
     name: string;
     dataUrl: string;
     token?: string;
+    member_code?: string | null;
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -94,7 +96,7 @@ function Members() {
       const { data, error } = await supabase
         .from("members")
         .select(
-          "id, full_name, phone, email, date_of_birth, gender, residential_area, marital_status, occupation, status, is_minor, position_id, messaging_opt_out",
+          "id, full_name, member_code, phone, email, date_of_birth, gender, residential_area, marital_status, occupation, status, is_minor, position_id, messaging_opt_out",
         )
         .neq("status", "anonymised")
         .order("full_name")
@@ -110,6 +112,7 @@ function Members() {
     return (members ?? []).filter(
       (m) =>
         m.full_name.toLowerCase().includes(q) ||
+        (m.member_code ?? "").toLowerCase().includes(q) ||
         (m.phone ?? "").includes(q) ||
         (m.residential_area ?? "").toLowerCase().includes(q) ||
         (m.occupation ?? "").toLowerCase().includes(q),
@@ -160,8 +163,15 @@ function Members() {
         tenant?.name ?? "",
         member.full_name,
         r.kind === "leader" ? "Leader" : "Member",
+        member.member_code,
       );
-      return { id: member.id, name: member.full_name, dataUrl, token: r.token };
+      return {
+        id: member.id,
+        name: member.full_name,
+        dataUrl,
+        token: r.token,
+        member_code: member.member_code,
+      };
     },
     onSuccess: (res) => setQr(res),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not open this code"),
@@ -175,7 +185,13 @@ function Members() {
       return {
         ...qr,
         token: String(data),
-        dataUrl: await labelledQr(String(data), tenant?.name ?? "", qr.name),
+        dataUrl: await labelledQr(
+          String(data),
+          tenant?.name ?? "",
+          qr.name,
+          "Member",
+          qr.member_code,
+        ),
       };
     },
     onSuccess: (res) => {
@@ -422,6 +438,7 @@ function Members() {
           <thead className="border-b border-border">
             <tr className="text-left">
               <th className="px-4 py-3 font-semibold">Name</th>
+              <th className="px-4 py-3 font-semibold">Member Code</th>
               <th className="px-4 py-3 font-semibold">Phone</th>
               <th className="px-4 py-3 font-semibold">Area</th>
               <th className="px-4 py-3 font-semibold">Occupation</th>
@@ -438,6 +455,18 @@ function Members() {
                     <Badge variant="outline" className="ml-2 text-xs">
                       Minor
                     </Badge>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {m.member_code ? (
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-xs uppercase tracking-wider px-2 py-0.5"
+                    >
+                      {m.member_code}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-xs font-mono">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
@@ -633,13 +662,24 @@ function Members() {
               This is the member's current code. Download it and send it to them.
             </DialogDescription>
           </DialogHeader>
-          {qr && <img src={qr.dataUrl} alt="Member QR code" className="mx-auto rounded-md" />}
-          {qr?.token && (
-            <div className="text-center">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Member code (for Watch Live)
+          {qr && (
+            <img
+              src={qr.dataUrl}
+              alt="Member QR code"
+              className="mx-auto rounded-xl shadow-md max-w-xs"
+            />
+          )}
+          {(qr?.member_code || qr?.token) && (
+            <div className="surface rounded-xl border border-border/80 p-3.5 text-center space-y-1 bg-muted/20">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Official Member Code (For Door Scanner Fallback)
               </p>
-              <p className="select-all break-all font-mono text-xs">{qr.token}</p>
+              <p className="select-all font-mono text-lg font-bold text-foreground tracking-wider">
+                {qr.member_code || qr.token}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Enter this code on the door scanner screen if QR scanning is not possible.
+              </p>
             </div>
           )}
           <DialogFooter>

@@ -176,6 +176,13 @@
       "when": 1790555355555,
       "tag": "0024_fix_attendance_qr_conflict",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0025_attendance_crud_member_codes_and_defaults",
+      "breakpoints": true
     }
   ]
 }

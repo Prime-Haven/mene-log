@@ -92,6 +92,7 @@ export type Database = {
           id: string;
           member_id: string | null;
           method: Database["public"]["Enums"]["attendance_method"];
+          notes: string | null;
           position_id: string | null;
           recorded_at: string;
           scanned_by_user_id: string | null;
@@ -104,6 +105,7 @@ export type Database = {
           id?: string;
           member_id?: string | null;
           method?: Database["public"]["Enums"]["attendance_method"];
+          notes?: string | null;
           position_id?: string | null;
           recorded_at?: string;
           scanned_by_user_id?: string | null;
@@ -116,6 +118,7 @@ export type Database = {
           id?: string;
           member_id?: string | null;
           method?: Database["public"]["Enums"]["attendance_method"];
+          notes?: string | null;
           position_id?: string | null;
           recorded_at?: string;
           scanned_by_user_id?: string | null;
@@ -622,6 +625,7 @@ export type Database = {
           is_minor: boolean;
           joined_on: string;
           marital_status: string | null;
+          member_code: string | null;
           messaging_opt_out: boolean;
           occupation: string | null;
           phone: string | null;
@@ -646,6 +650,7 @@ export type Database = {
           is_minor?: boolean;
           joined_on?: string;
           marital_status?: string | null;
+          member_code?: string | null;
           messaging_opt_out?: boolean;
           occupation?: string | null;
           phone?: string | null;
@@ -670,6 +675,7 @@ export type Database = {
           is_minor?: boolean;
           joined_on?: string;
           marital_status?: string | null;
+          member_code?: string | null;
           messaging_opt_out?: boolean;
           occupation?: string | null;
           phone?: string | null;
@@ -1066,34 +1072,46 @@ export type Database = {
         Row: {
           branch_id: string | null;
           created_at: string;
+          description: string | null;
           id: string;
           is_open: boolean;
           name: string;
           online_min_minutes: number;
           service_date: string;
+          service_type: string;
+          speaker: string | null;
           stream_url: string | null;
+          target_attendance: number | null;
           tenant_id: string;
         };
         Insert: {
           branch_id?: string | null;
           created_at?: string;
+          description?: string | null;
           id?: string;
           is_open?: boolean;
           name: string;
           online_min_minutes?: number;
           service_date: string;
+          service_type?: string;
+          speaker?: string | null;
           stream_url?: string | null;
+          target_attendance?: number | null;
           tenant_id: string;
         };
         Update: {
           branch_id?: string | null;
           created_at?: string;
+          description?: string | null;
           id?: string;
           is_open?: boolean;
           name?: string;
           online_min_minutes?: number;
           service_date?: string;
+          service_type?: string;
+          speaker?: string | null;
           stream_url?: string | null;
+          target_attendance?: number | null;
           tenant_id?: string;
         };
         Relationships: [
