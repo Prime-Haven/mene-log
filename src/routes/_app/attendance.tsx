@@ -8,7 +8,13 @@ import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_app/attendance")({
   head: () => ({
@@ -29,7 +35,13 @@ type Register = {
   service: { id: string; name: string; date: string; is_open: boolean };
   writable: boolean;
   present_count: number;
-  members: Array<{ id: string; full_name: string; status: string; present: boolean; method: string | null }>;
+  members: Array<{
+    id: string;
+    full_name: string;
+    status: string;
+    present: boolean;
+    method: string | null;
+  }>;
 };
 
 function AttendanceRegister() {
@@ -59,7 +71,10 @@ function AttendanceRegister() {
     enabled: !!activeId,
     queryFn: async () => {
       const q = search.trim();
-      const { data, error } = await supabase.rpc("attendance_register", q ? { p_service: activeId, p_search: q } : { p_service: activeId });
+      const { data, error } = await supabase.rpc(
+        "attendance_register",
+        q ? { p_service: activeId, p_search: q } : { p_service: activeId },
+      );
       if (error) throw error;
       return data as unknown as Register;
     },
@@ -67,7 +82,11 @@ function AttendanceRegister() {
 
   const toggle = useMutation({
     mutationFn: async ({ ids, present }: { ids: string[]; present: boolean }) => {
-      const { error } = await supabase.rpc("set_manual_attendance", { p_service: activeId, p_members: ids, p_present: present });
+      const { error } = await supabase.rpc("set_manual_attendance", {
+        p_service: activeId,
+        p_members: ids,
+        p_present: present,
+      });
       if (error) throw error;
     },
     onMutate: async ({ ids, present }) => {
@@ -76,7 +95,10 @@ function AttendanceRegister() {
       const prev = qc.getQueryData<Register>(key);
       if (prev) {
         const set = new Set(ids);
-        qc.setQueryData<Register>(key, { ...prev, members: prev.members.map((m) => (set.has(m.id) ? { ...m, present } : m)) });
+        qc.setQueryData<Register>(key, {
+          ...prev,
+          members: prev.members.map((m) => (set.has(m.id) ? { ...m, present } : m)),
+        });
       }
       return { prev, key };
     },
@@ -94,7 +116,12 @@ function AttendanceRegister() {
   const presentShown = useMemo(() => members.filter((m) => m.present).length, [members]);
   const writable = register.data?.writable ?? false;
 
-  if (!canManageMembers) return <p className="text-sm text-muted-foreground">Only church administrators can use the register.</p>;
+  if (!canManageMembers)
+    return (
+      <p className="text-sm text-muted-foreground">
+        Only church administrators can use the register.
+      </p>
+    );
 
   return (
     <div className="space-y-5">
@@ -102,33 +129,56 @@ function AttendanceRegister() {
         <div>
           <p className="text-eyebrow">Workspace</p>
           <h1 className="mt-2 text-2xl font-bold">Attendance register</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Tick the members who were present. Every tick saves straight away.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tick the members who were present. Every tick saves straight away.
+          </p>
         </div>
-        {register.data && <p className="text-sm font-semibold">{register.data.present_count} present</p>}
+        {register.data && (
+          <p className="text-sm font-semibold">{register.data.present_count} present</p>
+        )}
       </div>
 
       {services.data?.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm">
-          Create a service first. <Link to="/services" className="font-semibold text-primary">Go to Services</Link>
+          Create a service first.{" "}
+          <Link to="/services" className="font-semibold text-primary">
+            Go to Services
+          </Link>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <Select value={activeId} onValueChange={setServiceId}>
-            <SelectTrigger aria-label="Service"><SelectValue placeholder="Choose a service" /></SelectTrigger>
+            <SelectTrigger aria-label="Service">
+              <SelectValue placeholder="Choose a service" />
+            </SelectTrigger>
             <SelectContent>
               {services.data?.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name} — {s.service_date}{s.is_open ? "" : " (closed)"}</SelectItem>
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} — {s.service_date}
+                  {s.is_open ? "" : " (closed)"}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <div className="relative">
             <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search members" maxLength={80} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input
+              className="pl-9"
+              placeholder="Search members"
+              maxLength={80}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <Button
             variant="outline"
             disabled={!writable || toggle.isPending || members.every((m) => m.present)}
-            onClick={() => toggle.mutate({ ids: members.filter((m) => !m.present).map((m) => m.id), present: true })}
+            onClick={() =>
+              toggle.mutate({
+                ids: members.filter((m) => !m.present).map((m) => m.id),
+                present: true,
+              })
+            }
           >
             <CheckSquare className="size-4" /> Mark all shown
           </Button>
@@ -137,13 +187,16 @@ function AttendanceRegister() {
 
       {register.data && !writable && (
         <p className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          <Lock className="size-4" /> This service is closed or the account is inactive, so the register is read-only.
+          <Lock className="size-4" /> This service is closed or the account is inactive, so the
+          register is read-only.
         </p>
       )}
 
       <div className="rounded-lg border bg-card">
         <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
-          <span>{members.length} shown{members.length === 500 ? " (search to narrow)" : ""}</span>
+          <span>
+            {members.length} shown{members.length === 500 ? " (search to narrow)" : ""}
+          </span>
           <span>{presentShown} ticked</span>
         </div>
         {register.isLoading ? (
@@ -162,8 +215,16 @@ function AttendanceRegister() {
                     aria-label={`Mark ${m.full_name} present`}
                   />
                   <span className="flex-1 text-sm font-medium">{m.full_name}</span>
-                  {m.status === "first_timer" && <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">First-timer</span>}
-                  {m.present && m.method && m.method !== "manual" && <span className="text-[11px] text-muted-foreground">{m.method.replace("_", " ")}</span>}
+                  {m.status === "first_timer" && (
+                    <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                      First-timer
+                    </span>
+                  )}
+                  {m.present && m.method && m.method !== "manual" && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {m.method.replace("_", " ")}
+                    </span>
+                  )}
                 </label>
               </li>
             ))}

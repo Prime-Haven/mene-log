@@ -34,7 +34,16 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             amount?: number;
             currency?: string;
             customer?: { email?: string };
-            metadata?: { tenant_id?: string; tier?: string; kind?: string; slots?: number; charge_currency?: string; usd_cents?: number; rate?: number; coupon?: string | null };
+            metadata?: {
+              tenant_id?: string;
+              tier?: string;
+              kind?: string;
+              slots?: number;
+              charge_currency?: string;
+              usd_cents?: number;
+              rate?: number;
+              coupon?: string | null;
+            };
           };
         };
         try {
@@ -107,8 +116,13 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
             const { readSettings, writeSettings } = await import("@/lib/settings.server");
             const s = await readSettings(true);
             const c = s.coupons.find((x) => x.code === couponCode);
-            if (c) { c.uses += 1; await writeSettings(s); }
-          } catch (e) { console.error("coupon_count_failed", e); }
+            if (c) {
+              c.uses += 1;
+              await writeSettings(s);
+            }
+          } catch (e) {
+            console.error("coupon_count_failed", e);
+          }
         }
 
         // Yearly plans: the payment records one period; stretch it to a full year (idempotent).

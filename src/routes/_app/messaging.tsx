@@ -12,11 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { UpgradePanel } from "@/components/FeatureGate";
-import {
-  flushMessageQueue,
-  getMessagingStatus,
-  sendBroadcast,
-} from "@/lib/messaging.functions";
+import { flushMessageQueue, getMessagingStatus, sendBroadcast } from "@/lib/messaging.functions";
 
 export const Route = createFileRoute("/_app/messaging")({
   head: () => ({
@@ -164,8 +160,8 @@ function Messaging() {
         <p className="text-eyebrow">Outreach</p>
         <h1 className="mt-2 text-2xl font-bold">Messaging</h1>
         <p className="text-sm text-muted-foreground">
-          Reach members by email{smsAvailable ? " or text message" : ""}. Every send is recorded, and
-          anyone who has opted out is skipped automatically.
+          Reach members by email{smsAvailable ? " or text message" : ""}. Every send is recorded,
+          and anyone who has opted out is skipped automatically.
         </p>
       </div>
 
@@ -290,8 +286,8 @@ function Messaging() {
               placeholder={"Hello {{name}}, we would love to see you this Sunday at 9am."}
             />
             <p className="text-xs text-muted-foreground">
-              Use <code>{"{{name}}"}</code> to greet each person by their first name.{" "}
-              {body.length}/{channel === "sms" ? 480 : 1200} characters.
+              Use <code>{"{{name}}"}</code> to greet each person by their first name. {body.length}/
+              {channel === "sms" ? 480 : 1200} characters.
             </p>
           </div>
 
@@ -334,8 +330,7 @@ function Messaging() {
               <li>Welcome message with a QR code after a first check-in</li>
               <li>Birthday wishes on the day</li>
               <li>
-                A gentle note to anyone we have not seen for{" "}
-                {tenant?.absence_threshold ?? 3} weeks
+                A gentle note to anyone we have not seen for {tenant?.absence_threshold ?? 3} weeks
               </li>
             </ul>
             {!ctx.can("automations") && (
@@ -353,7 +348,10 @@ function Messaging() {
         </div>
         <div className="divide-y divide-border">
           {(history ?? []).map((m) => (
-            <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
+            <div
+              key={m.id}
+              className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm"
+            >
               <div className="min-w-0">
                 <p className="truncate font-medium">{m.subject ?? m.recipient}</p>
                 <p className="text-xs text-muted-foreground">

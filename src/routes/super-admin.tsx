@@ -14,15 +14,23 @@ import { operatorSignIn } from "@/lib/operator.functions";
 import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 export const Route = createFileRoute("/super-admin")({
-  head: () => ({ meta: [
-    { title: "Prime Haven operator sign in — Mene:Log" },
-    { name: "description", content: "Restricted Prime Haven operator access for Mene:Log platform administration." },
-    { property: "og:title", content: "Prime Haven operator sign in — Mene:Log" },
-    { property: "og:description", content: "Restricted Prime Haven operator access for Mene:Log platform administration." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary" },
-    { name: "robots", content: "noindex, nofollow" },
-  ] }),
+  head: () => ({
+    meta: [
+      { title: "Prime Haven operator sign in — Mene:Log" },
+      {
+        name: "description",
+        content: "Restricted Prime Haven operator access for Mene:Log platform administration.",
+      },
+      { property: "og:title", content: "Prime Haven operator sign in — Mene:Log" },
+      {
+        property: "og:description",
+        content: "Restricted Prime Haven operator access for Mene:Log platform administration.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: SuperAdminSignIn,
 });
 
@@ -57,7 +65,10 @@ function SuperAdminSignIn() {
     try {
       const result = await signIn({ data: { username, password } });
       if (!result.ok) throw new Error(result.error);
-      const { error } = await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
+      const { error } = await supabase.auth.setSession({
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
+      });
       if (error) throw error;
       if (!(await continueOperator())) {
         await supabase.auth.signOut();
@@ -72,24 +83,66 @@ function SuperAdminSignIn() {
 
   return (
     <main className="grid min-h-screen place-items-center bg-deep px-5 py-10 text-deep-foreground">
-      <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-lg border border-deep-foreground/15 bg-background p-7 text-foreground shadow-2xl">
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md rounded-lg border border-deep-foreground/15 bg-background p-7 text-foreground shadow-2xl"
+      >
         <MeneLogLogo className="h-12 max-w-56" />
         <p className="mt-6 text-eyebrow">Restricted entrance</p>
         <h1 className="mt-2 font-display text-3xl font-bold">Prime Haven console</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Manage church accounts, packages, billing health, and reviews. Church member records are never available here.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Manage church accounts, packages, billing health, and reviews. Church member records are
+          never available here.
+        </p>
         {stage !== "password" ? (
           <div className="mt-7">
-            <p className="mb-3 text-sm font-semibold">{stage === "enroll" ? "Set up two-step sign-in to continue" : "Two-step sign-in"}</p>
-            {stage === "enroll" ? <MfaEnroll onDone={() => navigate({ to: "/platform" })} /> : <MfaChallenge onDone={() => navigate({ to: "/platform" })} />}
+            <p className="mb-3 text-sm font-semibold">
+              {stage === "enroll" ? "Set up two-step sign-in to continue" : "Two-step sign-in"}
+            </p>
+            {stage === "enroll" ? (
+              <MfaEnroll onDone={() => navigate({ to: "/platform" })} />
+            ) : (
+              <MfaChallenge onDone={() => navigate({ to: "/platform" })} />
+            )}
           </div>
         ) : (
-        <form onSubmit={submit} className="mt-7 space-y-4">
-          <div className="space-y-2"><Label htmlFor="operator-username">Username</Label><Input id="operator-username" autoComplete="username" autoCapitalize="none" required maxLength={60} value={username} onChange={(event) => setUsername(event.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="operator-password">Password</Label><Input id="operator-password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></div>
-          <Button type="submit" className="h-11 w-full" disabled={busy}>{busy ? "Checking access…" : "Sign in securely"}<ArrowRight /></Button>
-        </form>
+          <form onSubmit={submit} className="mt-7 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="operator-username">Username</Label>
+              <Input
+                id="operator-username"
+                autoComplete="username"
+                autoCapitalize="none"
+                required
+                maxLength={60}
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="operator-password">Password</Label>
+              <Input
+                id="operator-password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </div>
+            <Button type="submit" className="h-11 w-full" disabled={busy}>
+              {busy ? "Checking access…" : "Sign in securely"}
+              <ArrowRight />
+            </Button>
+          </form>
         )}
-        <p className="mt-6 border-t pt-4 text-center text-xs text-muted-foreground">Church administrator? <Link to="/auth" className="font-semibold text-primary">Use church sign in</Link></p>
+        <p className="mt-6 border-t pt-4 text-center text-xs text-muted-foreground">
+          Church administrator?{" "}
+          <Link to="/auth" className="font-semibold text-primary">
+            Use church sign in
+          </Link>
+        </p>
       </motion.section>
     </main>
   );

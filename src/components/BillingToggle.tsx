@@ -10,7 +10,10 @@ export function BillingToggle({
 }) {
   return (
     <div className="mx-auto flex w-full flex-col items-center">
-      <div role="tablist" className="relative inline-flex rounded-lg border border-border bg-muted p-1">
+      <div
+        role="tablist"
+        className="relative inline-flex rounded-lg border border-border bg-muted p-1"
+      >
         {(["monthly", "yearly"] as const).map((v) => (
           <button
             key={v}

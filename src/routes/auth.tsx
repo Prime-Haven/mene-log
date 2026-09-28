@@ -1,6 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { QrCode, Sparkles, LogIn, UserPlus, ArrowRight, ShieldCheck, Mail, Lock, User } from "lucide-react";
+import {
+  QrCode,
+  Sparkles,
+  LogIn,
+  UserPlus,
+  ArrowRight,
+  ShieldCheck,
+  Mail,
+  Lock,
+  User,
+} from "lucide-react";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -101,7 +111,8 @@ function AuthPage() {
             Attendance that still exists on Tuesday morning.
           </h2>
           <p className="text-base leading-relaxed text-deep-foreground/75">
-            Instant door check-in, complete membership registry, leadership structures, and transparent reporting for growing congregations.
+            Instant door check-in, complete membership registry, leadership structures, and
+            transparent reporting for growing congregations.
           </p>
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10 text-xs">
             <div className="flex items-center gap-2 text-deep-foreground/80">
@@ -122,7 +133,10 @@ function AuthPage() {
       {/* Interactive Form Panel */}
       <div className="relative flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
-          <Link to="/" className="mb-8 inline-flex items-center gap-2 font-display text-lg font-bold lg:hidden">
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center gap-2 font-display text-lg font-bold lg:hidden"
+          >
             <MeneLogLogo className="h-10 max-w-48" />
           </Link>
 
@@ -180,7 +194,9 @@ function AuthPage() {
               >
                 {isSignUp && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-xs font-semibold">Your full name</Label>
+                    <Label htmlFor="name" className="text-xs font-semibold">
+                      Your full name
+                    </Label>
                     <div className="relative">
                       <User className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
                       <Input
@@ -198,7 +214,9 @@ function AuthPage() {
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-semibold">Email address</Label>
+                  <Label htmlFor="email" className="text-xs font-semibold">
+                    Email address
+                  </Label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
                     <Input
@@ -224,7 +242,9 @@ function AuthPage() {
                 ) : (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-xs font-semibold">Password</Label>
+                      <Label htmlFor="password" className="text-xs font-semibold">
+                        Password
+                      </Label>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
@@ -247,7 +267,11 @@ function AuthPage() {
                   className="h-11 w-full gap-2 rounded-xl text-sm font-semibold shadow-md transition-all active:scale-[0.99]"
                   disabled={busy || (isSignUp && !passwordIsStrong(password))}
                 >
-                  {busy ? "Please wait…" : isSignUp ? "Create Account & Continue" : "Sign In to Church"}
+                  {busy
+                    ? "Please wait…"
+                    : isSignUp
+                      ? "Create Account & Continue"
+                      : "Sign In to Church"}
                   {!busy && <ArrowRight className="size-4" />}
                 </Button>
               </motion.form>

@@ -4,7 +4,10 @@ import { intervalFromReference, planLabel } from "./pricing";
 import { SITE_URL as SITE } from "./site";
 
 function esc(v: string) {
-  return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  return v.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }
 
 function money(minor: number, currency: string) {
@@ -35,7 +38,11 @@ export function receiptHtml(r: ReceiptInput) {
       ? `Extra member space (+${(r.slots ?? 0).toLocaleString()} members)`
       : `${planLabel(r.tier)} plan · ${intervalFromReference(r.reference) === "yearly" ? "Yearly" : "Monthly"}`;
   const method = r.channel === "mobile_money" ? "Mobile money" : r.channel ? "Card" : "—";
-  const date = new Date(r.paidAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const date = new Date(r.paidAt).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const row = (k: string, v: string) =>
     `<tr><td style="padding:8px 0;color:#64748b;font-size:14px">${k}</td><td style="padding:8px 0;text-align:right;font-size:14px;color:#0f172a;font-weight:600">${v}</td></tr>`;
   return `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif">
@@ -68,8 +75,20 @@ export async function sendReceipt(r: ReceiptInput) {
 
 /** Sends a receipt once per payment reference. Uses the service client; call only after verifying the payment. */
 export async function sendReceiptOnce(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
-  opts: { tenantId: string; reference: string; to: string | null | undefined; kind: "subscription" | "space"; amountMinor: number; currency: string; channel?: string | null; paidAt: string; slots?: number | null; tier?: string | null },
+  opts: {
+    tenantId: string;
+    reference: string;
+    to: string | null | undefined;
+    kind: "subscription" | "space";
+    amountMinor: number;
+    currency: string;
+    channel?: string | null;
+    paidAt: string;
+    slots?: number | null;
+    tier?: string | null;
+  },
 ) {
   if (!opts.to) return;
   const { data: already } = await admin
@@ -80,16 +99,29 @@ export async function sendReceiptOnce(
     .eq("target", opts.reference)
     .limit(1);
   if (already && already.length) return;
-  const { data: tenant } = await admin.from("tenants").select("name").eq("id", opts.tenantId).maybeSingle();
-  const { data: sub } = await admin.from("subscriptions").select("period_end").eq("tenant_id", opts.tenantId).maybeSingle();
+  const { data: tenant } = await admin
+    .from("tenants")
+    .select("name")
+    .eq("id", opts.tenantId)
+    .maybeSingle();
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("period_end")
+    .eq("tenant_id", opts.tenantId)
+    .maybeSingle();
   const result = await sendReceipt({
     ...opts,
     to: opts.to,
     churchName: tenant?.name ?? "Your church",
-    renewsOn: opts.kind === "subscription" ? sub?.period_end ?? null : null,
+    renewsOn: opts.kind === "subscription" ? (sub?.period_end ?? null) : null,
   });
   if (result.ok) {
-    await admin.rpc("log_audit", { _tenant: opts.tenantId, _action: "receipt.sent", _target: opts.reference, _detail: { to: opts.to } });
+    await admin.rpc("log_audit", {
+      _tenant: opts.tenantId,
+      _action: "receipt.sent",
+      _target: opts.reference,
+      _detail: { to: opts.to },
+    });
   } else {
     console.error("receipt_send_failed", result.error);
   }

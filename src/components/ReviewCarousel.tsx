@@ -26,7 +26,8 @@ export function ReviewCarousel() {
     },
   });
 
-  if (isLoading) return <div className="mt-12 h-56 animate-pulse rounded-lg bg-primary-foreground/10" />;
+  if (isLoading)
+    return <div className="mt-12 h-56 animate-pulse rounded-lg bg-primary-foreground/10" />;
 
   if (!data?.length) {
     return (

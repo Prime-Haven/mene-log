@@ -1,6 +1,7 @@
 # Branches, check-in pages by plan, a fuller Prime Haven console, and a mobile app feel
 
 ## 1. Premium branches
+
 - **Create a branch:** the Premium head office clicks "Add branch" in its dashboard. There will also be a "Register as a branch" link on its check-in page, and head office approves those.
 - **The branch's own address:** each branch gets its own check-in address, e.g. `menelog.site/c/grace-accra-east`. Its page shows "A branch of Grace Chapel", linking back to the main church's page. The main church's page lists its branches.
 - **Branch dashboard:** it works like a Pro account. Branches get Pro features, including the leader structure, leader sign-up and leader dashboards, all scoped to the branch. Anything outside Pro shows a padlock.
@@ -8,19 +9,22 @@
 - **Prime Haven console:** each church's panel shows its parent or its branches, and the Churches list gets a "branches" filter. You still see counts only, never member details.
 
 ## 2. Check-in pages by plan
+
 Every check-in page uses the homepage look: the worship video background, glass panels and the church name in large bold text above the form.
 
-| Plan | Check-in page | Dashboard |
-|---|---|---|
-| Free | Self check-in | QR scanning during the 14-day trial, then attendance is ticked by hand only |
-| Standard | Self check-in | Adds QR scanning |
-| Pro | Check-in, leader sign-up and sign-in | Leader accounts and structure; Watch Live if you switch it on in Features |
-| Premium | Check-in, leader sign-up, Watch Live, branch registration | Everything |
+| Plan     | Check-in page                                             | Dashboard                                                                   |
+| -------- | --------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Free     | Self check-in                                             | QR scanning during the 14-day trial, then attendance is ticked by hand only |
+| Standard | Self check-in                                             | Adds QR scanning                                                            |
+| Pro      | Check-in, leader sign-up and sign-in                      | Leader accounts and structure; Watch Live if you switch it on in Features   |
+| Premium  | Check-in, leader sign-up, Watch Live, branch registration | Everything                                                                  |
 
 Each of these follows your Features switches. If you switch Watch Live on for Pro, Pro churches get the Watch Live button on their check-in page.
 
 ## 3. Fuller Prime Haven console
+
 The My Account page becomes a full **Settings** area:
+
 - **Profile and security:** your name, email and photo, password, two-step code reset, active sessions with sign-out everywhere, and the sign-in history.
 - **Platform branding:** platform name, logo, main colours, homepage headline and verse text, and support email and phone.
 - **Pricing:** monthly USD price for each plan, the yearly discount for each plan, trial length and the extra member space price. These feed the homepage, sign-up and Billing.
@@ -32,6 +36,7 @@ The My Account page becomes a full **Settings** area:
 - **Data:** export all church summaries and all payments.
 
 Other new console features:
+
 - A global search.
 - A notifications bell for new sign-ups, failed payments and trials ending.
 - Coupon and discount codes.
@@ -39,6 +44,7 @@ Other new console features:
 - A health check that actually tests Resend, Paystack and the AI assistant and shows the result.
 
 ## 4. Suggestions (built in this pass unless you say no)
+
 - Fix the known attendance-ticking error.
 - Show the member code under the QR on the Members page, so admins can share it for Watch Live.
 - Schedule the daily job for birthdays, absences and trial endings. This is part of the SQL file you'll run.
@@ -47,6 +53,7 @@ Other new console features:
 - Add error pages that offer "Try again".
 
 ## 5. Mobile app feel and install
+
 - **On phones:**
   - a bottom tab bar with the four main sections plus "More", and a compact top bar with the page title
   - full-width cards, large touch targets, a slide-up menu, and swipe-friendly lists
@@ -58,6 +65,7 @@ Other new console features:
 - **Offline:** not included. The installed app opens and works online, so there are no stale-page risks.
 
 ## Order of work
+
 1. You run one SQL file. It covers the branch links, platform settings, coupons, the attendance fix and the daily schedule.
 2. Branches.
 3. Check-in pages by plan.
@@ -67,6 +75,7 @@ Other new console features:
 7. A browser test of each plan's check-in page, the branch flow, the console settings and the phone layout.
 
 ## Technical details
+
 - **SQL, which you run:**
   - `tenants.parent_tenant_id` already exists. Add `branch_requests`, a `platform_settings` key/value jsonb table (operator-write, public-read for safe keys), `coupons`, and `operator_sessions` if needed.
   - Fix the attendance upsert (`ON CONFLICT (service_id, member_id) WHERE member_id IS NOT NULL`).

@@ -16,7 +16,10 @@ export const Route = createFileRoute("/_app/accounts")({
   head: () => ({
     meta: [
       { title: "Accounts — Mene:Log" },
-      { name: "description", content: "Invite admins, branch admins, leaders and ushers, and suspend access." },
+      {
+        name: "description",
+        content: "Invite admins, branch admins, leaders and ushers, and suspend access.",
+      },
       { property: "og:title", content: "Accounts — Mene:Log" },
       { property: "og:description", content: "Invite and manage the people who can sign in." },
       { property: "og:type", content: "website" },
@@ -59,7 +62,10 @@ function Accounts() {
     queryKey: ["positions", tenant?.id],
     enabled: !!tenant,
     queryFn: async () => {
-      const { data, error } = await supabase.from("positions").select("id, group_name").order("group_name");
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, group_name")
+        .order("group_name");
       if (error) throw error;
       return data;
     },
@@ -104,7 +110,8 @@ function Accounts() {
         <p className="text-eyebrow">Access</p>
         <h1 className="mt-2 text-2xl font-bold">Accounts</h1>
         <p className="text-sm text-muted-foreground">
-          Members never log in. Only the people listed here can sign in, and only within your church.
+          Members never log in. Only the people listed here can sign in, and only within your
+          church.
         </p>
       </div>
 
@@ -164,11 +171,16 @@ function Accounts() {
 
       <div className="surface divide-y divide-border">
         {(accounts ?? []).map((a) => {
-          const profile = a.profiles as unknown as { full_name: string | null; email: string | null } | null;
+          const profile = a.profiles as unknown as {
+            full_name: string | null;
+            email: string | null;
+          } | null;
           return (
             <div key={a.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
-                <p className="font-medium">{profile?.full_name || profile?.email || "Invited user"}</p>
+                <p className="font-medium">
+                  {profile?.full_name || profile?.email || "Invited user"}
+                </p>
                 <p className="text-sm text-muted-foreground">{profile?.email}</p>
               </div>
               <div className="flex items-center gap-3">

@@ -18,13 +18,22 @@ export function planLabel(tier: string | null | undefined) {
 }
 
 /** Yearly discount per plan. */
-export const YEARLY_DISCOUNT: Record<PlanTier, number> = { basic: 0.08, standard: 0.1, premium: 0.15 };
+export const YEARLY_DISCOUNT: Record<PlanTier, number> = {
+  basic: 0.08,
+  standard: 0.1,
+  premium: 0.15,
+};
 export function maxYearlyDiscount() {
   return Math.max(...Object.values(YEARLY_DISCOUNT));
 }
 
 /** Apply live prices from platform settings (mutates the shared tables in place). */
-export function applyPricing(p: { monthly: Record<PlanTier, number>; yearly_discount: Record<PlanTier, number> } | null | undefined) {
+export function applyPricing(
+  p:
+    | { monthly: Record<PlanTier, number>; yearly_discount: Record<PlanTier, number> }
+    | null
+    | undefined,
+) {
   if (!p) return;
   for (const t of ["basic", "standard", "premium"] as const) {
     if (Number.isFinite(p.monthly[t]) && p.monthly[t] > 0) MONTHLY_USD[t] = p.monthly[t];

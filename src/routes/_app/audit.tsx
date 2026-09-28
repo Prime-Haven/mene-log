@@ -7,7 +7,10 @@ export const Route = createFileRoute("/_app/audit")({
   head: () => ({
     meta: [
       { title: "Audit log — Mene" },
-      { name: "description", content: "Append-only record of every sensitive action taken in your church account." },
+      {
+        name: "description",
+        content: "Append-only record of every sensitive action taken in your church account.",
+      },
       { property: "og:title", content: "Audit log — Mene" },
       { property: "og:description", content: "Every sensitive action, recorded and retained." },
       { property: "og:type", content: "website" },
@@ -47,7 +50,10 @@ function Audit() {
 
       <div className="surface divide-y divide-border">
         {(events ?? []).map((e) => (
-          <div key={e.id} className="flex flex-wrap items-baseline justify-between gap-2 p-4 text-sm">
+          <div
+            key={e.id}
+            className="flex flex-wrap items-baseline justify-between gap-2 p-4 text-sm"
+          >
             <div>
               <p className="font-medium">{e.action}</p>
               <p className="font-mono text-xs text-muted-foreground">{e.target ?? "—"}</p>

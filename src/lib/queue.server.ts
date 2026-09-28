@@ -38,7 +38,8 @@ async function logoUrlFor(path: string | null): Promise<string | null> {
 }
 
 export async function processQueue(limit = 100): Promise<{ sent: number; failed: number }> {
-  if (!emailConfigured() && !smsConfigured() && !whatsappConfigured()) return { sent: 0, failed: 0 };
+  if (!emailConfigured() && !smsConfigured() && !whatsappConfigured())
+    return { sent: 0, failed: 0 };
 
   const { data, error } = await supabaseAdmin.rpc("claim_pending_messages", { p_limit: limit });
   if (error || !data) {

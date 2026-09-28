@@ -5,9 +5,18 @@ import { useEffect, useState } from "react";
  * translation. Visitors who ask for reduced motion see the KJV text at rest.
  */
 export const DANIEL_VERSES = [
-  { translation: "KJV", text: "And this is the writing that was written, MENE, MENE, TEKEL, UPHARSIN." },
-  { translation: "NIV", text: "This is the inscription that was written: mene, mene, tekel, parsin." },
-  { translation: "NLT", text: "This is the message that was written: Mene, Mene, Tekel, and Parsin." },
+  {
+    translation: "KJV",
+    text: "And this is the writing that was written, MENE, MENE, TEKEL, UPHARSIN.",
+  },
+  {
+    translation: "NIV",
+    text: "This is the inscription that was written: mene, mene, tekel, parsin.",
+  },
+  {
+    translation: "NLT",
+    text: "This is the message that was written: Mene, Mene, Tekel, and Parsin.",
+  },
   { translation: "TPT", text: "This is the writing on the wall: Mene, Mene, Tekel, Parsin." },
 ] as const;
 
@@ -64,7 +73,12 @@ export function VerseTyper() {
         aria-label={`Daniel 5:25 — ${DANIEL_VERSES[0]!.text}`}
       >
         <span>{shown}</span>
-        {!reduced && <span className="ml-1 inline-block w-[0.06em] animate-pulse bg-deep-foreground align-middle" style={{ height: "0.9em" }} />}
+        {!reduced && (
+          <span
+            className="ml-1 inline-block w-[0.06em] animate-pulse bg-deep-foreground align-middle"
+            style={{ height: "0.9em" }}
+          />
+        )}
       </p>
       <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-deep-foreground/60">
         Daniel 5:25 · {label}

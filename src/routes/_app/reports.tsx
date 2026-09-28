@@ -12,7 +12,10 @@ export const Route = createFileRoute("/_app/reports")({
   head: () => ({
     meta: [
       { title: "Reports — Mene:Log" },
-      { name: "description", content: "Service attendance, first-timers, absentees and birthday lists." },
+      {
+        name: "description",
+        content: "Service attendance, first-timers, absentees and birthday lists.",
+      },
       { property: "og:title", content: "Reports — Mene:Log" },
       { property: "og:description", content: "Attendance and follow-up reports for your church." },
       { property: "og:type", content: "website" },
@@ -104,7 +107,12 @@ function Reports() {
       });
       if (error) throw error;
       return data as unknown as {
-        services: Array<{ service_date: string; name: string; total: number; first_timers: number }>;
+        services: Array<{
+          service_date: string;
+          name: string;
+          total: number;
+          first_timers: number;
+        }>;
         groups: Array<{ group_name: string; members: number; attendances: number }>;
         branches: Array<{ branch: string; members: number; attendances: number }>;
         demographics: Record<string, number>;
@@ -190,7 +198,11 @@ function Reports() {
           </Button>
           <ReportTable
             head={["Name", "Phone", "Area"]}
-            rows={(firstTimers ?? []).map((m) => [m.full_name, m.phone ?? "—", m.residential_area ?? "—"])}
+            rows={(firstTimers ?? []).map((m) => [
+              m.full_name,
+              m.phone ?? "—",
+              m.residential_area ?? "—",
+            ])}
           />
         </TabsContent>
 

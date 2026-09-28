@@ -28,9 +28,16 @@ export function ExportChurchData({ tenantId, subdomain }: { tenantId: string; su
   }
   return (
     <section className="rounded-lg border bg-card p-5">
-      <h2 className="flex items-center gap-2 text-base font-semibold"><Download className="size-4 text-primary" /> Export church data</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Download members, services, attendance, leaders and follow-ups as spreadsheet (CSV) files in one ZIP. Up to 3 exports per hour.</p>
-      <Button size="sm" className="mt-4" disabled={busy} onClick={go}>{busy ? "Preparing…" : "Download ZIP"}</Button>
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <Download className="size-4 text-primary" /> Export church data
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Download members, services, attendance, leaders and follow-ups as spreadsheet (CSV) files in
+        one ZIP. Up to 3 exports per hour.
+      </p>
+      <Button size="sm" className="mt-4" disabled={busy} onClick={go}>
+        {busy ? "Preparing…" : "Download ZIP"}
+      </Button>
     </section>
   );
 }

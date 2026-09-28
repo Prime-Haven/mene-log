@@ -18,6 +18,9 @@ export type Membership = {
     tier: Tier;
     status: Database["public"]["Enums"]["tenant_status"];
     approval_status: string;
+    approval_reason?: string | null;
+    approval_risk_flags?: string[] | null;
+    correction_requested_at?: string | null;
     trial_ends_at: string | null;
     extra_member_slots: number;
     logo_path: string | null;
@@ -45,7 +48,7 @@ export function useTenant() {
       const { data, error } = await supabase
         .from("tenant_users")
         .select(
-          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa, parent_tenant_id)",
+          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, approval_reason, approval_risk_flags, correction_requested_at, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa, parent_tenant_id)",
         )
         .eq("status", "active")
         .order("created_at", { ascending: true })
@@ -101,9 +104,16 @@ export function usePlanConfig() {
     staleTime: 60_000,
     retry: false,
     queryFn: async (): Promise<PlanConfig | null> => {
-      const { data, error } = await (supabase as unknown as {
-        from: (t: string) => { select: (c: string) => Promise<{ data: Array<{ tier: Tier; config: Record<string, boolean | number> }> | null; error: unknown }> };
-      })
+      const { data, error } = await (
+        supabase as unknown as {
+          from: (t: string) => {
+            select: (c: string) => Promise<{
+              data: Array<{ tier: Tier; config: Record<string, boolean | number> }> | null;
+              error: unknown;
+            }>;
+          };
+        }
+      )
         .from("plan_config")
         .select("tier, config");
       if (error || !data) return null;

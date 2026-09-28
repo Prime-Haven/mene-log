@@ -88,13 +88,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Mene:Log — Church Attendance and Membership" },
       {
         name: "description",
-        content: "Mene:Log is church management software for secure membership records, QR check-in, attendance tracking, member care, branches, leadership and reports.",
+        content:
+          "Mene:Log is church management software for secure membership records, QR check-in, attendance tracking, member care, branches, leadership and reports.",
       },
       { name: "author", content: "Prime Haven IT Solutions & Consultancy" },
       { property: "og:title", content: "Mene:Log — Church Attendance and Membership" },
       {
         property: "og:description",
-        content: "Secure church membership, QR check-in, attendance, member care, branch management, leadership and reporting in one platform.",
+        content:
+          "Secure church membership, QR check-in, attendance, member care, branch management, leadership and reporting in one platform.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -143,10 +145,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               applicationCategory: "BusinessApplication",
               applicationSubCategory: "Church management software",
               operatingSystem: "Web",
-              description: "Church membership, attendance, check-in, member care, leadership, branch management and reporting software.",
+              description:
+                "Church membership, attendance, check-in, member care, leadership, branch management and reporting software.",
               image: "https://menelog.site/icons/icon-512.png",
               creator: { "@id": "https://menelog.site/#organization" },
-              offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free plan available" },
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+                description: "Free plan available",
+              },
             },
           ],
         }),
@@ -181,7 +189,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <motion.div
-        key={pathname.startsWith("/c/") ? pathname : pathname.split("/")[1] === "" ? "home" : "page"}
+        key={
+          pathname.startsWith("/c/") ? pathname : pathname.split("/")[1] === "" ? "home" : "page"
+        }
         initial={reduceMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: reduceMotion ? 0 : 0.15 }}

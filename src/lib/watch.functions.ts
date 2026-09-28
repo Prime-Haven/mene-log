@@ -8,8 +8,16 @@ import { z } from "zod";
  */
 
 const base = z.object({
-  subdomain: z.string().trim().toLowerCase().regex(/^[a-z0-9-]{3,40}$/),
-  code: z.string().trim().toLowerCase().regex(/^[0-9a-f]{32}$/, "That member code isn't valid"),
+  subdomain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9-]{3,40}$/),
+  code: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[0-9a-f]{32}$/, "That member code isn't valid"),
 });
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -28,9 +36,14 @@ async function resolveViewer(admin: Admin, subdomain: string, code: string) {
   if (!tenant || tenant.status === "closed" || tenant.status === "suspended") {
     return { error: "This church's live service isn't available." } as const;
   }
-  const { data: plan } = await admin.from("plan_config").select("config").eq("tier", tenant.tier).maybeSingle();
+  const { data: plan } = await admin
+    .from("plan_config")
+    .select("config")
+    .eq("tier", tenant.tier)
+    .maybeSingle();
   const cfg = (plan?.config ?? {}) as Record<string, unknown>;
-  const enabled = typeof cfg["watch_live"] === "boolean" ? cfg["watch_live"] : tenant.tier === "premium";
+  const enabled =
+    typeof cfg["watch_live"] === "boolean" ? cfg["watch_live"] : tenant.tier === "premium";
   if (!enabled) return { error: "Watch Live isn't included in this church's package." } as const;
 
   const hash = await sha256Hex(code);
@@ -41,7 +54,8 @@ async function resolveViewer(admin: Admin, subdomain: string, code: string) {
     .eq("token_hash", `\\x${hash}`)
     .is("revoked_at", null)
     .maybeSingle();
-  if (!token) return { error: "We couldn't find that member code. Check it and try again." } as const;
+  if (!token)
+    return { error: "We couldn't find that member code. Check it and try again." } as const;
 
   const { data: member } = await admin
     .from("members")
@@ -72,7 +86,11 @@ export const startWatch = createServerFn({ method: "POST" })
 
     const ids = (services ?? []).map((s) => s.id);
     const { data: sessions } = ids.length
-      ? await supabaseAdmin.from("watch_sessions").select("service_id, seconds").eq("member_id", v.member.id).in("service_id", ids)
+      ? await supabaseAdmin
+          .from("watch_sessions")
+          .select("service_id, seconds")
+          .eq("member_id", v.member.id)
+          .in("service_id", ids)
       : { data: [] };
 
     return {
@@ -133,7 +151,10 @@ export const pingWatch = createServerFn({ method: "POST" })
           .update({ seconds, last_ping: now.toISOString() })
           .eq("id", existing.id);
       } else if (elapsed < 0 || elapsed > 75) {
-        await supabaseAdmin.from("watch_sessions").update({ last_ping: now.toISOString() }).eq("id", existing.id);
+        await supabaseAdmin
+          .from("watch_sessions")
+          .update({ last_ping: now.toISOString() })
+          .eq("id", existing.id);
       }
     }
 

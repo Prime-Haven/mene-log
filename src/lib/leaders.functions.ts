@@ -11,7 +11,11 @@ import { clientIp, orNull } from "@/lib/checkin.functions";
  * rate limit. The browser never touches church tables directly.
  */
 
-const subdomain = z.string().trim().toLowerCase().regex(/^[a-z0-9-]{3,40}$/);
+const subdomain = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9-]{3,40}$/);
 
 const registerSchema = z.object({
   subdomain,
@@ -27,7 +31,11 @@ const registerSchema = z.object({
     .regex(/[0-9]/)
     .regex(/[^A-Za-z0-9]/),
   phone: z.string().trim().min(9).max(20),
-  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
+  date_of_birth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .or(z.literal("")),
   location: z.string().trim().max(120).optional().or(z.literal("")),
   leader_type_id: z.string().uuid().optional().or(z.literal("")),
   photo: z
@@ -64,7 +72,8 @@ export const registerLeader = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const url = process.env["SUPABASE_URL"];
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-    if (!url || !key) return { ok: false as const, message: "Leader sign-up is unavailable right now." };
+    if (!url || !key)
+      return { ok: false as const, message: "Leader sign-up is unavailable right now." };
 
     const { data: church } = await supabaseAdmin.rpc("tenant_branding", {
       p_subdomain: data.subdomain,

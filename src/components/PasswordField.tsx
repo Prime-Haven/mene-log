@@ -38,7 +38,14 @@ export function PasswordField({
       </div>
       <ul className="grid gap-1 pt-1 text-xs sm:grid-cols-2">
         {checks.map((check) => (
-          <li key={check.label} className={check.met ? "flex items-center gap-1.5 text-success" : "flex items-center gap-1.5 text-muted-foreground"}>
+          <li
+            key={check.label}
+            className={
+              check.met
+                ? "flex items-center gap-1.5 text-success"
+                : "flex items-center gap-1.5 text-muted-foreground"
+            }
+          >
             {check.met ? <Check className="size-3" /> : <X className="size-3" />}
             {check.label}
           </li>

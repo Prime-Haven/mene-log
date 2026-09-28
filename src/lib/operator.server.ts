@@ -53,18 +53,33 @@ export function verifyPassword(password: string, hash: string | undefined) {
   return bcrypt.compareSync(password, hash || fallback) && !!hash;
 }
 
-export async function rateLimit(bucket: string, identifier: string, max: number, windowSeconds: number) {
+export async function rateLimit(
+  bucket: string,
+  identifier: string,
+  max: number,
+  windowSeconds: number,
+) {
   const db = await admin();
   const { data, error } = await db.rpc("check_rate_limit", {
-    _bucket: bucket, _identifier: identifier, _max: max, _window_seconds: windowSeconds,
+    _bucket: bucket,
+    _identifier: identifier,
+    _max: max,
+    _window_seconds: windowSeconds,
   });
   if (error) return true;
   return data === true;
 }
 
-export async function audit(actor: string, action: string, detail: Record<string, unknown> = {}, tenantId: string | null = null) {
+export async function audit(
+  actor: string,
+  action: string,
+  detail: Record<string, unknown> = {},
+  tenantId: string | null = null,
+) {
   const db = await admin();
-  await db.from("platform_audit_events").insert({ actor_user_id: actor, action, detail, tenant_id: tenantId });
+  await db
+    .from("platform_audit_events")
+    .insert({ actor_user_id: actor, action, detail, tenant_id: tenantId });
 }
 
 export function validOperatorPassword(value: string) {

@@ -1,0 +1,5 @@
+{
+  "name": "Mene:Log",
+  "description": "Church management software for membership records, QR check-in, attendance tracking, member care, branches, and reports.",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

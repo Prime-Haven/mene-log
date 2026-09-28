@@ -1,7 +1,12 @@
 import QRCode from "qrcode";
 
 /** QR code PNG with the church and member name printed underneath. */
-export async function labelledQr(token: string, church: string, name: string, kind = "Member"): Promise<string> {
+export async function labelledQr(
+  token: string,
+  church: string,
+  name: string,
+  kind = "Member",
+): Promise<string> {
   const qr = await QRCode.toDataURL(token, { width: 480, margin: 2 });
   const img = new Image();
   img.src = qr;

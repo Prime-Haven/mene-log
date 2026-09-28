@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button";
 type Absent = {
   threshold: number;
   ready: boolean;
-  members: Array<{ id: string; full_name: string; phone: string | null; last_seen: string | null; in_followups: boolean }>;
+  members: Array<{
+    id: string;
+    full_name: string;
+    phone: string | null;
+    last_seen: string | null;
+    in_followups: boolean;
+  }>;
 };
 
 /** Dashboard card listing members who missed the last N Sundays. */
@@ -29,7 +35,12 @@ export function AbsenceAlerts() {
   const add = useMutation({
     mutationFn: async (member: string) => {
       const { error } = await supabase.rpc("upsert_followup", {
-        p_member: member, p_status: "new", p_leader: null as unknown as string, p_note: "", p_next: null as unknown as string, p_source: "absence",
+        p_member: member,
+        p_status: "new",
+        p_leader: null as unknown as string,
+        p_note: "",
+        p_next: null as unknown as string,
+        p_source: "absence",
       });
       if (error) throw error;
     },
@@ -46,13 +57,21 @@ export function AbsenceAlerts() {
   return (
     <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-panel)]">
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-base font-semibold"><UserX className="size-4 text-destructive" /> Missing recently</h2>
-        {data && <span className="text-xs text-muted-foreground">Missed last {data.threshold} Sundays</span>}
+        <h2 className="flex items-center gap-2 text-base font-semibold">
+          <UserX className="size-4 text-destructive" /> Missing recently
+        </h2>
+        {data && (
+          <span className="text-xs text-muted-foreground">
+            Missed last {data.threshold} Sundays
+          </span>
+        )}
       </div>
       {isLoading ? (
         <p className="mt-4 text-sm text-muted-foreground">Checking…</p>
       ) : !data?.ready ? (
-        <p className="mt-4 text-sm text-muted-foreground">Alerts start once you've held {data?.threshold ?? 3} Sunday services.</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Alerts start once you've held {data?.threshold ?? 3} Sunday services.
+        </p>
       ) : data.members.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">Everyone has attended recently.</p>
       ) : (
@@ -61,13 +80,28 @@ export function AbsenceAlerts() {
             <li key={m.id} className="flex items-center gap-3 py-2 text-sm">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{m.full_name}</p>
-                <p className="text-xs text-muted-foreground">{m.last_seen ? `Last seen ${new Date(m.last_seen).toLocaleDateString()}` : "Never checked in"}{m.phone ? ` · ${m.phone}` : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {m.last_seen
+                    ? `Last seen ${new Date(m.last_seen).toLocaleDateString()}`
+                    : "Never checked in"}
+                  {m.phone ? ` · ${m.phone}` : ""}
+                </p>
               </div>
-              {canFollow && (m.in_followups ? (
-                <Link to="/followups" className="text-xs font-semibold text-primary">In follow-ups</Link>
-              ) : (
-                <Button size="sm" variant="outline" disabled={add.isPending} onClick={() => add.mutate(m.id)}>Follow up</Button>
-              ))}
+              {canFollow &&
+                (m.in_followups ? (
+                  <Link to="/followups" className="text-xs font-semibold text-primary">
+                    In follow-ups
+                  </Link>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={add.isPending}
+                    onClick={() => add.mutate(m.id)}
+                  >
+                    Follow up
+                  </Button>
+                ))}
             </li>
           ))}
         </ul>

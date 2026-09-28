@@ -10,19 +10,35 @@ export function SiteFooter() {
           <div className="max-w-sm">
             <MeneLogLogo variant="light" className="h-10 max-w-48" />
             <p className="mt-3 text-sm leading-relaxed text-deep-foreground/55">
-              Attendance, membership and care records for churches — one clear record from the door to
-              the week ahead.
+              Attendance, membership and care records for churches — one clear record from the door
+              to the week ahead.
             </p>
           </div>
           <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-deep-foreground/70 sm:grid-cols-3">
-            <a href="/#features" className="hover:text-deep-foreground">Features</a>
-            <a href="/#pricing" className="hover:text-deep-foreground">Plans</a>
-            <a href="/#faq" className="hover:text-deep-foreground">Questions</a>
-            <Link to="/church-membership-software" className="hover:text-deep-foreground">Membership software</Link>
-            <Link to="/church-check-in-software" className="hover:text-deep-foreground">Check-in software</Link>
-            <Link to="/terms" className="hover:text-deep-foreground">Terms of Use</Link>
-            <Link to="/privacy" className="hover:text-deep-foreground">Privacy Policy</Link>
-            <Link to="/auth" search={{ mode: "signin" }} className="hover:text-deep-foreground">Sign in</Link>
+            <a href="/#features" className="hover:text-deep-foreground">
+              Features
+            </a>
+            <a href="/#pricing" className="hover:text-deep-foreground">
+              Plans
+            </a>
+            <a href="/#faq" className="hover:text-deep-foreground">
+              Questions
+            </a>
+            <Link to="/church-membership-software" className="hover:text-deep-foreground">
+              Membership software
+            </Link>
+            <Link to="/church-check-in-software" className="hover:text-deep-foreground">
+              Check-in software
+            </Link>
+            <Link to="/terms" className="hover:text-deep-foreground">
+              Terms of Use
+            </Link>
+            <Link to="/privacy" className="hover:text-deep-foreground">
+              Privacy Policy
+            </Link>
+            <Link to="/auth" search={{ mode: "signin" }} className="hover:text-deep-foreground">
+              Sign in
+            </Link>
           </nav>
         </div>
         <div className="mt-9 flex flex-col gap-2 border-t border-deep-foreground/10 pt-6 text-xs text-deep-foreground/45 sm:flex-row sm:items-center sm:justify-between">

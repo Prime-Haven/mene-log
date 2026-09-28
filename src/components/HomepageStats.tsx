@@ -31,13 +31,19 @@ export function HomepageStats() {
     { icon: Church, value: stats.data?.churches, label: "active churches" },
     { icon: Users, value: stats.data?.members, label: "members cared for" },
     { icon: ScanLine, value: stats.data?.checkins, label: "check-ins recorded" },
-    { icon: BarChart3, value: stats.data?.average_sunday_attendance, label: "average Sunday attendance" },
+    {
+      icon: BarChart3,
+      value: stats.data?.average_sunday_attendance,
+      label: "average Sunday attendance",
+    },
   ];
 
   return (
     <section aria-label="Mene:Log activity" className="bg-deep px-5 py-16 text-deep-foreground">
       <div className="mx-auto max-w-7xl">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/55">Growing together</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/55">
+          Growing together
+        </p>
         <div className="mt-7 grid gap-px overflow-hidden rounded-lg border border-deep-foreground/15 bg-deep-foreground/15 sm:grid-cols-2 lg:grid-cols-4">
           {rows.map(({ icon: Icon, value, label }, index) => (
             <motion.div

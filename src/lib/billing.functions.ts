@@ -97,7 +97,12 @@ export const startPayment = createServerFn({ method: "POST" })
     if (data.coupon) {
       const { findUsableCoupon } = await import("./coupons.server");
       const c = findUsableCoupon(settings.coupons, data.coupon, data.tier);
-      if (!c) return { ok: false as const, reason: "coupon" as const, message: "That discount code isn't valid for this plan." };
+      if (!c)
+        return {
+          ok: false as const,
+          reason: "coupon" as const,
+          message: "That discount code isn't valid for this plan.",
+        };
       usdAmount = Math.max(100, Math.round(usdAmount * (1 - c.percent / 100)));
       couponCode = c.code;
     }
@@ -116,7 +121,16 @@ export const startPayment = createServerFn({ method: "POST" })
         currency,
         reference,
         channels: currency === "GHS" ? ["card", "mobile_money"] : ["card"],
-        metadata: { tenant_id: data.tenant_id, tier: data.tier, kind: "subscription", charge_currency: currency, interval: data.interval, usd_cents: usdAmount, rate, coupon: couponCode },
+        metadata: {
+          tenant_id: data.tenant_id,
+          tier: data.tier,
+          kind: "subscription",
+          charge_currency: currency,
+          interval: data.interval,
+          usd_cents: usdAmount,
+          rate,
+          coupon: couponCode,
+        },
       }),
     });
 
@@ -295,22 +309,39 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
 
 export const resendReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ tenant_id: z.string().uuid(), reference: z.string().min(3).max(80) }).parse(data))
+  .inputValidator((data: unknown) =>
+    z.object({ tenant_id: z.string().uuid(), reference: z.string().min(3).max(80) }).parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: isAdmin } = await supabase.rpc("is_tenant_admin", { _tenant: data.tenant_id });
-    if (isAdmin !== true) return { ok: false as const, message: "Only an administrator can request receipts." };
+    if (isAdmin !== true)
+      return { ok: false as const, message: "Only an administrator can request receipts." };
     const { data: pay } = await supabase
       .from("payments")
       .select("reference, tier, amount_kobo, currency, channel, paid_at, status, tenant_id")
       .eq("tenant_id", data.tenant_id)
       .eq("reference", data.reference)
       .maybeSingle();
-    if (!pay || pay.status !== "success") return { ok: false as const, message: "Receipts are available for completed payments only." };
-    const { data: profile } = await supabase.from("profiles").select("email").eq("id", userId).maybeSingle();
-    if (!profile?.email) return { ok: false as const, message: "Add an email address to your profile first." };
-    const { data: tenant } = await supabase.from("tenants").select("name").eq("id", data.tenant_id).maybeSingle();
-    const { data: sub } = await supabase.from("subscriptions").select("period_end").eq("tenant_id", data.tenant_id).maybeSingle();
+    if (!pay || pay.status !== "success")
+      return { ok: false as const, message: "Receipts are available for completed payments only." };
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!profile?.email)
+      return { ok: false as const, message: "Add an email address to your profile first." };
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("name")
+      .eq("id", data.tenant_id)
+      .maybeSingle();
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("period_end")
+      .eq("tenant_id", data.tenant_id)
+      .maybeSingle();
     const { sendReceipt } = await import("./receipt.server");
     const result = await sendReceipt({
       to: profile.email,
@@ -324,6 +355,10 @@ export const resendReceipt = createServerFn({ method: "POST" })
       paidAt: pay.paid_at ?? new Date().toISOString(),
       renewsOn: sub?.period_end ?? null,
     });
-    if (!result.ok) return { ok: false as const, message: "The receipt could not be sent right now. Please try again shortly." };
+    if (!result.ok)
+      return {
+        ok: false as const,
+        message: "The receipt could not be sent right now. Please try again shortly.",
+      };
     return { ok: true as const, email: profile.email };
   });

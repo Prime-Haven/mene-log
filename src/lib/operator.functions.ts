@@ -4,21 +4,38 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  admin, audit, findOperator, hashPassword, listOperatorUsers, normaliseUsername,
-  operatorEmail, rateLimit, validOperatorPassword, verifyPassword,
+  admin,
+  audit,
+  findOperator,
+  hashPassword,
+  listOperatorUsers,
+  normaliseUsername,
+  operatorEmail,
+  rateLimit,
+  validOperatorPassword,
+  verifyPassword,
 } from "./operator.server";
 
 const GENERIC = "Username or password is incorrect.";
 
 /* ---------------- Sign in with username + password ---------------- */
 export const operatorSignIn = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ username: z.string().min(1).max(60), password: z.string().min(1).max(72) }).parse(d))
+  .inputValidator((d) =>
+    z.object({ username: z.string().min(1).max(60), password: z.string().min(1).max(72) }).parse(d),
+  )
   .handler(async ({ data }) => {
     const username = normaliseUsername(data.username);
-    const ip = (getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for") ?? "unknown").split(",")[0]!.trim();
+    const ip = (
+      getRequestHeader("cf-connecting-ip") ??
+      getRequestHeader("x-forwarded-for") ??
+      "unknown"
+    )
+      .split(",")[0]!
+      .trim();
     const okUser = await rateLimit("operator_login_user", username, 5, 900);
     const okIp = await rateLimit("operator_login_ip", ip, 5, 900);
-    if (!okUser || !okIp) return { ok: false as const, error: "Too many attempts. Wait 15 minutes and try again." };
+    if (!okUser || !okIp)
+      return { ok: false as const, error: "Too many attempts. Wait 15 minutes and try again." };
 
     const operator = await findOperator(username);
     const valid = verifyPassword(data.password, operator?.app_metadata.operator_hash);
@@ -27,31 +44,66 @@ export const operatorSignIn = createServerFn({ method: "POST" })
       return { ok: false as const, error: GENERIC };
     }
     const db = await admin();
-    const { data: isAdmin } = await db.from("platform_admins").select("user_id").eq("user_id", operator.id).maybeSingle();
+    const { data: isAdmin } = await db
+      .from("platform_admins")
+      .select("user_id")
+      .eq("user_id", operator.id)
+      .maybeSingle();
     if (!isAdmin) return { ok: false as const, error: GENERIC };
 
-    const { data: link, error: linkError } = await db.auth.admin.generateLink({ type: "magiclink", email: operator.email });
-    if (linkError || !link?.properties?.hashed_token) return { ok: false as const, error: "Sign-in is unavailable right now. Try again shortly." };
+    const { data: link, error: linkError } = await db.auth.admin.generateLink({
+      type: "magiclink",
+      email: operator.email,
+    });
+    if (linkError || !link?.properties?.hashed_token)
+      return { ok: false as const, error: "Sign-in is unavailable right now. Try again shortly." };
     const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
     const pub = createClient(process.env["SUPABASE_URL"]!, key, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => { const h = new Headers(init?.headers); if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization"); h.set("apikey", key); return fetch(input, { ...init, headers: h }); } },
+      global: {
+        fetch: (input, init) => {
+          const h = new Headers(init?.headers);
+          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
+            h.delete("Authorization");
+          h.set("apikey", key);
+          return fetch(input, { ...init, headers: h });
+        },
+      },
     });
-    const { data: verified, error: otpError } = await pub.auth.verifyOtp({ type: "magiclink", token_hash: link.properties.hashed_token });
-    if (otpError || !verified.session) return { ok: false as const, error: "Sign-in is unavailable right now. Try again shortly." };
+    const { data: verified, error: otpError } = await pub.auth.verifyOtp({
+      type: "magiclink",
+      token_hash: link.properties.hashed_token,
+    });
+    if (otpError || !verified.session)
+      return { ok: false as const, error: "Sign-in is unavailable right now. Try again shortly." };
     await audit(operator.id, "operator.sign_in", { ip });
-    return { ok: true as const, access_token: verified.session.access_token, refresh_token: verified.session.refresh_token };
+    return {
+      ok: true as const,
+      access_token: verified.session.access_token,
+      refresh_token: verified.session.refresh_token,
+    };
   });
 
 /* ---------------- Guard ---------------- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function assertOperator(context: { supabase: any; userId: string }) {
   const { data, error } = await context.supabase.rpc("is_platform_admin");
-  if (error || data !== true) throw new Error("Prime Haven operator access with two-step sign-in is required.");
+  if (error || data !== true)
+    throw new Error("Prime Haven operator access with two-step sign-in is required.");
 }
 
 // Estimated bytes per row, used to size each church's share of the database.
-const ROW_BYTES = { members: 1200, attendance: 260, messages: 1400, services: 300, audit_events: 500, tenant_users: 250, leader_profiles: 700, member_followups: 400, ask_mene_messages: 1500 } as const;
+const ROW_BYTES = {
+  members: 1200,
+  attendance: 260,
+  messages: 1400,
+  services: 300,
+  audit_events: 500,
+  tenant_users: 250,
+  leader_profiles: 700,
+  member_followups: 400,
+  ask_mene_messages: 1500,
+} as const;
 
 /* ---------------- Full console snapshot (aggregate only) ---------------- */
 export const consoleSnapshot = createServerFn({ method: "GET" })
@@ -61,17 +113,78 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
     const db = await admin();
     const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
 
-    const [{ data: tenants }, { data: subs }, { data: payments }, { data: space }, { data: auditRows }, { data: msgs }] = await Promise.all([
-      db.from("tenants").select("id,name,subdomain,tier,status,approval_status,trial_ends_at,contact_email,contact_phone,created_at,extra_member_slots,admin_notes,require_mfa,logo_path,parent_tenant_id").order("created_at", { ascending: false }).limit(1000),
-      db.from("subscriptions").select("tenant_id,tier,period_start,period_end,auto_renew,payment_method"),
-      db.from("payments").select("id,tenant_id,reference,amount_kobo,currency,tier,status,channel,paid_at,created_at").order("created_at", { ascending: false }).limit(3000),
-      db.from("space_requests").select("id,tenant_id,extra_slots,amount_cents,status,created_at").order("created_at", { ascending: false }).limit(500),
-      db.from("platform_audit_events").select("id,actor_user_id,action,tenant_id,detail,created_at").order("created_at", { ascending: false }).limit(1000),
-      db.from("messages").select("tenant_id,channel,status,created_at").gte("created_at", since30).limit(50000),
+    const [
+      { data: tenants },
+      { data: subs },
+      { data: payments },
+      { data: space },
+      { data: auditRows },
+      { data: msgs },
+      { data: backupJobs },
+    ] = await Promise.all([
+      db
+        .from("tenants")
+        .select(
+          "id,name,subdomain,tier,status,approval_status,approval_risk_flags,approval_reason,correction_requested_at,trial_ends_at,contact_email,contact_phone,created_at,extra_member_slots,admin_notes,require_mfa,logo_path,parent_tenant_id",
+        )
+        .order("created_at", { ascending: false })
+        .limit(1000),
+      db
+        .from("subscriptions")
+        .select("tenant_id,tier,period_start,period_end,auto_renew,payment_method"),
+      db
+        .from("payments")
+        .select(
+          "id,tenant_id,reference,amount_kobo,currency,tier,status,channel,paid_at,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(3000),
+      db
+        .from("space_requests")
+        .select("id,tenant_id,extra_slots,amount_cents,status,created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      db
+        .from("platform_audit_events")
+        .select("id,actor_user_id,action,tenant_id,detail,created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000),
+      db
+        .from("messages")
+        .select("tenant_id,channel,status,error,created_at,scheduled_at,sent_at")
+        .gte("created_at", since30)
+        .limit(50000),
+      db
+        .from("tenant_backup_jobs")
+        .select(
+          "id,tenant_id,requested_by,kind,status,storage_path,schema_version,byte_size,checksum,record_counts,source_backup_id,error_summary,expires_at,started_at,completed_at,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(200),
     ]);
 
-    type TenantRow = { id: string; name: string; subdomain: string; tier: string; status: string; approval_status: string; trial_ends_at: string | null; contact_email: string | null; contact_phone: string | null; created_at: string; extra_member_slots: number; admin_notes: string | null; require_mfa: boolean; logo_path: string | null; parent_tenant_id: string | null };
+    type TenantRow = {
+      id: string;
+      name: string;
+      subdomain: string;
+      tier: string;
+      status: string;
+      approval_status: string;
+      approval_risk_flags?: string[] | null;
+      approval_reason?: string | null;
+      correction_requested_at?: string | null;
+      trial_ends_at: string | null;
+      contact_email: string | null;
+      contact_phone: string | null;
+      created_at: string;
+      extra_member_slots: number;
+      admin_notes: string | null;
+      require_mfa: boolean;
+      logo_path: string | null;
+      parent_tenant_id: string | null;
+    };
     const tenantList = (tenants ?? []) as TenantRow[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const count = async (table: string, tenantId: string, extra?: (q: any) => any) => {
       let q = db.from(table).select("id", { count: "exact", head: true }).eq("tenant_id", tenantId);
       if (extra) q = extra(q);
@@ -79,23 +192,66 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
       return c ?? 0;
     };
 
-    const perTenant = await Promise.all(tenantList.map(async (t) => {
-      const [members, attendance, attendance30, services, staff, messages, audits, leaders, followups, ai, lastAtt] = await Promise.all([
-        count("members", t.id, (q) => q.neq("status", "anonymised")),
-        count("attendance", t.id),
-        count("attendance", t.id, (q) => q.gte("recorded_at", since30)),
-        count("services", t.id),
-        count("tenant_users", t.id, (q) => q.eq("status", "active")),
-        count("messages", t.id),
-        count("audit_events", t.id),
-        count("leader_profiles", t.id),
-        count("member_followups", t.id),
-        count("ask_mene_messages", t.id),
-        db.from("attendance").select("recorded_at").eq("tenant_id", t.id).order("recorded_at", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      const bytes = members * ROW_BYTES.members + attendance * ROW_BYTES.attendance + messages * ROW_BYTES.messages + services * ROW_BYTES.services + audits * ROW_BYTES.audit_events + staff * ROW_BYTES.tenant_users + leaders * ROW_BYTES.leader_profiles + followups * ROW_BYTES.member_followups + ai * ROW_BYTES.ask_mene_messages + 4096;
-      return { id: t.id as string, members, attendance, attendance30, services, staff, messages, leaders, rows: members + attendance + messages + services + audits + staff + leaders + followups + ai, bytes, last_activity: (lastAtt.data?.recorded_at as string | undefined) ?? null };
-    }));
+    const perTenant = await Promise.all(
+      tenantList.map(async (t) => {
+        const [
+          members,
+          attendance,
+          attendance30,
+          services,
+          staff,
+          messages,
+          audits,
+          leaders,
+          followups,
+          ai,
+          lastAtt,
+        ] = await Promise.all([
+          count("members", t.id, (q) => q.neq("status", "anonymised")),
+          count("attendance", t.id),
+          count("attendance", t.id, (q) => q.gte("recorded_at", since30)),
+          count("services", t.id),
+          count("tenant_users", t.id, (q) => q.eq("status", "active")),
+          count("messages", t.id),
+          count("audit_events", t.id),
+          count("leader_profiles", t.id),
+          count("member_followups", t.id),
+          count("ask_mene_messages", t.id),
+          db
+            .from("attendance")
+            .select("recorded_at")
+            .eq("tenant_id", t.id)
+            .order("recorded_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        const bytes =
+          members * ROW_BYTES.members +
+          attendance * ROW_BYTES.attendance +
+          messages * ROW_BYTES.messages +
+          services * ROW_BYTES.services +
+          audits * ROW_BYTES.audit_events +
+          staff * ROW_BYTES.tenant_users +
+          leaders * ROW_BYTES.leader_profiles +
+          followups * ROW_BYTES.member_followups +
+          ai * ROW_BYTES.ask_mene_messages +
+          4096;
+        return {
+          id: t.id as string,
+          members,
+          attendance,
+          attendance30,
+          services,
+          staff,
+          messages,
+          leaders,
+          rows:
+            members + attendance + messages + services + audits + staff + leaders + followups + ai,
+          bytes,
+          last_activity: (lastAtt.data?.recorded_at as string | undefined) ?? null,
+        };
+      }),
+    );
 
     // Storage buckets: sum file sizes (two folder levels deep).
     const storage: Array<{ bucket: string; files: number; bytes: number }> = [];
@@ -103,105 +259,329 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
     try {
       const { data: buckets } = await db.storage.listBuckets();
       for (const b of buckets ?? []) {
-        let files = 0, bytes = 0;
+        let files = 0,
+          bytes = 0;
         const { data: top } = await db.storage.from(b.name).list("", { limit: 1000 });
         for (const item of top ?? []) {
-          if (item.id) { files++; bytes += item.metadata?.size ?? 0; continue; }
+          if (item.id) {
+            files++;
+            bytes += item.metadata?.size ?? 0;
+            continue;
+          }
           const { data: inner } = await db.storage.from(b.name).list(item.name, { limit: 1000 });
           for (const f of inner ?? []) {
             if (!f.id) continue;
-            files++; const s = f.metadata?.size ?? 0; bytes += s;
-            if (tenantList.some((t) => t.id === item.name)) tenantStorage[item.name] = (tenantStorage[item.name] ?? 0) + s;
+            files++;
+            const s = f.metadata?.size ?? 0;
+            bytes += s;
+            if (tenantList.some((t) => t.id === item.name))
+              tenantStorage[item.name] = (tenantStorage[item.name] ?? 0) + s;
           }
         }
         storage.push({ bucket: b.name, files, bytes });
       }
-    } catch { /* storage listing is best effort */ }
+    } catch {
+      /* storage listing is best effort */
+    }
 
     // Weekly check-ins across the platform (12 weeks).
-    const weekly = await Promise.all(Array.from({ length: 12 }, async (_, i) => {
-      const end = new Date(Date.now() - i * 7 * 864e5); const start = new Date(end.getTime() - 7 * 864e5);
-      const { count: c } = await db.from("attendance").select("id", { count: "exact", head: true }).gte("recorded_at", start.toISOString()).lt("recorded_at", end.toISOString());
-      return { week: start.toISOString().slice(0, 10), checkins: c ?? 0 };
-    }));
+    const weekly = await Promise.all(
+      Array.from({ length: 12 }, async (_, i) => {
+        const end = new Date(Date.now() - i * 7 * 864e5);
+        const start = new Date(end.getTime() - 7 * 864e5);
+        const { count: c } = await db
+          .from("attendance")
+          .select("id", { count: "exact", head: true })
+          .gte("recorded_at", start.toISOString())
+          .lt("recorded_at", end.toISOString());
+        return { week: start.toISOString().slice(0, 10), checkins: c ?? 0 };
+      }),
+    );
 
-    const msgHealth: Record<string, { email_sent: number; sms_sent: number; failed: number; queued: number }> = {};
+    const msgHealth: Record<
+      string,
+      { email_sent: number; sms_sent: number; failed: number; queued: number }
+    > = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const m of (msgs ?? []) as any[]) {
-      const row = (msgHealth[m.tenant_id!] ??= { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 });
+      const row = (msgHealth[m.tenant_id!] ??= {
+        email_sent: 0,
+        sms_sent: 0,
+        failed: 0,
+        queued: 0,
+      });
       if (m.status === "sent") row[m.channel === "sms" ? "sms_sent" : "email_sent"]++;
       else if (m.status === "failed") row.failed++;
       else row.queued++;
     }
 
     const operators = await listOperatorUsers();
-    const opName = Object.fromEntries(operators.map((o) => [o.id, o.app_metadata.operator_username ?? o.email]));
+    const opName = Object.fromEntries(
+      operators.map((o) => [o.id, o.app_metadata.operator_username ?? o.email]),
+    );
 
     const env = (k: string) => !!process.env[k];
     const day = new Date(Date.now() - 864e5).toISOString();
     const hourAgo = new Date(Date.now() - 36e5).toISOString();
     const [{ count: sent24 }, { count: failed24 }, { count: stuck }] = await Promise.all([
-      db.from("messages").select("id", { count: "exact", head: true }).eq("status", "sent").gte("sent_at", day),
-      db.from("messages").select("id", { count: "exact", head: true }).eq("status", "failed").gte("created_at", day),
-      db.from("messages").select("id", { count: "exact", head: true }).eq("status", "queued").lt("scheduled_at", hourAgo),
+      db
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "sent")
+        .gte("sent_at", day),
+      db
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "failed")
+        .gte("created_at", day),
+      db
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "queued")
+        .lt("scheduled_at", hourAgo),
     ]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lastPaid = ((payments ?? []) as any[]).find((p) => p.status === "success");
 
     return {
       generated_at: new Date().toISOString(),
-      tenants: tenantList.map((t) => ({ ...t, sub: ((subs ?? []) as Array<{ tenant_id: string; period_end: string; auto_renew: boolean; payment_method: string }>).find((s) => s.tenant_id === t.id) ?? null, usage: perTenant.find((p) => p.id === t.id) as { members: number; attendance: number; attendance30: number; services: number; staff: number; messages: number; leaders: number; rows: number; bytes: number; last_activity: string | null }, storage_bytes: tenantStorage[t.id] ?? 0, messaging: msgHealth[t.id] ?? { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 } })),
-      payments: (payments ?? []) as Array<{ id: string; tenant_id: string; reference: string; amount_kobo: number; currency: string; tier: string; status: string; channel: string | null; paid_at: string | null; created_at: string }>,
-      space_requests: (space ?? []) as Array<{ id: string; tenant_id: string; extra_slots: number; amount_cents: number; status: string; created_at: string }>,
-      audit: ((auditRows ?? []) as Array<{ id: string; actor_user_id: string; action: string; tenant_id: string | null; detail: Record<string, string | number | boolean | null | string[]> | null; created_at: string }>).map((a) => ({ ...a, actor: (opName[a.actor_user_id] ?? "operator") as string })),
+      tenants: tenantList.map((t) => ({
+        ...t,
+        sub:
+          (
+            (subs ?? []) as Array<{
+              tenant_id: string;
+              period_end: string;
+              auto_renew: boolean;
+              payment_method: string;
+            }>
+          ).find((s) => s.tenant_id === t.id) ?? null,
+        usage: perTenant.find((p) => p.id === t.id) as {
+          members: number;
+          attendance: number;
+          attendance30: number;
+          services: number;
+          staff: number;
+          messages: number;
+          leaders: number;
+          rows: number;
+          bytes: number;
+          last_activity: string | null;
+        },
+        storage_bytes: tenantStorage[t.id] ?? 0,
+        messaging: msgHealth[t.id] ?? { email_sent: 0, sms_sent: 0, failed: 0, queued: 0 },
+      })),
+      payments: (payments ?? []) as Array<{
+        id: string;
+        tenant_id: string;
+        reference: string;
+        amount_kobo: number;
+        currency: string;
+        tier: string;
+        status: string;
+        channel: string | null;
+        paid_at: string | null;
+        created_at: string;
+      }>,
+      space_requests: (space ?? []) as Array<{
+        id: string;
+        tenant_id: string;
+        extra_slots: number;
+        amount_cents: number;
+        status: string;
+        created_at: string;
+      }>,
+      audit: (
+        (auditRows ?? []) as Array<{
+          id: string;
+          actor_user_id: string;
+          action: string;
+          tenant_id: string | null;
+          detail: Record<string, string | number | boolean | null | string[]> | null;
+          created_at: string;
+        }>
+      ).map((a) => ({ ...a, actor: (opName[a.actor_user_id] ?? "operator") as string })),
       weekly: weekly.reverse(),
       storage,
-      operators: operators.map((o) => ({ id: o.id, username: o.app_metadata.operator_username ?? o.email, last_sign_in_at: o.last_sign_in_at, created_at: o.created_at, is_me: o.id === context.userId })),
+      backup_jobs: (
+        (backupJobs ?? []) as Array<{
+          id: string;
+          tenant_id: string;
+          requested_by: string;
+          kind: "backup" | "pre_restore" | "restore";
+          status: "pending" | "running" | "completed" | "failed" | "expired";
+          storage_path: string | null;
+          schema_version: number;
+          byte_size: number;
+          checksum: string | null;
+          record_counts: Record<string, number>;
+          source_backup_id: string | null;
+          error_summary: string | null;
+          expires_at: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+        }>
+      ).map((j) => ({ ...j, requested_by_name: (opName[j.requested_by] ?? "operator") as string })),
+      messaging_errors: (() => {
+        const cats: Record<string, number> = {};
+        for (const m of (msgs ?? []) as Array<{ status: string; error?: string | null }>) {
+          if (m.status === "failed") {
+            const err = (m.error ?? "").toLowerCase();
+            let cat = "Delivery rejection";
+            if (err.includes("rate") || err.includes("limit") || err.includes("429"))
+              cat = "Provider rate limit";
+            else if (
+              err.includes("invalid") ||
+              err.includes("format") ||
+              err.includes("email") ||
+              err.includes("phone")
+            )
+              cat = "Invalid recipient contact";
+            else if (err.includes("quiet")) cat = "Quiet hours deferred";
+            else if (err.includes("timeout") || err.includes("network")) cat = "Network timeout";
+            else if (err.includes("quota") || err.includes("balance"))
+              cat = "Provider quota / credits";
+            cats[cat] = (cats[cat] ?? 0) + 1;
+          }
+        }
+        return cats;
+      })(),
+      operators: operators.map((o) => ({
+        id: o.id,
+        username: o.app_metadata.operator_username ?? o.email,
+        last_sign_in_at: o.last_sign_in_at,
+        created_at: o.created_at,
+        is_me: o.id === context.userId,
+      })),
       health: {
-        email: env("MENELOG_RESEND_API_KEY"), payments: env("PAYSTACK_SECRET_KEY"), cron: env("MENELOG_CRON_SECRET"), ai: env("LOVABLE_API_KEY"),
+        email: env("MENELOG_RESEND_API_KEY"),
+        payments: env("PAYSTACK_SECRET_KEY"),
+        cron: env("MENELOG_CRON_SECRET"),
+        ai: env("LOVABLE_API_KEY"),
         sms: env("AKASEL_API_KEY") || env("AKASEL_API_TOKEN"),
-        sent_24h: sent24 ?? 0, failed_24h: failed24 ?? 0, stuck_queue: stuck ?? 0, last_payment_at: lastPaid?.paid_at ?? lastPaid?.created_at ?? null,
+        sent_24h: sent24 ?? 0,
+        failed_24h: failed24 ?? 0,
+        stuck_queue: stuck ?? 0,
+        last_payment_at: lastPaid?.paid_at ?? lastPaid?.created_at ?? null,
       },
     };
   });
 
 /* ---------------- Mutations ---------------- */
 const action = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("extend"), tenant_id: z.string().uuid(), days: z.number().int().min(1).max(730) }),
+  z.object({
+    type: z.literal("extend"),
+    tenant_id: z.string().uuid(),
+    days: z.number().int().min(1).max(730),
+  }),
   z.object({ type: z.literal("notes"), tenant_id: z.string().uuid(), notes: z.string().max(4000) }),
   z.object({ type: z.literal("require_mfa"), tenant_id: z.string().uuid(), value: z.boolean() }),
   z.object({ type: z.literal("retry_failed"), tenant_id: z.string().uuid().nullable() }),
   z.object({ type: z.literal("resend_welcome"), tenant_id: z.string().uuid() }),
-  z.object({ type: z.literal("announce"), subject: z.string().min(3).max(150), body: z.string().min(5).max(5000), tiers: z.array(z.enum(["free", "basic", "standard", "premium"])).min(1), statuses: z.array(z.enum(["active", "grace", "suspended", "closed"])).min(1) }),
-  z.object({ type: z.literal("add_operator"), username: z.string().regex(/^[a-z0-9._-]{3,30}$/i), password: z.string() }),
+  z.object({
+    type: z.literal("announce"),
+    subject: z.string().min(3).max(150),
+    body: z.string().min(5).max(5000),
+    tiers: z.array(z.enum(["free", "basic", "standard", "premium"])).min(1),
+    statuses: z.array(z.enum(["active", "grace", "suspended", "closed"])).min(1),
+  }),
+  z.object({
+    type: z.literal("add_operator"),
+    username: z.string().regex(/^[a-z0-9._-]{3,30}$/i),
+    password: z.string(),
+  }),
   z.object({ type: z.literal("remove_operator"), user_id: z.string().uuid() }),
   z.object({ type: z.literal("reset_operator"), user_id: z.string().uuid(), password: z.string() }),
   z.object({ type: z.literal("change_password"), current: z.string(), next: z.string() }),
   z.object({ type: z.literal("test_email"), to: z.string().trim().email().max(160) }),
   z.object({ type: z.literal("apply_messaging_defaults") }),
   z.object({ type: z.literal("detach_branch"), tenant_id: z.string().uuid() }),
+  z.object({ type: z.literal("create_backup"), tenant_id: z.string().uuid() }),
+  z.object({
+    type: z.literal("restore_backup"),
+    backup_id: z.string().uuid(),
+    tenant_id: z.string().uuid(),
+    confirmation_name: z.string().min(1),
+    operator_password: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("approve_church"),
+    tenant_id: z.string().uuid(),
+    notes: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("reject_church"),
+    tenant_id: z.string().uuid(),
+    reason: z.string().min(2),
+  }),
+  z.object({
+    type: z.literal("request_correction"),
+    tenant_id: z.string().uuid(),
+    reason: z.string().min(5),
+  }),
+  z.object({
+    type: z.literal("flag_church"),
+    tenant_id: z.string().uuid(),
+    reason: z.string().min(5),
+  }),
 ]);
 
 export type OperatorActionInput = z.infer<typeof action>;
+
+export const downloadBackupArchive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ backup_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOperator(context);
+    const { downloadEncryptedBackup } = await import("./backup.server");
+    return downloadEncryptedBackup(context.userId, data.backup_id);
+  });
 
 export const operatorAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => action.parse(d))
   .handler(async ({ data, context }) => {
     await assertOperator(context);
-    if (!(await rateLimit("operator_action", context.userId, 60, 300))) throw new Error("Too many actions in a short time. Wait a few minutes.");
+    if (!(await rateLimit("operator_action", context.userId, 60, 300)))
+      throw new Error("Too many actions in a short time. Wait a few minutes.");
     const db = await admin();
     const me = context.userId;
 
     switch (data.type) {
       case "extend": {
-        const { data: t } = await db.from("tenants").select("trial_ends_at,name").eq("id", data.tenant_id).single();
-        const { data: s } = await db.from("subscriptions").select("period_end").eq("tenant_id", data.tenant_id).maybeSingle();
-        const add = (iso: string | null) => { const base = iso && new Date(iso) > new Date() ? new Date(iso) : new Date(); return new Date(base.getTime() + data.days * 864e5); };
+        const { data: t } = await db
+          .from("tenants")
+          .select("trial_ends_at,name")
+          .eq("id", data.tenant_id)
+          .single();
+        const { data: s } = await db
+          .from("subscriptions")
+          .select("period_end")
+          .eq("tenant_id", data.tenant_id)
+          .maybeSingle();
+        const add = (iso: string | null) => {
+          const base = iso && new Date(iso) > new Date() ? new Date(iso) : new Date();
+          return new Date(base.getTime() + data.days * 864e5);
+        };
         if (s) {
-          if (String(s.period_end).startsWith("9999")) throw new Error("Free plan churches never expire.");
-          await db.from("subscriptions").update({ period_end: add(s.period_end).toISOString().slice(0, 10) }).eq("tenant_id", data.tenant_id);
+          if (String(s.period_end).startsWith("9999"))
+            throw new Error("Free plan churches never expire.");
+          await db
+            .from("subscriptions")
+            .update({ period_end: add(s.period_end).toISOString().slice(0, 10) })
+            .eq("tenant_id", data.tenant_id);
         }
-        if (t?.trial_ends_at) await db.from("tenants").update({ trial_ends_at: add(t.trial_ends_at).toISOString() }).eq("id", data.tenant_id);
-        await db.from("tenants").update({ status: "active" }).eq("id", data.tenant_id).eq("status", "grace");
+        if (t?.trial_ends_at)
+          await db
+            .from("tenants")
+            .update({ trial_ends_at: add(t.trial_ends_at).toISOString() })
+            .eq("id", data.tenant_id);
+        await db
+          .from("tenants")
+          .update({ status: "active" })
+          .eq("id", data.tenant_id)
+          .eq("status", "grace");
         await audit(me, "tenant.extended", { days: data.days }, data.tenant_id);
         return { ok: true, message: `Extended by ${data.days} days` };
       }
@@ -212,45 +592,126 @@ export const operatorAction = createServerFn({ method: "POST" })
       case "require_mfa":
         await db.from("tenants").update({ require_mfa: data.value }).eq("id", data.tenant_id);
         await audit(me, "tenant.require_mfa", { value: data.value }, data.tenant_id);
-        return { ok: true, message: data.value ? "Two-step sign-in required" : "Two-step sign-in requirement removed" };
+        return {
+          ok: true,
+          message: data.value
+            ? "Two-step sign-in required"
+            : "Two-step sign-in requirement removed",
+        };
       case "retry_failed": {
-        let q = db.from("messages").update({ status: "queued", attempts: 0, error: null, scheduled_at: new Date().toISOString() }).eq("status", "failed");
+        let q = db
+          .from("messages")
+          .update({
+            status: "queued",
+            attempts: 0,
+            error: null,
+            scheduled_at: new Date().toISOString(),
+          })
+          .eq("status", "failed");
         if (data.tenant_id) q = q.eq("tenant_id", data.tenant_id);
         const { data: rows } = await q.select("id");
         await audit(me, "messages.retried", { count: rows?.length ?? 0 }, data.tenant_id);
         return { ok: true, message: `${rows?.length ?? 0} messages queued again` };
       }
       case "resend_welcome": {
-        const { data: t } = await db.from("tenants").select("name,contact_email,brand_primary,subdomain").eq("id", data.tenant_id).single();
+        const { data: t } = await db
+          .from("tenants")
+          .select("name,contact_email,brand_primary,subdomain")
+          .eq("id", data.tenant_id)
+          .single();
         if (!t?.contact_email) throw new Error("This church has no contact email.");
         const { renderEmail, sendEmail } = await import("./messaging.server");
         const { SITE_URL } = await import("./site");
-        const res = await sendEmail({ to: t.contact_email, fromName: "Mene:Log", replyTo: null, subject: `Welcome to Mene:Log, ${t.name}`,
-          html: renderEmail({ churchName: t.name, brandPrimary: t.brand_primary, logoUrl: null, subject: `Welcome to Mene:Log`, body: `Your church account is ready.\n\nSign in to set up services, members and check-in. Your check-in page is ${SITE_URL}/c/${t.subdomain}.`, ctaLabel: "Sign in", ctaUrl: `${SITE_URL}/auth` }) });
+        const res = await sendEmail({
+          to: t.contact_email,
+          fromName: "Mene:Log",
+          replyTo: null,
+          subject: `Welcome to Mene:Log, ${t.name}`,
+          html: renderEmail({
+            churchName: t.name,
+            brandPrimary: t.brand_primary,
+            logoUrl: null,
+            subject: `Welcome to Mene:Log`,
+            body: `Your church account is ready.\n\nSign in to set up services, members and check-in. Your check-in page is ${SITE_URL}/c/${t.subdomain}.`,
+            ctaLabel: "Sign in",
+            ctaUrl: `${SITE_URL}/auth`,
+          }),
+        });
         if (!res.ok) throw new Error(res.error ?? "Email failed");
         await audit(me, "tenant.welcome_resent", {}, data.tenant_id);
         return { ok: true, message: "Welcome email sent" };
       }
       case "announce": {
-        const { data: ts } = await db.from("tenants").select("id,name,brand_primary").in("tier", data.tiers).in("status", data.statuses);
+        const { data: ts } = await db
+          .from("tenants")
+          .select("id,name,brand_primary")
+          .in("tier", data.tiers)
+          .in("status", data.statuses);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ids = (ts ?? []).map((t: any) => t.id);
         if (!ids.length) throw new Error("No churches match this audience.");
-        const { data: owners } = await db.from("tenant_users").select("tenant_id,user_id").in("tenant_id", ids).in("role", ["owner", "church_admin"]).eq("status", "active");
+        const { data: owners } = await db
+          .from("tenant_users")
+          .select("tenant_id,user_id")
+          .in("tenant_id", ids)
+          .in("role", ["owner", "church_admin"])
+          .eq("status", "active");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userIds = [...new Set((owners ?? []).map((o: any) => o.user_id))];
-        const { data: profiles } = userIds.length ? await db.from("profiles").select("id,email").in("id", userIds) : { data: [] };
-        const emails = [...new Set((profiles ?? []).map((p: any) => p.email).filter(Boolean))] as string[];
+        const { data: profiles } = userIds.length
+          ? await db.from("profiles").select("id,email").in("id", userIds)
+          : { data: [] };
+        const emails = [
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...new Set((profiles ?? []).map((p: any) => p.email).filter(Boolean)),
+        ] as string[];
         const { renderEmail, sendEmail } = await import("./messaging.server");
-        const html = renderEmail({ churchName: "Prime Haven · Mene:Log", brandPrimary: "#3b82f6", logoUrl: null, subject: data.subject, body: data.body });
+        const html = renderEmail({
+          churchName: "Prime Haven · Mene:Log",
+          brandPrimary: "#3b82f6",
+          logoUrl: null,
+          subject: data.subject,
+          body: data.body,
+        });
         let sent = 0;
-        for (const to of emails.slice(0, 2000)) { const r = await sendEmail({ to, subject: data.subject, html, fromName: "Mene:Log", replyTo: null }); if (r.ok) sent++; }
-        await audit(me, "announcement.sent", { subject: data.subject, body: data.body, tiers: data.tiers, statuses: data.statuses, recipients: emails.length, sent });
-        return { ok: true, message: `Announcement sent to ${sent} of ${emails.length} administrators` };
+        for (const to of emails.slice(0, 2000)) {
+          const r = await sendEmail({
+            to,
+            subject: data.subject,
+            html,
+            fromName: "Mene:Log",
+            replyTo: null,
+          });
+          if (r.ok) sent++;
+        }
+        await audit(me, "announcement.sent", {
+          subject: data.subject,
+          body: data.body,
+          tiers: data.tiers,
+          statuses: data.statuses,
+          recipients: emails.length,
+          sent,
+        });
+        return {
+          ok: true,
+          message: `Announcement sent to ${sent} of ${emails.length} administrators`,
+        };
       }
       case "add_operator": {
-        if (!validOperatorPassword(data.password)) throw new Error("Password must be 8 to 72 characters.");
+        if (!validOperatorPassword(data.password))
+          throw new Error("Password must be 8 to 72 characters.");
         const username = normaliseUsername(data.username);
         if (await findOperator(username)) throw new Error("That username is already taken.");
-        const { data: created, error } = await db.auth.admin.createUser({ email: operatorEmail(username), password: crypto.randomUUID() + "Aa1!", email_confirm: true, app_metadata: { operator: true, operator_username: username, operator_hash: hashPassword(data.password) } });
+        const { data: created, error } = await db.auth.admin.createUser({
+          email: operatorEmail(username),
+          password: crypto.randomUUID() + "Aa1!",
+          email_confirm: true,
+          app_metadata: {
+            operator: true,
+            operator_username: username,
+            operator_hash: hashPassword(data.password),
+          },
+        });
         if (error || !created.user) throw new Error("Could not create operator");
         await db.from("platform_admins").insert({ user_id: created.user.id });
         await audit(me, "operator.added", { username });
@@ -268,17 +729,34 @@ export const operatorAction = createServerFn({ method: "POST" })
         return { ok: true, message: "Operator removed" };
       }
       case "reset_operator": {
-        if (!validOperatorPassword(data.password)) throw new Error("Password must be 8 to 72 characters.");
+        if (!validOperatorPassword(data.password))
+          throw new Error("Password must be 8 to 72 characters.");
         const target = (await listOperatorUsers()).find((o) => o.id === data.user_id);
         if (!target) throw new Error("Operator not found");
-        await db.auth.admin.updateUserById(data.user_id, { app_metadata: { ...target.app_metadata, operator_hash: hashPassword(data.password) } });
-        await audit(me, "operator.password_reset", { username: target.app_metadata.operator_username });
+        await db.auth.admin.updateUserById(data.user_id, {
+          app_metadata: { ...target.app_metadata, operator_hash: hashPassword(data.password) },
+        });
+        await audit(me, "operator.password_reset", {
+          username: target.app_metadata.operator_username,
+        });
         return { ok: true, message: "Password reset" };
       }
       case "test_email": {
         const { renderEmail, sendEmail } = await import("./messaging.server");
-        const html = renderEmail({ churchName: "Prime Haven · Mene:Log", brandPrimary: "#3b82f6", logoUrl: null, subject: "Your Mene:Log email is working", body: "This is a test email from the Prime Haven console. If you can read this, email delivery is working." });
-        const r = await sendEmail({ to: data.to, subject: "Your Mene:Log email is working", html, fromName: "Mene:Log", replyTo: null });
+        const html = renderEmail({
+          churchName: "Prime Haven · Mene:Log",
+          brandPrimary: "#3b82f6",
+          logoUrl: null,
+          subject: "Your Mene:Log email is working",
+          body: "This is a test email from the Prime Haven console. If you can read this, email delivery is working.",
+        });
+        const r = await sendEmail({
+          to: data.to,
+          subject: "Your Mene:Log email is working",
+          html,
+          fromName: "Mene:Log",
+          replyTo: null,
+        });
         await audit(me, "platform.test_email", { to: data.to, ok: r.ok });
         if (!r.ok) throw new Error(r.error ?? "Email could not be sent");
         return { ok: true, message: `Test email sent to ${data.to}` };
@@ -286,24 +764,91 @@ export const operatorAction = createServerFn({ method: "POST" })
       case "apply_messaging_defaults": {
         const { readSettings } = await import("./settings.server");
         const s = await readSettings(true);
-        const { error } = await db.from("tenants").update({ quiet_hour_start: s.messaging.quiet_start, quiet_hour_end: s.messaging.quiet_end, absence_threshold: s.messaging.default_absence_threshold }).neq("status", "closed");
+        const { error } = await db
+          .from("tenants")
+          .update({
+            quiet_hour_start: s.messaging.quiet_start,
+            quiet_hour_end: s.messaging.quiet_end,
+            absence_threshold: s.messaging.default_absence_threshold,
+          })
+          .neq("status", "closed");
         if (error) throw new Error("Could not apply to churches.");
         await audit(me, "platform.messaging_defaults_applied", s.messaging);
         return { ok: true, message: "Quiet hours and absence alerts applied to every church" };
       }
       case "detach_branch": {
-        const { error } = await db.from("tenants").update({ parent_tenant_id: null }).eq("id", data.tenant_id);
+        const { error } = await db
+          .from("tenants")
+          .update({ parent_tenant_id: null })
+          .eq("id", data.tenant_id);
         if (error) throw new Error("Could not detach this branch.");
         await audit(me, "branch.detached", {}, data.tenant_id);
         return { ok: true, message: "Branch is now a standalone church" };
       }
       case "change_password": {
-        if (!validOperatorPassword(data.next)) throw new Error("New password must be 8 to 72 characters.");
+        if (!validOperatorPassword(data.next))
+          throw new Error("New password must be 8 to 72 characters.");
         const self = (await listOperatorUsers()).find((o) => o.id === me);
-        if (!self || !verifyPassword(data.current, self.app_metadata.operator_hash)) throw new Error("Current password is incorrect.");
-        await db.auth.admin.updateUserById(me, { app_metadata: { ...self.app_metadata, operator_hash: hashPassword(data.next) } });
+        if (!self || !verifyPassword(data.current, self.app_metadata.operator_hash))
+          throw new Error("Current password is incorrect.");
+        await db.auth.admin.updateUserById(me, {
+          app_metadata: { ...self.app_metadata, operator_hash: hashPassword(data.next) },
+        });
         await audit(me, "operator.password_changed");
         return { ok: true, message: "Password changed" };
+      }
+      case "create_backup": {
+        const { createTenantBackup } = await import("./backup.server");
+        const res = await createTenantBackup(me, data.tenant_id, "backup");
+        return {
+          ok: true,
+          message: `Encrypted backup created for ${res.tenantName} (${(res.byteSize / 1024).toFixed(1)} KB)`,
+        };
+      }
+      case "restore_backup": {
+        const { restoreTenantBackup } = await import("./backup.server");
+        const self = (await listOperatorUsers()).find((o) => o.id === me);
+        const username = self?.app_metadata?.operator_username ?? self?.email ?? "operator";
+        const res = await restoreTenantBackup(me, {
+          backupId: data.backup_id,
+          tenantId: data.tenant_id,
+          confirmationName: data.confirmation_name,
+          operatorPassword: data.operator_password,
+          operatorUsername: username,
+        });
+        return { ok: true, message: res.message };
+      }
+      case "approve_church": {
+        const { error } = await db.rpc("platform_approve_church", {
+          p_tenant: data.tenant_id,
+          p_notes: data.notes || null,
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, message: "Church approved and activated" };
+      }
+      case "reject_church": {
+        const { error } = await db.rpc("platform_reject_church", {
+          p_tenant: data.tenant_id,
+          p_reason: data.reason,
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, message: "Church rejected" };
+      }
+      case "request_correction": {
+        const { error } = await db.rpc("platform_request_correction", {
+          p_tenant: data.tenant_id,
+          p_reason: data.reason,
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, message: "Correction request sent to church" };
+      }
+      case "flag_church": {
+        const { error } = await db.rpc("platform_flag_church", {
+          p_tenant: data.tenant_id,
+          p_reason: data.reason,
+        });
+        if (error) throw new Error(error.message);
+        return { ok: true, message: "Church flagged for review" };
       }
     }
   });
@@ -315,21 +860,59 @@ export const healthCheck = createServerFn({ method: "POST" })
     await assertOperator(context);
     const timed = async (fn: () => Promise<boolean>) => {
       const t = Date.now();
-      try { const ok = await fn(); return { ok, ms: Date.now() - t }; } catch { return { ok: false, ms: Date.now() - t }; }
+      try {
+        const ok = await fn();
+        return { ok, ms: Date.now() - t };
+      } catch {
+        return { ok: false, ms: Date.now() - t };
+      }
     };
     const resend = process.env["MENELOG_RESEND_API_KEY"];
     const paystack = process.env["PAYSTACK_SECRET_KEY"];
     const ai = process.env["LOVABLE_API_KEY"];
     const [email, payments, assistant, database] = await Promise.all([
-      timed(async () => !!resend && (await fetch("https://api.resend.com/domains", { headers: { Authorization: `Bearer ${resend}` } })).ok),
-      timed(async () => !!paystack && (await fetch("https://api.paystack.co/transaction?perPage=1", { headers: { Authorization: `Bearer ${paystack}` } })).ok),
+      timed(
+        async () =>
+          !!resend &&
+          (
+            await fetch("https://api.resend.com/domains", {
+              headers: { Authorization: `Bearer ${resend}` },
+            })
+          ).ok,
+      ),
+      timed(
+        async () =>
+          !!paystack &&
+          (
+            await fetch("https://api.paystack.co/transaction?perPage=1", {
+              headers: { Authorization: `Bearer ${paystack}` },
+            })
+          ).ok,
+      ),
       timed(async () => {
         if (!ai) return false;
-        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${ai}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: "google/gemini-3.8-flash", messages: [{ role: "user", content: "Reply with OK" }], max_tokens: 5 }) });
+        const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${ai}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-3.8-flash",
+            messages: [{ role: "user", content: "Reply with OK" }],
+            max_tokens: 5,
+          }),
+        });
         return r.ok;
       }),
-      timed(async () => { const db = await admin(); const { error } = await db.from("tenants").select("id", { head: true, count: "exact" }); return !error; }),
+      timed(async () => {
+        const db = await admin();
+        const { error } = await db.from("tenants").select("id", { head: true, count: "exact" });
+        return !error;
+      }),
     ]);
-    await audit(context.userId, "platform.health_check", { email: email.ok, payments: payments.ok, ai: assistant.ok, database: database.ok });
+    await audit(context.userId, "platform.health_check", {
+      email: email.ok,
+      payments: payments.ok,
+      ai: assistant.ok,
+      database: database.ok,
+    });
     return { checked_at: new Date().toISOString(), email, payments, assistant, database };
   });

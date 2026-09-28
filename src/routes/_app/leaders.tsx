@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_app/leaders")({
   head: () => ({
     meta: [
       { title: "Leaders — Mene:Log" },
-      { name: "description", content: "Create leader roles, share your access code and see every registered leader." },
+      {
+        name: "description",
+        content: "Create leader roles, share your access code and see every registered leader.",
+      },
       { property: "og:title", content: "Leaders — Mene:Log" },
       { property: "og:description", content: "Manage leader roles and accounts for your church." },
       { property: "og:type", content: "website" },
@@ -120,7 +123,11 @@ function LeadersPage() {
   });
 
   if (!isAdmin) {
-    return <p className="surface p-8 text-center text-sm text-muted-foreground">Administrator access required.</p>;
+    return (
+      <p className="surface p-8 text-center text-sm text-muted-foreground">
+        Administrator access required.
+      </p>
+    );
   }
 
   if (!can("leaders")) {
@@ -133,8 +140,8 @@ function LeadersPage() {
         <p className="text-eyebrow">People</p>
         <h1 className="mt-2 font-display text-2xl font-bold">Leaders</h1>
         <p className="text-sm text-muted-foreground">
-          Choose the leader roles your church uses, share one access code, and members can pick their
-          leader when they check in.
+          Choose the leader roles your church uses, share one access code, and members can pick
+          their leader when they check in.
         </p>
       </div>
 
@@ -158,10 +165,17 @@ function LeadersPage() {
             maxLength={24}
             onChange={(e) => setCode(e.target.value)}
           />
-          <Button onClick={() => saveCode.mutate(code)} disabled={saveCode.isPending || code.trim().length < 6}>
+          <Button
+            onClick={() => saveCode.mutate(code)}
+            disabled={saveCode.isPending || code.trim().length < 6}
+          >
             Save code
           </Button>
-          <Button variant="outline" onClick={() => saveCode.mutate("")} disabled={saveCode.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => saveCode.mutate("")}
+            disabled={saveCode.isPending}
+          >
             <RefreshCw className="size-4" /> Generate one for me
           </Button>
         </div>
@@ -177,7 +191,9 @@ function LeadersPage() {
           }}
         >
           <div className="min-w-48 flex-1 space-y-2">
-            <Label htmlFor="typeName" className="sr-only">Role name</Label>
+            <Label htmlFor="typeName" className="sr-only">
+              Role name
+            </Label>
             <Input
               id="typeName"
               placeholder="Cell leader, Usher head, Youth pastor…"
@@ -187,7 +203,9 @@ function LeadersPage() {
               required
             />
           </div>
-          <Button type="submit" disabled={addType.isPending}>Add role</Button>
+          <Button type="submit" disabled={addType.isPending}>
+            Add role
+          </Button>
         </form>
         <StaggerList className="flex flex-wrap gap-2">
           {(types.data ?? []).map((type) => (
@@ -221,7 +239,8 @@ function LeadersPage() {
             <div className="min-w-0">
               <p className="font-semibold">{leader.full_name}</p>
               <p className="truncate text-sm text-muted-foreground">
-                {(leader.leader_types as { name: string } | null)?.name ?? "No role"} · {leader.email ?? "no email"}
+                {(leader.leader_types as { name: string } | null)?.name ?? "No role"} ·{" "}
+                {leader.email ?? "no email"}
                 {leader.location ? ` · ${leader.location}` : ""}
               </p>
             </div>

@@ -25,7 +25,9 @@ export function PublicAskMene() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, busy]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, busy]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -42,10 +44,13 @@ export function PublicAskMene() {
         body: JSON.stringify({ question: value }),
       });
       const body = (await response.json()) as { answer?: string; error?: string };
-      if (!response.ok || !body.answer) throw new Error(body.error ?? "Mene:Log help is unavailable right now.");
+      if (!response.ok || !body.answer)
+        throw new Error(body.error ?? "Mene:Log help is unavailable right now.");
       setMessages((m) => [...m, { role: "assistant", text: body.answer! }]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Mene:Log help is unavailable right now.");
+      setError(
+        caught instanceof Error ? caught.message : "Mene:Log help is unavailable right now.",
+      );
     } finally {
       setBusy(false);
     }
@@ -65,7 +70,11 @@ export function PublicAskMene() {
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
             className="fixed bottom-5 right-5 z-40 sm:bottom-7 sm:right-7"
           >
-            <Button onClick={() => setOpen(true)} className="h-12 gap-2 rounded-full px-5 shadow-xl" aria-label="Ask Mene:Log">
+            <Button
+              onClick={() => setOpen(true)}
+              className="h-12 gap-2 rounded-full px-5 shadow-xl"
+              aria-label="Ask Mene:Log"
+            >
               <Sparkles className="size-4" /> Ask Mene:Log
             </Button>
           </motion.div>
@@ -86,34 +95,70 @@ export function PublicAskMene() {
           >
             <div className="relative flex items-start justify-between gap-3 bg-deep px-5 py-5 text-deep-foreground">
               <div>
-                <p className="flex items-center gap-2 font-semibold"><MessageCircle className="size-5 text-primary" /> Ask Mene:Log</p>
-                <p className="mt-1 text-xs text-deep-foreground/65">Packages, check-in, security, onboarding and more.</p>
+                <p className="flex items-center gap-2 font-semibold">
+                  <MessageCircle className="size-5 text-primary" /> Ask Mene:Log
+                </p>
+                <p className="mt-1 text-xs text-deep-foreground/65">
+                  Packages, check-in, security, onboarding and more.
+                </p>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-full p-1.5 text-deep-foreground/70 transition hover:bg-deep-foreground/10 hover:text-deep-foreground"><X className="size-4" /></button>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="rounded-full p-1.5 text-deep-foreground/70 transition hover:bg-deep-foreground/10 hover:text-deep-foreground"
+              >
+                <X className="size-4" />
+              </button>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
-              {messages.length === 0 && <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground">Hi! Ask me anything about Mene:Log — for example, "How does QR check-in work?"</p>}
+              {messages.length === 0 && (
+                <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground">
+                  Hi! Ask me anything about Mene:Log — for example, "How does QR check-in work?"
+                </p>
+              )}
               {messages.map((m, i) => (
-                <motion.div key={i} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "ml-auto bg-primary text-primary-foreground" : "bg-muted/60"}`}>
+                <motion.div
+                  key={i}
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "ml-auto bg-primary text-primary-foreground" : "bg-muted/60"}`}
+                >
                   {m.text}
                 </motion.div>
               ))}
               {busy && <p className="text-xs text-muted-foreground animate-pulse">Thinking…</p>}
-              {error && <p className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+              {error && (
+                <p className="rounded-xl border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">
+                  {error}
+                </p>
+              )}
               <div ref={endRef} />
             </div>
             <form onSubmit={submit} className="flex items-end gap-2 border-t p-3">
               <textarea
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void submit(e); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void submit(e);
+                  }
+                }}
                 maxLength={500}
                 rows={2}
                 aria-label="Your question"
                 placeholder="Type your question…"
                 className="flex-1 resize-none rounded-2xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/30"
               />
-              <Button type="submit" size="icon" className="rounded-full" disabled={busy || !question.trim()} aria-label="Send"><Send className="size-4" /></Button>
+              <Button
+                type="submit"
+                size="icon"
+                className="rounded-full"
+                disabled={busy || !question.trim()}
+                aria-label="Send"
+              >
+                <Send className="size-4" />
+              </Button>
             </form>
           </motion.aside>
         )}

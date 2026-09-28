@@ -1,6 +1,7 @@
 # Prime Haven superadmin: username login and full oversight console
 
 ## Sign in
+
 - `/super-admin` asks for **Username** and **Password** instead of email.
 - Account: username `master`, password `mene.log26`. It's linked to a hidden operator login account, so there's no email to type.
 - The password is stored only as a secure hash, and the username is checked on the server.
@@ -9,6 +10,7 @@
 - Add a "Change password" option inside the console.
 
 ## Console layout
+
 The left menu is grouped like the church dashboards, in Mene:Log colours, with smooth motion.
 
 1. **Overview**: total churches, active, on trial, suspended and closed churches, and new sign-ups this week and month. Also total members and check-ins as platform-wide counts, monthly and yearly revenue, revenue by plan, and trials ending soon.
@@ -32,9 +34,11 @@ The left menu is grouped like the church dashboards, in Mene:Log colours, with s
 11. **System health**: status of the email service, payment webhook, daily job and AI assistant, with recent error counts.
 
 ## Privacy boundary (unchanged)
+
 Operators never see individual members, their contacts, attendance rows, message bodies, QR codes or a church's own audit trail. They get only counts, sizes and account-level information.
 
 ## Technical details
+
 - Reuse `super_admin_credentials` (username plus bcrypt hash through pgcrypto) and link it to a synthetic auth user `master@ops.menelog.site`, which is added to `platform_admins`.
 - A server function `operatorSignIn({username,password})` checks the rate limit, verifies with `crypt()`, and then signs in the linked auth user on the server. It returns the session tokens, and the client runs `setSession`. After that comes the MFA challenge or enrolment.
 - New security-definer RPCs, each checking `is_platform_admin()` plus aal2:

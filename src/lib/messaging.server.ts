@@ -22,7 +22,9 @@ function twilioConfigured(): boolean {
 }
 
 export function smsConfigured(): boolean {
-  return (twilioConfigured() && !!process.env["TWILIO_SMS_FROM"]) || !!process.env["ARKESEL_API_KEY"];
+  return (
+    (twilioConfigured() && !!process.env["TWILIO_SMS_FROM"]) || !!process.env["ARKESEL_API_KEY"]
+  );
 }
 
 export function whatsappConfigured(): boolean {
@@ -33,14 +35,17 @@ async function twilioSend(to: string, from: string, body: string): Promise<SendR
   const sid = process.env["TWILIO_ACCOUNT_SID"]!;
   const token = process.env["TWILIO_AUTH_TOKEN"]!;
   try {
-    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${sid}:${token}`)}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: to, From: from, Body: body.slice(0, 1500) }),
       },
-      body: new URLSearchParams({ To: to, From: from, Body: body.slice(0, 1500) }),
-    });
+    );
     const json = (await response.json().catch(() => ({}))) as { sid?: string; message?: string };
     if (!response.ok) {
       console.error(`[messaging] Twilio failed [${response.status}]: ${json.message ?? ""}`);
@@ -87,14 +92,18 @@ export function renderEmail(options: {
   const colour = /^#[0-9a-f]{6}$/i.test(options.brandPrimary) ? options.brandPrimary : "#3b82f6";
   const paragraphs = options.body
     .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 14px;line-height:1.65">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .map(
+      (p) =>
+        `<p style="margin:0 0 14px;line-height:1.65">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`,
+    )
     .join("");
   const churchLogo = options.logoUrl
     ? `<img src="${escapeHtml(options.logoUrl)}" alt="" width="44" height="44" style="border-radius:10px;display:block;margin:0 0 14px">`
     : "";
-  const cta = options.ctaLabel && options.ctaUrl && /^https:\/\//.test(options.ctaUrl)
-    ? `<a href="${escapeHtml(options.ctaUrl)}" style="display:inline-block;background:${colour};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;margin-top:6px">${escapeHtml(options.ctaLabel)}</a>`
-    : "";
+  const cta =
+    options.ctaLabel && options.ctaUrl && /^https:\/\//.test(options.ctaUrl)
+      ? `<a href="${escapeHtml(options.ctaUrl)}" style="display:inline-block;background:${colour};color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;margin-top:6px">${escapeHtml(options.ctaLabel)}</a>`
+      : "";
   return `<!doctype html><html><body style="margin:0;background:#ffffff;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;border:1px solid #e8ecf1;border-radius:16px;overflow:hidden">
@@ -119,8 +128,10 @@ export async function sendEmail(options: {
 }): Promise<SendResult> {
   const key = process.env["MENELOG_RESEND_API_KEY"];
   if (!key) return { ok: false, error: "Email is not configured yet" };
-  const from = (process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <support@menelog.site>")
-    .replace(/no-?reply@menelog\.site/i, "support@menelog.site");
+  const from = (process.env["MENELOG_EMAIL_FROM"] ?? "Mene:Log <support@menelog.site>").replace(
+    /no-?reply@menelog\.site/i,
+    "support@menelog.site",
+  );
   const { readSettings } = await import("./settings.server");
   const settings = await readSettings();
   const address = from.match(/<([^>]+)>/)?.[1] ?? from;
@@ -148,8 +159,15 @@ export async function sendEmail(options: {
     if (!response.ok) {
       console.error(`[messaging] Resend failed [${response.status}]: ${text}`);
       let detail = "";
-      try { detail = (JSON.parse(text) as { message?: string }).message ?? ""; } catch { detail = ""; }
-      return { ok: false, error: `Email provider error ${response.status}${detail ? `: ${detail}` : ""}` };
+      try {
+        detail = (JSON.parse(text) as { message?: string }).message ?? "";
+      } catch {
+        detail = "";
+      }
+      return {
+        ok: false,
+        error: `Email provider error ${response.status}${detail ? `: ${detail}` : ""}`,
+      };
     }
     let providerId: string | undefined;
     try {

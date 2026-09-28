@@ -12,9 +12,15 @@ export const Route = createFileRoute("/live/$subdomain")({
   head: () => ({
     meta: [
       { title: "Watch Live — Mene:Log" },
-      { name: "description", content: "Enter your member code to watch your church's live service online." },
+      {
+        name: "description",
+        content: "Enter your member code to watch your church's live service online.",
+      },
       { property: "og:title", content: "Watch Live" },
-      { property: "og:description", content: "Watch your church's service live and have your attendance recorded." },
+      {
+        property: "og:description",
+        content: "Watch your church's service live and have your attendance recorded.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -29,9 +35,11 @@ function embedUrl(url: string): string | null {
   try {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\.|^m\./, "");
-    if (host === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1)}?autoplay=1`;
+    if (host === "youtu.be")
+      return `https://www.youtube.com/embed/${u.pathname.slice(1)}?autoplay=1`;
     if (host === "youtube.com") {
-      const id = u.searchParams.get("v") ?? u.pathname.match(/\/(live|embed|shorts)\/([^/?]+)/)?.[2];
+      const id =
+        u.searchParams.get("v") ?? u.pathname.match(/\/(live|embed|shorts)\/([^/?]+)/)?.[2];
       if (id) return `https://www.youtube.com/embed/${id}?autoplay=1`;
     }
     if (host === "vimeo.com") {
@@ -89,7 +97,11 @@ function WatchLive() {
     <div className="min-h-screen bg-background px-4 py-10">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-          <Link to="/c/$subdomain" params={{ subdomain }} className="text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            to="/c/$subdomain"
+            params={{ subdomain }}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
             ← Back to check-in
           </Link>
           <span className="inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
@@ -113,7 +125,8 @@ function WatchLive() {
                 </div>
                 <h1 className="font-display text-2xl font-bold">Watch the service live</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Enter your member code — the code printed under your check-in QR. Your attendance is recorded while you watch.
+                  Enter your member code — the code printed under your check-in QR. Your attendance
+                  is recorded while you watch.
                 </p>
               </div>
               <div className="space-y-2">
@@ -135,7 +148,12 @@ function WatchLive() {
               </Button>
             </motion.form>
           ) : (
-            <motion.div key="player" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+            <motion.div
+              key="player"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-5"
+            >
               <div>
                 <p className="text-sm text-muted-foreground">{session.church}</p>
                 <h1 className="font-display text-2xl font-bold">Welcome, {session.member}</h1>
@@ -149,13 +167,20 @@ function WatchLive() {
                   {session.services.length > 1 && (
                     <div className="flex flex-wrap gap-2">
                       {session.services.map((s) => (
-                        <Button key={s.id} size="sm" variant={s.id === serviceId ? "default" : "outline"} onClick={() => setServiceId(s.id)}>
+                        <Button
+                          key={s.id}
+                          size="sm"
+                          variant={s.id === serviceId ? "default" : "outline"}
+                          onClick={() => setServiceId(s.id)}
+                        >
                           {s.name} · {s.date}
                         </Button>
                       ))}
                     </div>
                   )}
-                  {service && <Player key={service.id} subdomain={subdomain} code={code} service={service} />}
+                  {service && (
+                    <Player key={service.id} subdomain={subdomain} code={code} service={service} />
+                  )}
                 </>
               )}
             </motion.div>
@@ -218,7 +243,9 @@ function Player({
     <div className="space-y-4">
       <div className="surface overflow-hidden p-0">
         {ended ? (
-          <div className="grid aspect-video place-items-center p-6 text-center text-sm text-muted-foreground">{ended}</div>
+          <div className="grid aspect-video place-items-center p-6 text-center text-sm text-muted-foreground">
+            {ended}
+          </div>
         ) : embed ? (
           <iframe
             src={embed}
@@ -230,9 +257,13 @@ function Player({
         ) : (
           <div className="grid aspect-video place-items-center p-6 text-center">
             <div>
-              <p className="text-sm text-muted-foreground">This stream opens on its own site. Keep this page open so your time counts.</p>
+              <p className="text-sm text-muted-foreground">
+                This stream opens on its own site. Keep this page open so your time counts.
+              </p>
               <Button asChild className="mt-4">
-                <a href={service.url} target="_blank" rel="noopener noreferrer">Open the live stream</a>
+                <a href={service.url} target="_blank" rel="noopener noreferrer">
+                  Open the live stream
+                </a>
               </Button>
             </div>
           </div>
@@ -244,7 +275,9 @@ function Player({
           <div>
             <p className="text-sm font-semibold">Watched {fmt(seconds)}</p>
             <p className="text-xs text-muted-foreground">
-              {recorded ? "Your attendance is recorded. Thank you for joining!" : `Watch ${service.minMinutes} minutes to be marked present.`}
+              {recorded
+                ? "Your attendance is recorded. Thank you for joining!"
+                : `Watch ${service.minMinutes} minutes to be marked present.`}
             </p>
           </div>
         </div>

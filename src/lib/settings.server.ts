@@ -38,7 +38,9 @@ export async function readSettings(fresh = false): Promise<PlatformSettings> {
   try {
     const client = await db();
     const { data, error } = await client.storage.from(BUCKET).download(FILE);
-    const value = merge(error || !data ? null : (JSON.parse(await data.text()) as Partial<PlatformSettings>));
+    const value = merge(
+      error || !data ? null : (JSON.parse(await data.text()) as Partial<PlatformSettings>),
+    );
     cache = { at: Date.now(), value };
     return value;
   } catch {
@@ -54,7 +56,10 @@ export async function writeSettings(next: PlatformSettings) {
   }
   const { error } = await client.storage
     .from(BUCKET)
-    .upload(FILE, new Blob([JSON.stringify(next)], { type: "application/json" }), { upsert: true, contentType: "application/json" });
+    .upload(FILE, new Blob([JSON.stringify(next)], { type: "application/json" }), {
+      upsert: true,
+      contentType: "application/json",
+    });
   if (error) throw new Error("Could not save settings. Try again.");
   cache = { at: Date.now(), value: next };
 }

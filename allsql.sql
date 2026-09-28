@@ -3847,3 +3847,104 @@ GRANT EXECUTE ON FUNCTION public.get_member_qr(uuid), public.get_all_member_qrs(
 
 -- ============ 0020_leader_dashboard_volatile.sql ============
 ALTER FUNCTION public.leader_dashboard() VOLATILE;
+
+
+-- ============ 0021_restrict_plan_config_reads.sql ============
+DROP POLICY IF EXISTS "Plan config is public" ON public.plan_config;
+DROP POLICY IF EXISTS "Signed-in users read plan config" ON public.plan_config;
+DROP POLICY IF EXISTS "plan_config_authenticated_read" ON public.plan_config;
+
+CREATE POLICY "plan config scoped read"
+ON public.plan_config
+FOR SELECT
+TO authenticated
+USING (
+  public.is_platform_admin()
+  OR EXISTS (
+    SELECT 1
+    FROM public.tenant_users tu
+    JOIN public.tenants t ON t.id = tu.tenant_id
+    WHERE tu.user_id = auth.uid()
+      AND tu.status = 'active'
+      AND t.tier = plan_config.tier
+  )
+);
+
+
+-- ============ 0022_platform_risk_approvals_and_tenant_backups.sql ============
+ALTER TABLE public.tenants
+  ADD COLUMN IF NOT EXISTS approval_risk_flags jsonb NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS approval_reason text,
+  ADD COLUMN IF NOT EXISTS correction_requested_at timestamptz;
+
+CREATE INDEX IF NOT EXISTS tenants_risk_approval_idx
+  ON public.tenants (approval_status, created_at DESC)
+  WHERE approval_status = 'pending_approval';
+
+CREATE TABLE IF NOT EXISTS public.tenant_backup_jobs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  requested_by uuid NOT NULL,
+  kind text NOT NULL DEFAULT 'backup' CHECK (kind IN ('backup','pre_restore','restore')),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','running','completed','failed','expired')),
+  storage_path text,
+  schema_version integer NOT NULL DEFAULT 1,
+  byte_size bigint NOT NULL DEFAULT 0 CHECK (byte_size >= 0),
+  checksum text,
+  record_counts jsonb NOT NULL DEFAULT '{}'::jsonb,
+  source_backup_id uuid REFERENCES public.tenant_backup_jobs(id) ON DELETE SET NULL,
+  error_summary text,
+  expires_at timestamptz,
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_backup_jobs TO authenticated;
+GRANT ALL ON public.tenant_backup_jobs TO service_role;
+ALTER TABLE public.tenant_backup_jobs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Platform operators manage tenant backup jobs" ON public.tenant_backup_jobs;
+CREATE POLICY "Platform operators manage tenant backup jobs"
+  ON public.tenant_backup_jobs FOR ALL TO authenticated
+  USING (public.is_platform_admin())
+  WITH CHECK (public.is_platform_admin());
+CREATE UNIQUE INDEX IF NOT EXISTS tenant_backup_one_active_job_idx
+  ON public.tenant_backup_jobs (tenant_id)
+  WHERE status IN ('pending','running');
+CREATE INDEX IF NOT EXISTS tenant_backup_jobs_tenant_created_idx
+  ON public.tenant_backup_jobs (tenant_id, created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.platform_request_correction(p_tenant uuid, p_reason text)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'Forbidden'; END IF;
+  IF length(trim(p_reason)) < 5 THEN RAISE EXCEPTION 'A correction reason is required'; END IF;
+  UPDATE public.tenants
+  SET approval_status = 'correction_requested', approval_reason = trim(p_reason), correction_requested_at = now(), status = 'suspended'
+  WHERE id = p_tenant;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Church not found'; END IF;
+  INSERT INTO public.platform_audit_events(actor_user_id, action, tenant_id, detail)
+  VALUES (auth.uid(), 'tenant.correction_requested', p_tenant, jsonb_build_object('reason', trim(p_reason)));
+END;
+$$;
+REVOKE ALL ON FUNCTION public.platform_request_correction(uuid,text) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.platform_request_correction(uuid,text) TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.platform_flag_church(p_tenant uuid, p_reason text)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_platform_admin() THEN RAISE EXCEPTION 'Forbidden'; END IF;
+  IF length(trim(p_reason)) < 5 THEN RAISE EXCEPTION 'A flag reason is required'; END IF;
+  UPDATE public.tenants
+  SET approval_status = 'pending_approval', approval_reason = trim(p_reason), approval_risk_flags = approval_risk_flags || jsonb_build_array(trim(p_reason)), status = 'suspended'
+  WHERE id = p_tenant;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Church not found'; END IF;
+  INSERT INTO public.platform_audit_events(actor_user_id, action, tenant_id, detail)
+  VALUES (auth.uid(), 'tenant.flagged_for_review', p_tenant, jsonb_build_object('reason', trim(p_reason)));
+END;
+$$;
+REVOKE ALL ON FUNCTION public.platform_flag_church(uuid,text) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.platform_flag_church(uuid,text) TO authenticated, service_role;

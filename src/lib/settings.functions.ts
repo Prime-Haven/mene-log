@@ -10,11 +10,20 @@ async function assertOperator(context: { supabase: any }) {
 }
 
 /** Public, safe subset used by the homepage, sign-up and billing. */
-export const getPublicSettings = createServerFn({ method: "GET" }).handler(async (): Promise<PublicSettings> => {
-  const { readSettings } = await import("./settings.server");
-  const s = await readSettings();
-  return { branding: s.branding, pricing: s.pricing, homepage: s.homepage, legal: s.legal, maintenance: s.signups.maintenance, maintenance_message: s.signups.maintenance_message };
-});
+export const getPublicSettings = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PublicSettings> => {
+    const { readSettings } = await import("./settings.server");
+    const s = await readSettings();
+    return {
+      branding: s.branding,
+      pricing: s.pricing,
+      homepage: s.homepage,
+      legal: s.legal,
+      maintenance: s.signups.maintenance,
+      maintenance_message: s.signups.maintenance_message,
+    };
+  },
+);
 
 /** Is a new sign-up with this email allowed right now? */
 export const checkSignupAllowed = createServerFn({ method: "POST" })
@@ -22,9 +31,20 @@ export const checkSignupAllowed = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { readSettings } = await import("./settings.server");
     const s = await readSettings();
-    if (s.signups.maintenance) return { ok: false as const, message: s.signups.maintenance_message || "New sign-ups are paused for maintenance. Please try again later." };
+    if (s.signups.maintenance)
+      return {
+        ok: false as const,
+        message:
+          s.signups.maintenance_message ||
+          "New sign-ups are paused for maintenance. Please try again later.",
+      };
     const domain = data.email.split("@")[1] ?? "";
-    if (domain && s.signups.blocked_domains.includes(domain)) return { ok: false as const, message: "Sign-ups from this email provider aren't accepted. Please use another email address." };
+    if (domain && s.signups.blocked_domains.includes(domain))
+      return {
+        ok: false as const,
+        message:
+          "Sign-ups from this email provider aren't accepted. Please use another email address.",
+      };
     return { ok: true as const };
   });
 
@@ -56,7 +76,14 @@ export const saveSettings = createServerFn({ method: "POST" })
 /** Check a coupon for a plan (used by Billing before paying). */
 export const checkCoupon = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ code: z.string().trim().toUpperCase().max(24), tier: z.enum(["basic", "standard", "premium"]) }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        code: z.string().trim().toUpperCase().max(24),
+        tier: z.enum(["basic", "standard", "premium"]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { data: membership, error } = await context.supabase
       .from("tenant_users")

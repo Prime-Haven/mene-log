@@ -2,7 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BellOff, BellRing, Download, Lock, QrCode, Search, Trash2, Upload, UserPlus } from "lucide-react";
+import {
+  BellOff,
+  BellRing,
+  Download,
+  Lock,
+  QrCode,
+  Search,
+  Trash2,
+  Upload,
+  UserPlus,
+} from "lucide-react";
 import { labelledQr } from "@/lib/qr";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
@@ -23,7 +33,10 @@ export const Route = createFileRoute("/_app/members")({
   head: () => ({
     meta: [
       { title: "Members — Mene:Log" },
-      { name: "description", content: "Your church member registry: add, import, issue QR codes and export." },
+      {
+        name: "description",
+        content: "Your church member registry: add, import, issue QR codes and export.",
+      },
       { property: "og:title", content: "Members — Mene:Log" },
       { property: "og:description", content: "Manage your church member registry." },
       { property: "og:type", content: "website" },
@@ -55,7 +68,12 @@ function Members() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [qr, setQr] = useState<{ id: string; name: string; dataUrl: string; token?: string } | null>(null);
+  const [qr, setQr] = useState<{
+    id: string;
+    name: string;
+    dataUrl: string;
+    token?: string;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -101,17 +119,32 @@ function Members() {
   const addMember = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc("create_member", {
-        p_tenant: tenant!.id, p_branch: membership?.branch_id as string,
-        p_full_name: form.full_name.trim(), p_phone: form.phone.trim(), p_email: form.email.trim(),
-        p_dob: form.date_of_birth as string, p_gender: form.gender as "male" | "female" | "other",
-        p_marital_status: form.marital_status, p_area: form.residential_area.trim(), p_occupation: form.occupation.trim(),
+        p_tenant: tenant!.id,
+        p_branch: membership?.branch_id as string,
+        p_full_name: form.full_name.trim(),
+        p_phone: form.phone.trim(),
+        p_email: form.email.trim(),
+        p_dob: form.date_of_birth as string,
+        p_gender: form.gender as "male" | "female" | "other",
+        p_marital_status: form.marital_status,
+        p_area: form.residential_area.trim(),
+        p_occupation: form.occupation.trim(),
       });
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Member added");
       setAddOpen(false);
-      setForm({ full_name: "", phone: "", email: "", date_of_birth: "", gender: "", residential_area: "", marital_status: "", occupation: "" });
+      setForm({
+        full_name: "",
+        phone: "",
+        email: "",
+        date_of_birth: "",
+        gender: "",
+        residential_area: "",
+        marital_status: "",
+        occupation: "",
+      });
       qc.invalidateQueries({ queryKey: ["members"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not add member"),
@@ -122,7 +155,12 @@ function Members() {
       const { data, error } = await supabase.rpc("get_member_qr", { p_member: member.id });
       if (error) throw error;
       const r = data as unknown as { token: string; kind: string };
-      const dataUrl = await labelledQr(r.token, tenant?.name ?? "", member.full_name, r.kind === "leader" ? "Leader" : "Member");
+      const dataUrl = await labelledQr(
+        r.token,
+        tenant?.name ?? "",
+        member.full_name,
+        r.kind === "leader" ? "Leader" : "Member",
+      );
       return { id: member.id, name: member.full_name, dataUrl, token: r.token };
     },
     onSuccess: (res) => setQr(res),
@@ -134,9 +172,18 @@ function Members() {
       if (!qr) return null;
       const { data, error } = await supabase.rpc("issue_qr_token", { p_member: qr.id });
       if (error) throw error;
-      return { ...qr, token: String(data), dataUrl: await labelledQr(String(data), tenant?.name ?? "", qr.name) };
+      return {
+        ...qr,
+        token: String(data),
+        dataUrl: await labelledQr(String(data), tenant?.name ?? "", qr.name),
+      };
     },
-    onSuccess: (res) => { if (res) { setQr(res); toast.success("New code issued — the old one no longer works"); } },
+    onSuccess: (res) => {
+      if (res) {
+        setQr(res);
+        toast.success("New code issued — the old one no longer works");
+      }
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not reset"),
   });
 
@@ -147,16 +194,28 @@ function Members() {
     try {
       const { data, error } = await supabase.rpc("get_all_member_qrs", { p_tenant: tenant.id });
       if (error) throw error;
-      const rows = data as unknown as Array<{ id: string; full_name: string; kind: string; token: string }>;
+      const rows = data as unknown as Array<{
+        id: string;
+        full_name: string;
+        kind: string;
+        token: string;
+      }>;
       const { zipSync } = await import("fflate");
       const files: Record<string, Uint8Array> = {};
       const used = new Set<string>();
       for (const r of rows) {
-        const url = await labelledQr(r.token, tenant.name, r.full_name, r.kind === "leader" ? "Leader" : "Member");
+        const url = await labelledQr(
+          r.token,
+          tenant.name,
+          r.full_name,
+          r.kind === "leader" ? "Leader" : "Member",
+        );
         let name = r.full_name.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "member";
         if (used.has(name)) name = `${name}-${r.id.slice(0, 6)}`;
         used.add(name);
-        files[`${name}.png`] = Uint8Array.from(atob(url.split(",")[1] ?? ""), (c) => c.charCodeAt(0));
+        files[`${name}.png`] = Uint8Array.from(atob(url.split(",")[1] ?? ""), (c) =>
+          c.charCodeAt(0),
+        );
       }
       const blob = new Blob([zipSync(files, { level: 0 })], { type: "application/zip" });
       const a = document.createElement("a");
@@ -207,7 +266,8 @@ function Members() {
         header: true,
         skipEmptyLines: true,
       });
-      if (parsed.errors.length) throw new Error(`Could not read CSV row ${parsed.errors[0]?.row ?? 1}.`);
+      if (parsed.errors.length)
+        throw new Error(`Could not read CSV row ${parsed.errors[0]?.row ?? 1}.`);
       const rows = parsed.data;
 
       const pick = (row: Record<string, unknown>, keys: string[]) => {
@@ -268,7 +328,17 @@ function Members() {
       m.status,
     ]);
     const csv = [
-      ["Name", "Phone", "Email", "Date of birth", "Gender", "Area", "Occupation", "Marital status", "Status"],
+      [
+        "Name",
+        "Phone",
+        "Email",
+        "Date of birth",
+        "Gender",
+        "Area",
+        "Occupation",
+        "Marital status",
+        "Status",
+      ],
       ...rows,
     ]
       .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
@@ -314,7 +384,11 @@ function Members() {
                       e.target.value = "";
                     }}
                   />
-                  <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={importRows.isPending}>
+                  <Button
+                    variant="outline"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={importRows.isPending}
+                  >
                     <Upload className="size-4" /> Import CSV
                   </Button>
                 </>
@@ -432,7 +506,9 @@ function Members() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add a member</DialogTitle>
-            <DialogDescription>Only fields with a pastoral purpose are collected.</DialogDescription>
+            <DialogDescription>
+              Only fields with a pastoral purpose are collected.
+            </DialogDescription>
           </DialogHeader>
           <form
             className="space-y-3"
@@ -451,7 +527,15 @@ function Members() {
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
               />
             </div>
-            <div className="space-y-2"><Label htmlFor="me">Email</Label><Input id="me" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label htmlFor="me">Email</Label>
+              <Input
+                id="me"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="mp">Phone</Label>
@@ -476,8 +560,34 @@ function Members() {
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="mm">Marital status</Label><select id="mm" required className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.marital_status} onChange={(e) => setForm({ ...form, marital_status: e.target.value })}><option value="">Select status</option><option value="single">Single</option><option value="married">Married</option><option value="divorced">Divorced</option><option value="widowed">Widowed</option><option value="separated">Separated</option><option value="prefer_not_to_say">Prefer not to say</option></select></div>
-              <div className="space-y-2"><Label htmlFor="mo">Occupation</Label><Input id="mo" required maxLength={120} value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} /></div>
+              <div className="space-y-2">
+                <Label htmlFor="mm">Marital status</Label>
+                <select
+                  id="mm"
+                  required
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.marital_status}
+                  onChange={(e) => setForm({ ...form, marital_status: e.target.value })}
+                >
+                  <option value="">Select status</option>
+                  <option value="single">Single</option>
+                  <option value="married">Married</option>
+                  <option value="divorced">Divorced</option>
+                  <option value="widowed">Widowed</option>
+                  <option value="separated">Separated</option>
+                  <option value="prefer_not_to_say">Prefer not to say</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mo">Occupation</Label>
+                <Input
+                  id="mo"
+                  required
+                  maxLength={120}
+                  value={form.occupation}
+                  onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                />
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -524,7 +634,14 @@ function Members() {
             </DialogDescription>
           </DialogHeader>
           {qr && <img src={qr.dataUrl} alt="Member QR code" className="mx-auto rounded-md" />}
-          {qr?.token && <div className="text-center"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Member code (for Watch Live)</p><p className="select-all break-all font-mono text-xs">{qr.token}</p></div>}
+          {qr?.token && (
+            <div className="text-center">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Member code (for Watch Live)
+              </p>
+              <p className="select-all break-all font-mono text-xs">{qr.token}</p>
+            </div>
+          )}
           <DialogFooter>
             <Button asChild variant="outline">
               <a href={qr?.dataUrl} download={`${qr?.name}-qr.png`}>

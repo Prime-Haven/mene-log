@@ -13,7 +13,10 @@ export const Route = createFileRoute("/_app/services")({
   head: () => ({
     meta: [
       { title: "Services — Mene:Log" },
-      { name: "description", content: "Create services and open or close them for attendance capture." },
+      {
+        name: "description",
+        content: "Create services and open or close them for attendance capture.",
+      },
       { property: "og:title", content: "Services — Mene:Log" },
       { property: "og:description", content: "Create and manage your church services." },
       { property: "og:type", content: "website" },
@@ -39,7 +42,9 @@ function Services() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, service_date, is_open, stream_url, online_min_minutes, attendance(count), watch_sessions(count)")
+        .select(
+          "id, name, service_date, is_open, stream_url, online_min_minutes, attendance(count), watch_sessions(count)",
+        )
         .order("service_date", { ascending: false })
         .limit(60);
       if (error) throw error;
@@ -74,7 +79,15 @@ function Services() {
   });
 
   const rename = useMutation({
-    mutationFn: async ({ id, name: newName, date: newDate }: { id: string; name: string; date: string }) => {
+    mutationFn: async ({
+      id,
+      name: newName,
+      date: newDate,
+    }: {
+      id: string;
+      name: string;
+      date: string;
+    }) => {
       const { error } = await supabase.rpc("rename_service", {
         p_service: id,
         p_name: newName,
@@ -105,7 +118,8 @@ function Services() {
   const saveLive = useMutation({
     mutationFn: async (v: { id: string; url: string; min: number }) => {
       const url = v.url.trim();
-      if (url && !/^https:\/\/\S+$/i.test(url)) throw new Error("Stream link must start with https://");
+      if (url && !/^https:\/\/\S+$/i.test(url))
+        throw new Error("Stream link must start with https://");
       const { error } = await supabase
         .from("services")
         .update({ stream_url: url || null, online_min_minutes: Math.max(1, Math.min(240, v.min)) })
@@ -140,11 +154,23 @@ function Services() {
       >
         <div className="space-y-2">
           <Label htmlFor="sname">Service name</Label>
-          <Input id="sname" value={name} onChange={(e) => setName(e.target.value)} required maxLength={80} />
+          <Input
+            id="sname"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={80}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="sdate">Date</Label>
-          <Input id="sdate" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <Input
+            id="sdate"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
         </div>
         <Button type="submit" disabled={create.isPending}>
           Add service
@@ -179,8 +205,12 @@ function Services() {
                     onChange={(e) => setEditing({ ...editing, date: e.target.value })}
                     required
                   />
-                  <Button type="submit" size="sm" disabled={rename.isPending}>Save</Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={rename.isPending}>
+                    Save
+                  </Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>
+                    Cancel
+                  </Button>
                 </form>
               ) : (
                 <>
@@ -189,7 +219,13 @@ function Services() {
                     <p className="text-sm text-muted-foreground">
                       {s.service_date} · {count} recorded
                       {liveOn && s.stream_url && (
-                        <> · {(s.watch_sessions as unknown as Array<{ count: number }>)?.[0]?.count ?? 0} watched online</>
+                        <>
+                          {" "}
+                          ·{" "}
+                          {(s.watch_sessions as unknown as Array<{ count: number }>)?.[0]?.count ??
+                            0}{" "}
+                          watched online
+                        </>
                       )}
                     </p>
                     {live?.id === s.id && (
@@ -202,14 +238,35 @@ function Services() {
                       >
                         <div className="space-y-1">
                           <Label className="text-xs">Stream link (YouTube, Vimeo, Facebook…)</Label>
-                          <Input className="w-72" value={live.url} placeholder="https://youtube.com/live/…" onChange={(e) => setLive({ ...live, url: e.target.value })} />
+                          <Input
+                            className="w-72"
+                            value={live.url}
+                            placeholder="https://youtube.com/live/…"
+                            onChange={(e) => setLive({ ...live, url: e.target.value })}
+                          />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Minutes to count as present</Label>
-                          <Input className="w-28" type="number" min={1} max={240} value={live.min} onChange={(e) => setLive({ ...live, min: Number(e.target.value) })} />
+                          <Input
+                            className="w-28"
+                            type="number"
+                            min={1}
+                            max={240}
+                            value={live.min}
+                            onChange={(e) => setLive({ ...live, min: Number(e.target.value) })}
+                          />
                         </div>
-                        <Button type="submit" size="sm" disabled={saveLive.isPending}>Save</Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setLive(null)}>Cancel</Button>
+                        <Button type="submit" size="sm" disabled={saveLive.isPending}>
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setLive(null)}
+                        >
+                          Cancel
+                        </Button>
                       </form>
                     )}
                   </div>
@@ -218,7 +275,9 @@ function Services() {
                       <Button
                         variant={s.stream_url ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setLive({ id: s.id, url: s.stream_url ?? "", min: s.online_min_minutes })}
+                        onClick={() =>
+                          setLive({ id: s.id, url: s.stream_url ?? "", min: s.online_min_minutes })
+                        }
                       >
                         <Radio className="size-4" /> {s.stream_url ? "Live on" : "Go live"}
                       </Button>

@@ -24,7 +24,12 @@ import {
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getBrandAssetUrl, getChurchBranding, getPublicOpenServices, submitSelfCheckin } from "@/lib/checkin.functions";
+import {
+  getBrandAssetUrl,
+  getChurchBranding,
+  getPublicOpenServices,
+  submitSelfCheckin,
+} from "@/lib/checkin.functions";
 import { getPublicLeaderTypes, getPublicLeaders, registerLeader } from "@/lib/leaders.functions";
 import { passwordChecks, passwordIsStrong, PASSWORD_RULE_TEXT } from "@/lib/password";
 import { labelledQr } from "@/lib/qr";
@@ -37,9 +42,16 @@ export const Route = createFileRoute("/c/$subdomain")({
   head: () => ({
     meta: [
       { title: "Check in — Mene:Log" },
-      { name: "description", content: "Check in to today's service and get your personal QR code." },
+      {
+        name: "description",
+        content: "Check in to today's service and get your personal QR code.",
+      },
       { property: "og:title", content: "Church check-in — Mene:Log" },
-      { property: "og:description", content: "Check in to your church service in seconds and get your personal member QR code with Mene:Log." },
+      {
+        property: "og:description",
+        content:
+          "Check in to your church service in seconds and get your personal member QR code with Mene:Log.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -50,7 +62,8 @@ export const Route = createFileRoute("/c/$subdomain")({
       <div className="surface max-w-md p-8">
         <h2 className="font-display text-xl font-bold">Check-in Unavailable</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          We could not load this church's check-in page. Please verify the web address or contact the church administrator.
+          We could not load this church's check-in page. Please verify the web address or contact
+          the church administrator.
         </p>
         <Button asChild className="mt-6">
           <Link to="/">Return to Mene:Log Home</Link>
@@ -60,7 +73,8 @@ export const Route = createFileRoute("/c/$subdomain")({
   ),
 });
 
-const selectClass = "h-11 w-full rounded-xl border border-border/70 bg-background/80 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
+const selectClass =
+  "h-11 w-full rounded-xl border border-border/70 bg-background/80 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 
 const educationLevels = [
   "No formal education",
@@ -116,8 +130,14 @@ function CheckIn() {
     queryFn: () => loadAsset({ data: { path: church!.background_path! } }),
   });
 
-  const { data: ctx } = useQuery({ queryKey: ["checkin-context", subdomain], queryFn: () => getCheckinContext({ data: { subdomain } }), staleTime: 60_000 });
-  const leaderAreaOpen = ctx ? ctx.leaders : church?.tier === "standard" || church?.tier === "premium";
+  const { data: ctx } = useQuery({
+    queryKey: ["checkin-context", subdomain],
+    queryFn: () => getCheckinContext({ data: { subdomain } }),
+    staleTime: 60_000,
+  });
+  const leaderAreaOpen = ctx
+    ? ctx.leaders
+    : church?.tier === "standard" || church?.tier === "premium";
   const showQr = ctx ? ctx.qr : church?.tier !== "free";
   const tabCount = 1 + (leaderAreaOpen ? 1 : 0) + (ctx?.acceptsBranches ? 1 : 0);
 
@@ -139,8 +159,15 @@ function CheckIn() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ qr: string; token: string; returning: boolean; service: string; file: string } | null>(null);
-  const isiPhone = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const [done, setDone] = useState<{
+    qr: string;
+    token: string;
+    returning: boolean;
+    service: string;
+    file: string;
+  } | null>(null);
+  const isiPhone =
+    typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
     if (services.length === 1) setForm((current) => ({ ...current, service_id: services[0]!.id }));
@@ -189,11 +216,13 @@ function CheckIn() {
           email: form.email,
           date_of_birth: form.date_of_birth,
           gender: form.gender as "male" | "female",
-          marital_status: form.marital_status as "single" | "married" | "divorced" | "widowed" | "separated" | "prefer_not_to_say",
+          marital_status: form.marital_status as
+            "single" | "married" | "divorced" | "widowed" | "separated" | "prefer_not_to_say",
           residential_area: form.residential_area,
           occupation: form.occupation,
           education_level: form.education_level,
-          invited_by_leader_id: form.invited_by_leader_id === "other" ? "" : form.invited_by_leader_id,
+          invited_by_leader_id:
+            form.invited_by_leader_id === "other" ? "" : form.invited_by_leader_id,
           service_id: form.service_id,
           consent: true as const,
         },
@@ -203,8 +232,18 @@ function CheckIn() {
         return;
       }
       const qr = await labelledQr(result.token, church?.name ?? "", form.full_name);
-      const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      setDone({ qr, token: result.token, returning: result.returning, service: result.service, file: `${slug(church?.name ?? "church")}-${slug(form.full_name)}-qr.png` });
+      const slug = (v: string) =>
+        v
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+      setDone({
+        qr,
+        token: result.token,
+        returning: result.returning,
+        service: result.service,
+        file: `${slug(church?.name ?? "church")}-${slug(form.full_name)}-qr.png`,
+      });
     } catch {
       setError("Something went wrong. Please ask an usher for help.");
     } finally {
@@ -239,31 +278,52 @@ function CheckIn() {
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-sm rounded-3xl border border-white/15 bg-black/40 p-6 text-center shadow-2xl backdrop-blur-xl"
         >
-          {logoUrl && <img src={logoUrl} alt={`${church?.name ?? "Church"} logo`} className="mx-auto mb-3 h-14 max-w-40 object-contain" />}
-          <p className="font-display text-lg font-extrabold uppercase tracking-wide">{church?.name}</p>
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={`${church?.name ?? "Church"} logo`}
+              className="mx-auto mb-3 h-14 max-w-40 object-contain"
+            />
+          )}
+          <p className="font-display text-lg font-extrabold uppercase tracking-wide">
+            {church?.name}
+          </p>
           <div className="mx-auto mt-4 grid size-12 place-items-center rounded-2xl bg-success/15 text-success">
             <CheckCircle2 className="size-6" />
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold">You're checked in!</h1>
           <p className="mt-1 text-sm text-muted-foreground">{done.service}</p>
           {!showQr ? (
-            <p className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white/80">You're on the register. An usher will mark your attendance at the service — just give them your name.</p>
-          ) : <>
-          <div className="mt-6 rounded-2xl bg-white p-4">
-            <img src={done.qr} alt="Your member check-in QR code" className="mx-auto aspect-square w-full max-w-[240px]" />
-          </div>
-          <p className="mt-3 text-[11px] uppercase tracking-wide text-muted-foreground">Member code (for Watch Live)</p>
-          <p className="select-all break-all font-mono text-xs text-white/90">{done.token}</p>
-          <p className="mt-4 text-xs text-muted-foreground">
-            {isiPhone
-              ? "iPhone: press and hold the code above, then tap “Save to Photos”. Show it at the door next time."
-              : "Your code has downloaded. Show it at the door next time for instant check-in."}
-          </p>
-          </>}
+            <p className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white/80">
+              You're on the register. An usher will mark your attendance at the service — just give
+              them your name.
+            </p>
+          ) : (
+            <>
+              <div className="mt-6 rounded-2xl bg-white p-4">
+                <img
+                  src={done.qr}
+                  alt="Your member check-in QR code"
+                  className="mx-auto aspect-square w-full max-w-[240px]"
+                />
+              </div>
+              <p className="mt-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+                Member code (for Watch Live)
+              </p>
+              <p className="select-all break-all font-mono text-xs text-white/90">{done.token}</p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                {isiPhone
+                  ? "iPhone: press and hold the code above, then tap “Save to Photos”. Show it at the door next time."
+                  : "Your code has downloaded. Show it at the door next time for instant check-in."}
+              </p>
+            </>
+          )}
           <div className="mt-6 flex flex-col gap-2">
-            {showQr && <Button onClick={saveQr} className="gap-2 rounded-xl">
-              <Download className="size-4" /> Save member code
-            </Button>}
+            {showQr && (
+              <Button onClick={saveQr} className="gap-2 rounded-xl">
+                <Download className="size-4" /> Save member code
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDone(null)} className="rounded-xl">
               Check in another person
             </Button>
@@ -276,10 +336,12 @@ function CheckIn() {
   return (
     <div
       className="dark relative min-h-svh px-4 py-8 text-foreground sm:py-12"
-      style={{
-        "--church-primary": church?.brand_primary ?? "#3b82f6",
-        "--church-accent": church?.brand_accent ?? "#0f172a",
-      } as React.CSSProperties}
+      style={
+        {
+          "--church-primary": church?.brand_primary ?? "#3b82f6",
+          "--church-accent": church?.brand_accent ?? "#0f172a",
+        } as React.CSSProperties
+      }
     >
       <HeroBackdrop />
       <motion.div
@@ -289,7 +351,11 @@ function CheckIn() {
       >
         <div className="text-center">
           {logoUrl && (
-            <img src={logoUrl} alt={`${church?.name ?? "Church"} logo`} className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]" />
+            <img
+              src={logoUrl}
+              alt={`${church?.name ?? "Church"} logo`}
+              className="mx-auto mb-4 h-24 max-w-56 object-contain drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
+            />
           )}
           <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight text-white sm:text-4xl">
             {church?.name ?? "Loading…"}
@@ -307,19 +373,31 @@ function CheckIn() {
               params={{ subdomain }}
               className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-destructive/80 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg backdrop-blur transition-transform hover:scale-105"
             >
-              <span className="size-2 animate-pulse rounded-full bg-destructive-foreground" /> Watch Live
+              <span className="size-2 animate-pulse rounded-full bg-destructive-foreground" /> Watch
+              Live
             </Link>
           )}
           {ctx?.parent && (
-            <p className="mt-3 text-xs text-white/60">A branch of <Link to="/c/$subdomain" params={{ subdomain: ctx.parent.subdomain }} className="font-semibold text-white underline-offset-2 hover:underline">{ctx.parent.name}</Link></p>
+            <p className="mt-3 text-xs text-white/60">
+              A branch of{" "}
+              <Link
+                to="/c/$subdomain"
+                params={{ subdomain: ctx.parent.subdomain }}
+                className="font-semibold text-white underline-offset-2 hover:underline"
+              >
+                {ctx.parent.name}
+              </Link>
+            </p>
           )}
         </div>
 
         {/* Member / Leader / Branch tab switch */}
-         <div className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/30 p-1.5 shadow-md backdrop-blur-xl ${tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
-           <Button
+        <div
+          className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/30 p-1.5 shadow-md backdrop-blur-xl ${tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}
+        >
+          <Button
             type="button"
-             variant="ghost"
+            variant="ghost"
             onClick={() => setTab("member")}
             className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
               tab === "member"
@@ -328,41 +406,58 @@ function CheckIn() {
             }`}
           >
             <User className="size-4" /> Member Check-in
-           </Button>
-           {leaderAreaOpen && <Button
-            type="button"
-             variant="ghost"
-            onClick={() => setTab("leader")}
-            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
-              tab === "leader"
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <UserCog className="size-4" /> Leader Area
-           </Button>}
-           {ctx?.acceptsBranches && <Button
-            type="button"
-             variant="ghost"
-            onClick={() => setTab("branch")}
-            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
-              tab === "branch"
-                ? "bg-primary text-primary-foreground shadow-md"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Building2 className="size-4" /> Branches
-           </Button>}
+          </Button>
+          {leaderAreaOpen && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setTab("leader")}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                tab === "leader"
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <UserCog className="size-4" /> Leader Area
+            </Button>
+          )}
+          {ctx?.acceptsBranches && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setTab("branch")}
+              className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
+                tab === "branch"
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Building2 className="size-4" /> Branches
+            </Button>
+          )}
         </div>
 
         {tab === "branch" && ctx?.acceptsBranches ? (
-          <BranchArea parent={subdomain} churchName={church?.name ?? "this church"} branches={ctx.branches} />
+          <BranchArea
+            parent={subdomain}
+            churchName={church?.name ?? "this church"}
+            branches={ctx.branches}
+          />
         ) : tab === "leader" ? (
-          <LeaderArea subdomain={subdomain} churchName={church?.name ?? "this church"} leaderTypes={leaderTypes} />
+          <LeaderArea
+            subdomain={subdomain}
+            churchName={church?.name ?? "this church"}
+            leaderTypes={leaderTypes}
+          />
         ) : (
-          <form onSubmit={onSubmit} className="mt-6 rounded-3xl border border-white/15 bg-black/35 space-y-4 p-5 sm:p-6 shadow-xl backdrop-blur-xl">
+          <form
+            onSubmit={onSubmit}
+            className="mt-6 rounded-3xl border border-white/15 bg-black/35 space-y-4 p-5 sm:p-6 shadow-xl backdrop-blur-xl"
+          >
             <div className="space-y-1.5">
-              <Label htmlFor="service" className="text-xs font-semibold">Service</Label>
+              <Label htmlFor="service" className="text-xs font-semibold">
+                Service
+              </Label>
               <select
                 id="service"
                 required
@@ -372,7 +467,11 @@ function CheckIn() {
                 disabled={services.length === 0}
               >
                 <option value="">
-                  {servicesLoading ? "Loading services…" : services.length ? "Select a service" : "No open service available"}
+                  {servicesLoading
+                    ? "Loading services…"
+                    : services.length
+                      ? "Select a service"
+                      : "No open service available"}
                 </option>
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
@@ -381,12 +480,16 @@ function CheckIn() {
                 ))}
               </select>
               {!servicesLoading && services.length === 0 && (
-                <p className="text-xs text-destructive">Please ask an usher or admin to open a service.</p>
+                <p className="text-xs text-destructive">
+                  Please ask an usher or admin to open a service.
+                </p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="n" className="text-xs font-semibold">Full name</Label>
+              <Label htmlFor="n" className="text-xs font-semibold">
+                Full name
+              </Label>
               <Input
                 id="n"
                 required
@@ -399,7 +502,9 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="p" className="text-xs font-semibold">Phone number</Label>
+              <Label htmlFor="p" className="text-xs font-semibold">
+                Phone number
+              </Label>
               <Input
                 id="p"
                 required
@@ -429,7 +534,9 @@ function CheckIn() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="d" className="text-xs font-semibold">Date of birth</Label>
+                <Label htmlFor="d" className="text-xs font-semibold">
+                  Date of birth
+                </Label>
                 <Input
                   id="d"
                   type="date"
@@ -441,7 +548,9 @@ function CheckIn() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="g" className="text-xs font-semibold">Gender</Label>
+                <Label htmlFor="g" className="text-xs font-semibold">
+                  Gender
+                </Label>
                 <select
                   id="g"
                   required
@@ -457,7 +566,9 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="marital" className="text-xs font-semibold">Marital status</Label>
+              <Label htmlFor="marital" className="text-xs font-semibold">
+                Marital status
+              </Label>
               <select
                 id="marital"
                 required
@@ -476,7 +587,9 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="a" className="text-xs font-semibold">Where do you live?</Label>
+              <Label htmlFor="a" className="text-xs font-semibold">
+                Where do you live?
+              </Label>
               <Input
                 id="a"
                 required
@@ -490,7 +603,9 @@ function CheckIn() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="occupation" className="text-xs font-semibold">Occupation</Label>
+                <Label htmlFor="occupation" className="text-xs font-semibold">
+                  Occupation
+                </Label>
                 <Input
                   id="occupation"
                   required
@@ -502,7 +617,9 @@ function CheckIn() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="education" className="text-xs font-semibold">Educational level</Label>
+                <Label htmlFor="education" className="text-xs font-semibold">
+                  Educational level
+                </Label>
                 <select
                   id="education"
                   className={selectClass}
@@ -520,7 +637,9 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader" className="text-xs font-semibold">Who invited you?</Label>
+              <Label htmlFor="leader" className="text-xs font-semibold">
+                Who invited you?
+              </Label>
               <select
                 id="leader"
                 className={selectClass}
@@ -547,7 +666,8 @@ function CheckIn() {
                 required
               />
               <span>
-                I agree to {church?.name ?? "this church"} keeping my details to record attendance and contact me for pastoral care.
+                I agree to {church?.name ?? "this church"} keeping my details to record attendance
+                and contact me for pastoral care.
               </span>
             </label>
 
@@ -565,24 +685,50 @@ function CheckIn() {
         )}
 
         <p className="mt-6 text-center text-[11px] text-white/50">
-           Powered by Mene:Log · Protected by the privacy guarantee · No public directory access
+          Powered by Mene:Log · Protected by the privacy guarantee · No public directory access
         </p>
       </motion.div>
     </div>
   );
 }
 
-function BranchArea({ parent, churchName, branches }: { parent: string; churchName: string; branches: Array<{ name: string; subdomain: string }> }) {
-  const [f, setF] = useState({ name: "", subdomain: "", city: "", contact_name: "", email: "", phone: "" });
+function BranchArea({
+  parent,
+  churchName,
+  branches,
+}: {
+  parent: string;
+  churchName: string;
+  branches: Array<{ name: string; subdomain: string }>;
+}) {
+  const [f, setF] = useState({
+    name: "",
+    subdomain: "",
+    city: "",
+    contact_name: "",
+    email: "",
+    phone: "",
+  });
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: k === "subdomain" ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") : e.target.value });
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF({
+      ...f,
+      [k]:
+        k === "subdomain"
+          ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
+          : e.target.value,
+    });
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true);
+    e.preventDefault();
+    setBusy(true);
     try {
       const r = await requestBranch({ data: { parent, ...f } });
-      if (r.ok) setSent(r.message); else toast.error(r.message);
-    } catch { toast.error("Please check the details and try again."); }
+      if (r.ok) setSent(r.message);
+      else toast.error(r.message);
+    } catch {
+      toast.error("Please check the details and try again.");
+    }
     setBusy(false);
   }
   return (
@@ -592,26 +738,81 @@ function BranchArea({ parent, churchName, branches }: { parent: string; churchNa
           <p className="text-sm font-semibold">Check in at a branch</p>
           <div className="mt-3 grid gap-2">
             {branches.map((b) => (
-              <Link key={b.subdomain} to="/c/$subdomain" params={{ subdomain: b.subdomain }} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10">
-                <span className="font-medium">{b.name}</span><span className="text-xs text-white/60">/c/{b.subdomain}</span>
+              <Link
+                key={b.subdomain}
+                to="/c/$subdomain"
+                params={{ subdomain: b.subdomain }}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10"
+              >
+                <span className="font-medium">{b.name}</span>
+                <span className="text-xs text-white/60">/c/{b.subdomain}</span>
               </Link>
             ))}
           </div>
         </div>
       )}
       {sent ? (
-        <div className="rounded-3xl border border-white/15 bg-black/35 p-6 text-center backdrop-blur-xl"><CheckCircle2 className="mx-auto size-8 text-success" /><p className="mt-3 text-sm">{sent}</p></div>
+        <div className="rounded-3xl border border-white/15 bg-black/35 p-6 text-center backdrop-blur-xl">
+          <CheckCircle2 className="mx-auto size-8 text-success" />
+          <p className="mt-3 text-sm">{sent}</p>
+        </div>
       ) : (
-        <form onSubmit={submit} className="space-y-3 rounded-3xl border border-white/15 bg-black/35 p-5 shadow-xl backdrop-blur-xl sm:p-6">
+        <form
+          onSubmit={submit}
+          className="space-y-3 rounded-3xl border border-white/15 bg-black/35 p-5 shadow-xl backdrop-blur-xl sm:p-6"
+        >
           <p className="text-sm font-semibold">Register a branch of {churchName}</p>
-          <p className="text-xs text-white/60">The head office reviews every request before the branch goes live.</p>
-          <Input required placeholder="Branch name" value={f.name} onChange={set("name")} maxLength={120} />
-          <Input required placeholder="Check-in address, e.g. grace-kumasi" value={f.subdomain} onChange={set("subdomain")} minLength={3} maxLength={40} />
-          <Input required placeholder="Town or city" value={f.city} onChange={set("city")} maxLength={80} />
-          <Input required placeholder="Branch leader's full name" value={f.contact_name} onChange={set("contact_name")} maxLength={120} />
-          <Input required type="email" placeholder="Branch leader's email" value={f.email} onChange={set("email")} />
-          <Input required type="tel" placeholder="Phone number" value={f.phone} onChange={set("phone")} minLength={9} maxLength={20} />
-          <Button type="submit" disabled={busy} className="w-full rounded-xl">{busy ? "Sending…" : "Send branch request"}</Button>
+          <p className="text-xs text-white/60">
+            The head office reviews every request before the branch goes live.
+          </p>
+          <Input
+            required
+            placeholder="Branch name"
+            value={f.name}
+            onChange={set("name")}
+            maxLength={120}
+          />
+          <Input
+            required
+            placeholder="Check-in address, e.g. grace-kumasi"
+            value={f.subdomain}
+            onChange={set("subdomain")}
+            minLength={3}
+            maxLength={40}
+          />
+          <Input
+            required
+            placeholder="Town or city"
+            value={f.city}
+            onChange={set("city")}
+            maxLength={80}
+          />
+          <Input
+            required
+            placeholder="Branch leader's full name"
+            value={f.contact_name}
+            onChange={set("contact_name")}
+            maxLength={120}
+          />
+          <Input
+            required
+            type="email"
+            placeholder="Branch leader's email"
+            value={f.email}
+            onChange={set("email")}
+          />
+          <Input
+            required
+            type="tel"
+            placeholder="Phone number"
+            value={f.phone}
+            onChange={set("phone")}
+            minLength={9}
+            maxLength={20}
+          />
+          <Button type="submit" disabled={busy} className="w-full rounded-xl">
+            {busy ? "Sending…" : "Send branch request"}
+          </Button>
         </form>
       )}
     </div>
@@ -668,7 +869,9 @@ function LeaderArea({
       toast.success("Welcome back! Loading your leader dashboard…");
       navigate({ to: "/my-members" });
     } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Could not sign in with these credentials.");
+      setLoginError(
+        err instanceof Error ? err.message : "Could not sign in with these credentials.",
+      );
     } finally {
       setLoginBusy(false);
     }
@@ -681,7 +884,8 @@ function LeaderArea({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setForm((current) => ({ ...current, photo: String(reader.result ?? "") }));
+    reader.onload = () =>
+      setForm((current) => ({ ...current, photo: String(reader.result ?? "") }));
     reader.readAsDataURL(file);
   }
 
@@ -732,9 +936,16 @@ function LeaderArea({
         </div>
         <h2 className="font-display text-xl font-bold">Check your email</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          We've sent a verification link to <b className="text-foreground">{form.email}</b>. Click the link to confirm, then sign in below to access your members at {churchName}.
+          We've sent a verification link to <b className="text-foreground">{form.email}</b>. Click
+          the link to confirm, then sign in below to access your members at {churchName}.
         </p>
-        <Button onClick={() => { setSent(false); setAuthMode("login"); }} className="w-full rounded-xl">
+        <Button
+          onClick={() => {
+            setSent(false);
+            setAuthMode("login");
+          }}
+          className="w-full rounded-xl"
+        >
           Proceed to Leader Log in
         </Button>
       </div>
@@ -788,7 +999,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader-email" className="text-xs font-semibold">Email address</Label>
+              <Label htmlFor="leader-email" className="text-xs font-semibold">
+                Email address
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
                 <Input
@@ -804,7 +1017,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader-password" className="text-xs font-semibold">Password</Label>
+              <Label htmlFor="leader-password" className="text-xs font-semibold">
+                Password
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
                 <Input
@@ -826,14 +1041,14 @@ function LeaderArea({
             </Button>
 
             <div className="text-center">
-               <Button
+              <Button
                 type="button"
-                 variant="link"
+                variant="link"
                 onClick={() => setAuthMode("register")}
                 className="text-xs text-primary hover:underline"
               >
                 Need to register? Create leader account
-               </Button>
+              </Button>
             </div>
           </motion.form>
         ) : (
@@ -854,7 +1069,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lname" className="text-xs font-semibold">Full name</Label>
+              <Label htmlFor="lname" className="text-xs font-semibold">
+                Full name
+              </Label>
               <Input
                 id="lname"
                 required
@@ -867,7 +1084,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lemail" className="text-xs font-semibold">Email address</Label>
+              <Label htmlFor="lemail" className="text-xs font-semibold">
+                Email address
+              </Label>
               <Input
                 id="lemail"
                 type="email"
@@ -880,7 +1099,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lphone" className="text-xs font-semibold">Phone number</Label>
+              <Label htmlFor="lphone" className="text-xs font-semibold">
+                Phone number
+              </Label>
               <Input
                 id="lphone"
                 required
@@ -906,7 +1127,9 @@ function LeaderArea({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ldob" className="text-xs font-semibold">Date of birth</Label>
+                <Label htmlFor="ldob" className="text-xs font-semibold">
+                  Date of birth
+                </Label>
                 <Input
                   id="ldob"
                   type="date"
@@ -917,7 +1140,9 @@ function LeaderArea({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="lloc" className="text-xs font-semibold">Location</Label>
+                <Label htmlFor="lloc" className="text-xs font-semibold">
+                  Location
+                </Label>
                 <Input
                   id="lloc"
                   maxLength={120}
@@ -929,7 +1154,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ltype" className="text-xs font-semibold">Type of leader</Label>
+              <Label htmlFor="ltype" className="text-xs font-semibold">
+                Type of leader
+              </Label>
               <select
                 id="ltype"
                 className={selectClass}
@@ -947,7 +1174,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lcode" className="text-xs font-semibold">Leader access code</Label>
+              <Label htmlFor="lcode" className="text-xs font-semibold">
+                Leader access code
+              </Label>
               <Input
                 id="lcode"
                 required
@@ -961,7 +1190,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lpass" className="text-xs font-semibold">Password</Label>
+              <Label htmlFor="lpass" className="text-xs font-semibold">
+                Password
+              </Label>
               <Input
                 id="lpass"
                 type="password"
@@ -973,7 +1204,10 @@ function LeaderArea({
               />
               <ul className="grid gap-1 pt-1 text-xs text-muted-foreground">
                 {checks.map((check) => (
-                  <li key={check.label} className={check.met ? "text-success font-medium" : undefined}>
+                  <li
+                    key={check.label}
+                    className={check.met ? "text-success font-medium" : undefined}
+                  >
                     {check.met ? "✓" : "•"} {check.label}
                   </li>
                 ))}
@@ -981,7 +1215,9 @@ function LeaderArea({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lconfirm" className="text-xs font-semibold">Confirm password</Label>
+              <Label htmlFor="lconfirm" className="text-xs font-semibold">
+                Confirm password
+              </Label>
               <Input
                 id="lconfirm"
                 type="password"
@@ -993,7 +1229,9 @@ function LeaderArea({
               />
             </div>
 
-            {registerError && <p className="text-sm font-medium text-destructive">{registerError}</p>}
+            {registerError && (
+              <p className="text-sm font-medium text-destructive">{registerError}</p>
+            )}
 
             <Button type="submit" className="h-11 w-full rounded-xl" disabled={registerBusy}>
               {registerBusy ? "Creating your account…" : "Create Leader Account"}
@@ -1002,7 +1240,8 @@ function LeaderArea({
             <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <span>
-                Leaders only see the members assigned to them or who chose them. Sensitive church-wide records remain confidential.
+                Leaders only see the members assigned to them or who chose them. Sensitive
+                church-wide records remain confidential.
               </span>
             </div>
           </motion.form>
@@ -1011,4 +1250,3 @@ function LeaderArea({
     </div>
   );
 }
-

@@ -2,14 +2,12 @@
 
 ## 1. New plan line-up (names shown everywhere)
 
-
 | New name      | Was      | Monthly      | Yearly discount | Yearly total |
 | ------------- | -------- | ------------ | --------------- | ------------ |
 | Free plan     | (new)    | Free forever | none            | none         |
 | Standard plan | Basic    | $10          | 8%              | $110.40      |
 | Pro plan      | Standard | $25          | 10%             | $270         |
 | Premium plan  | Premium  | $50          | 15%             | $510         |
-
 
 - Yearly totals are still worked out from the monthly price (monthly x 12, less that plan's discount), so they update if prices change.
 - The badge under the toggle now reads "Save up to 15% when you pay yearly". Each paid card shows its own "Save 8%", "Save 10%" or "Save 15%".

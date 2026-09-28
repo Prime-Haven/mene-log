@@ -7,7 +7,13 @@ import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /**
  * On the 30th of each month we invite each church administrator to review Mene:Log.
@@ -74,8 +80,8 @@ export function ReviewPrompt() {
         <DialogHeader>
           <DialogTitle>How is Mene:Log working for {tenant?.name}?</DialogTitle>
           <DialogDescription>
-            Share one short review. Once our team approves it, it appears on the Mene:Log homepage so
-            other churches can hear from you.
+            Share one short review. Once our team approves it, it appears on the Mene:Log homepage
+            so other churches can hear from you.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
@@ -83,9 +89,18 @@ export function ReviewPrompt() {
             <Label>Your rating</Label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((value) => (
-                 <Button key={value} type="button" variant="ghost" size="icon" aria-label={`${value} star`} onClick={() => setRating(value)}>
-                  <Star className={`size-7 ${value <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-                 </Button>
+                <Button
+                  key={value}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${value} star`}
+                  onClick={() => setRating(value)}
+                >
+                  <Star
+                    className={`size-7 ${value <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                  />
+                </Button>
               ))}
             </div>
           </div>
@@ -107,16 +122,32 @@ export function ReviewPrompt() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="rname">Your name</Label>
-              <Input id="rname" required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                id="rname"
+                required
+                maxLength={80}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="rrole">Your role</Label>
-              <Input id="rrole" maxLength={80} placeholder="Senior Pastor" value={role} onChange={(e) => setRole(e.target.value)} />
+              <Input
+                id="rrole"
+                maxLength={80}
+                placeholder="Senior Pastor"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Maybe later</Button>
-            <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send review"}</Button>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Maybe later
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Sending…" : "Send review"}
+            </Button>
           </div>
         </form>
       </DialogContent>

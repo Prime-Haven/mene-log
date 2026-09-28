@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_app/scan")({
   head: () => ({
     meta: [
       { title: "Scan & check in — Mene:Log" },
-      { name: "description", content: "Scan member QR codes to record attendance for an open service." },
+      {
+        name: "description",
+        content: "Scan member QR codes to record attendance for an open service.",
+      },
       { property: "og:title", content: "Scan & check in — Mene:Log" },
       { property: "og:description", content: "Record attendance by scanning member QR codes." },
       { property: "og:type", content: "website" },
@@ -90,7 +93,11 @@ function Scan() {
         setResult({
           ok: true,
           name: res.member_name,
-          message: res.duplicate ? "Already recorded" : res.designation === "leader" ? "Leader attendance recorded" : "Attendance recorded",
+          message: res.duplicate
+            ? "Already recorded"
+            : res.designation === "leader"
+              ? "Leader attendance recorded"
+              : "Attendance recorded",
         });
       }
     } catch (e) {
@@ -149,8 +156,20 @@ function Scan() {
 
       {serviceId && (
         <div className="surface overflow-hidden">
-          <ClientOnly fallback={<div className="grid h-64 place-items-center text-sm text-muted-foreground">Starting camera…</div>}>
-            <Suspense fallback={<div className="grid h-64 place-items-center text-sm text-muted-foreground">Starting camera…</div>}>
+          <ClientOnly
+            fallback={
+              <div className="grid h-64 place-items-center text-sm text-muted-foreground">
+                Starting camera…
+              </div>
+            }
+          >
+            <Suspense
+              fallback={
+                <div className="grid h-64 place-items-center text-sm text-muted-foreground">
+                  Starting camera…
+                </div>
+              }
+            >
               <CameraScanner onToken={handleToken} />
             </Suspense>
           </ClientOnly>
@@ -188,7 +207,12 @@ function Scan() {
           {(matches ?? []).map((m) => (
             <li key={m.id} className="flex items-center justify-between py-2">
               <span className="text-sm">{m.full_name}</span>
-              <Button size="sm" variant="outline" disabled={!serviceId} onClick={() => manual(m.id)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!serviceId}
+                onClick={() => manual(m.id)}
+              >
                 Record
               </Button>
             </li>

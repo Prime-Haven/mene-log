@@ -1,4 +1,5 @@
 # Roadmap
+
 - [x] Platform settings + console Settings area
 - [x] Pricing driven by settings
 - [x] Discount codes

@@ -5,7 +5,11 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 
 const textOf = (message: UIMessage) =>
-  message.parts.filter((part) => part.type === "text").map((part) => part.text).join("").trim();
+  message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("")
+    .trim();
 
 function userClient(token: string) {
   const url = process.env["SUPABASE_URL"];
@@ -24,11 +28,13 @@ export const Route = createFileRoute("/api/public/ask-mene")({
         try {
           const auth = request.headers.get("authorization") ?? "";
           const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-          if (!token) return Response.json({ error: "Sign in again to continue." }, { status: 401 });
+          if (!token)
+            return Response.json({ error: "Sign in again to continue." }, { status: 401 });
 
           const client = userClient(token);
           const { data: claims } = await client.auth.getClaims(token);
-          if (!claims?.claims?.sub) return Response.json({ error: "Your session has expired." }, { status: 401 });
+          if (!claims?.claims?.sub)
+            return Response.json({ error: "Your session has expired." }, { status: 401 });
 
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -52,22 +58,42 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           const question = latest ? textOf(latest) : "";
           const maxQuestion = pro ? 2000 : 800;
           if (!tenantId || !question || question.length > maxQuestion) {
-            return Response.json({ error: `Ask one question of up to ${maxQuestion} characters.` }, { status: 400 });
+            return Response.json(
+              { error: `Ask one question of up to ${maxQuestion} characters.` },
+              { status: 400 },
+            );
           }
 
-          const { data: allowed, error: limitError } = await client.rpc("ask_mene_allow_request", { p_tenant: tenantId });
-          if (limitError) return Response.json({ error: "You do not have access to Ask Mene." }, { status: 403 });
-          if (!allowed) return Response.json({ error: "Ask Mene's hourly limit has been reached. Try again later." }, { status: 429 });
+          const { data: allowed, error: limitError } = await client.rpc("ask_mene_allow_request", {
+            p_tenant: tenantId,
+          });
+          if (limitError)
+            return Response.json({ error: "You do not have access to Ask Mene." }, { status: 403 });
+          if (!allowed)
+            return Response.json(
+              { error: "Ask Mene's hourly limit has been reached. Try again later." },
+              { status: 429 },
+            );
 
-          const { data: context, error: contextError } = await client.rpc("ask_mene_context", { p_tenant: tenantId });
-          if (contextError || !context) return Response.json({ error: "Church insights are unavailable right now." }, { status: 403 });
+          const { data: context, error: contextError } = await client.rpc("ask_mene_context", {
+            p_tenant: tenantId,
+          });
+          if (contextError || !context)
+            return Response.json(
+              { error: "Church insights are unavailable right now." },
+              { status: 403 },
+            );
 
           const apiKey = process.env["LOVABLE_API_KEY"];
-          if (!apiKey) return Response.json({ error: "Ask Mene is not configured yet." }, { status: 503 });
+          if (!apiKey)
+            return Response.json({ error: "Ask Mene is not configured yet." }, { status: 503 });
 
           const { data: conversation, error: conversationError } = await supabaseAdmin
             .from("ask_mene_conversations")
-            .upsert({ tenant_id: tenantId, updated_by: claims.claims.sub }, { onConflict: "tenant_id" })
+            .upsert(
+              { tenant_id: tenantId, updated_by: claims.claims.sub },
+              { onConflict: "tenant_id" },
+            )
             .select("id")
             .single();
           if (conversationError) throw conversationError;
@@ -117,12 +143,21 @@ export const Route = createFileRoute("/api/public/ask-mene")({
                 content: answer,
                 created_by: claims.claims.sub,
               });
-              await supabaseAdmin.from("ask_mene_conversations").update({ updated_at: new Date().toISOString(), updated_by: claims.claims.sub }).eq("id", conversation.id);
+              await supabaseAdmin
+                .from("ask_mene_conversations")
+                .update({ updated_at: new Date().toISOString(), updated_by: claims.claims.sub })
+                .eq("id", conversation.id);
             },
           });
         } catch (error) {
-          console.error("[ask-mene] request failed", error instanceof Error ? error.message : error);
-          return Response.json({ error: "Ask Mene:Log is temporarily unavailable. Please try again." }, { status: 500 });
+          console.error(
+            "[ask-mene] request failed",
+            error instanceof Error ? error.message : error,
+          );
+          return Response.json(
+            { error: "Ask Mene:Log is temporarily unavailable. Please try again." },
+            { status: 500 },
+          );
         }
       },
     },

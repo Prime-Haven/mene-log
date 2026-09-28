@@ -8,7 +8,13 @@ import { UpgradePanel } from "@/components/FeatureGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_app/followups")({
   head: () => ({
@@ -65,7 +71,12 @@ function Followups() {
     queryKey: ["followup-leaders", tenant?.id],
     enabled: !!tenant && ctx.can("followups"),
     queryFn: async () => {
-      const { data, error } = await supabase.from("leader_profiles").select("id, full_name").eq("tenant_id", tenant!.id).eq("status", "active").order("full_name");
+      const { data, error } = await supabase
+        .from("leader_profiles")
+        .select("id, full_name")
+        .eq("tenant_id", tenant!.id)
+        .eq("status", "active")
+        .order("full_name");
       if (error) throw error;
       return data;
     },
@@ -75,7 +86,11 @@ function Followups() {
 
   const today = new Date().toISOString().slice(0, 10);
   const rows = (list.data ?? []).filter((r) =>
-    filter === "all" ? true : filter === "open" ? !["joined", "not_interested"].includes(r.status) : r.status === filter,
+    filter === "all"
+      ? true
+      : filter === "open"
+        ? !["joined", "not_interested"].includes(r.status)
+        : r.status === filter,
   );
 
   return (
@@ -84,25 +99,44 @@ function Followups() {
         <div>
           <p className="text-eyebrow">People</p>
           <h1 className="mt-2 text-2xl font-bold">Follow-ups</h1>
-          <p className="mt-1 text-sm text-muted-foreground">First-timers and members you've added from absence alerts.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            First-timers and members you've added from absence alerts.
+          </p>
         </div>
         <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-44" aria-label="Filter"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-44" aria-label="Filter">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="open">Still open</SelectItem>
             <SelectItem value="all">Everyone</SelectItem>
-            {FOLLOWUP_STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+            {FOLLOWUP_STATUSES.map(([v, l]) => (
+              <SelectItem key={v} value={v}>
+                {l}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
       {list.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">Nobody needs a follow-up right now.</div>
+        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+          Nobody needs a follow-up right now.
+        </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {rows.map((r) => (
-            <FollowupCard key={r.member_id} row={r} overdue={!!r.next_contact_on && r.next_contact_on < today && !["joined", "not_interested"].includes(r.status)} leaders={leaders.data ?? []} />
+            <FollowupCard
+              key={r.member_id}
+              row={r}
+              overdue={
+                !!r.next_contact_on &&
+                r.next_contact_on < today &&
+                !["joined", "not_interested"].includes(r.status)
+              }
+              leaders={leaders.data ?? []}
+            />
           ))}
         </div>
       )}
@@ -110,7 +144,15 @@ function Followups() {
   );
 }
 
-function FollowupCard({ row, overdue, leaders }: { row: Row; overdue: boolean; leaders: Array<{ id: string; full_name: string }> }) {
+function FollowupCard({
+  row,
+  overdue,
+  leaders,
+}: {
+  row: Row;
+  overdue: boolean;
+  leaders: Array<{ id: string; full_name: string }>;
+}) {
   const qc = useQueryClient();
   const [status, setStatus] = useState(row.status);
   const [leader, setLeader] = useState(row.assigned_leader_id ?? "none");
@@ -140,26 +182,61 @@ function FollowupCard({ row, overdue, leaders }: { row: Row; overdue: boolean; l
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold">{row.full_name}</p>
-          <p className="text-xs text-muted-foreground">{row.phone ?? "No phone"} · joined {row.joined_on}{row.source === "absence" ? " · from absence alert" : ""}</p>
+          <p className="text-xs text-muted-foreground">
+            {row.phone ?? "No phone"} · joined {row.joined_on}
+            {row.source === "absence" ? " · from absence alert" : ""}
+          </p>
         </div>
-        {overdue && <span className="rounded bg-destructive/10 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive">Overdue</span>}
+        {overdue && (
+          <span className="rounded bg-destructive/10 px-2 py-0.5 text-[10px] font-bold uppercase text-destructive">
+            Overdue
+          </span>
+        )}
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger aria-label="Status"><SelectValue /></SelectTrigger>
-          <SelectContent>{FOLLOWUP_STATUSES.map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={leader} onValueChange={setLeader}>
-          <SelectTrigger aria-label="Leader"><SelectValue placeholder="Assign leader" /></SelectTrigger>
+          <SelectTrigger aria-label="Status">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">No leader</SelectItem>
-            {leaders.map((l) => <SelectItem key={l.id} value={l.id}>{l.full_name}</SelectItem>)}
+            {FOLLOWUP_STATUSES.map(([v, l]) => (
+              <SelectItem key={v} value={v}>
+                {l}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Input type="date" aria-label="Next contact" value={next} onChange={(e) => setNext(e.target.value)} />
+        <Select value={leader} onValueChange={setLeader}>
+          <SelectTrigger aria-label="Leader">
+            <SelectValue placeholder="Assign leader" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No leader</SelectItem>
+            {leaders.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.full_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          type="date"
+          aria-label="Next contact"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+        />
       </div>
-      <Textarea className="mt-2" rows={2} maxLength={1000} placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
-      <Button size="sm" className="mt-2" disabled={save.isPending} onClick={() => save.mutate()}>{save.isPending ? "Saving…" : "Save"}</Button>
+      <Textarea
+        className="mt-2"
+        rows={2}
+        maxLength={1000}
+        placeholder="Note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <Button size="sm" className="mt-2" disabled={save.isPending} onClick={() => save.mutate()}>
+        {save.isPending ? "Saving…" : "Save"}
+      </Button>
     </div>
   );
 }
