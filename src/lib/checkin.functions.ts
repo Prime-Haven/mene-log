@@ -86,95 +86,67 @@ export const getPublicOpenServices = createServerFn({ method: "GET" })
 
     if (!tenant) return [];
 
-    // 2. Fetch existing open services for this church
-    const { data: existingServices } = await supabaseAdmin
+    // 2. Ensure canonical default services exist (Sunday Service, Midweek Service, Prayer Service)
+    const defaults = [
+      { name: "Sunday Service", type: "sunday" },
+      { name: "Midweek Service", type: "midweek" },
+      { name: "Prayer Service", type: "prayer" },
+    ];
+
+    for (const def of defaults) {
+      const { data: existing } = await supabaseAdmin
+        .from("services")
+        .select("id, is_open")
+        .eq("tenant_id", tenant.id)
+        .eq("service_type", def.type)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabaseAdmin.from("services").insert({
+          tenant_id: tenant.id,
+          name: def.name,
+          service_type: def.type,
+          is_default: true,
+          is_open: true,
+        });
+      } else if (!existing.is_open) {
+        await supabaseAdmin.from("services").update({ is_open: true }).eq("id", existing.id);
+      }
+    }
+
+    // 3. Fetch all open services for this church
+    const { data: allServices } = await supabaseAdmin
       .from("services")
       .select(
         "id, name, service_date, is_open, service_type, theme, description, speaker, is_default",
       )
       .eq("tenant_id", tenant.id)
       .eq("is_open", true)
-      .order("service_date", { ascending: false });
+      .order("created_at", { ascending: false });
 
-    const list = existingServices ? [...existingServices] : [];
+    const list = allServices ?? [];
 
-    // Helper to calculate nearest date for a day of week (0 = Sunday, 3 = Wednesday, 5 = Friday)
-    const getUpcomingDate = (targetDow: number) => {
-      const now = new Date();
-      const currentDow = now.getDay();
-      let diff = targetDow - currentDow;
-      if (diff < 0) diff += 7;
-      const d = new Date(now);
-      d.setDate(now.getDate() + diff);
-      return d.toISOString().slice(0, 10);
-    };
-
-    const defaultServices = [
-      { name: "Sunday Service", type: "sunday", date: getUpcomingDate(0) },
-      { name: "Midweek Service", type: "midweek", date: getUpcomingDate(3) },
-      { name: "Prayer Service", type: "prayer", date: getUpcomingDate(5) },
-    ];
-
-    // Ensure all 3 default weekly services are present and open
-    for (const def of defaultServices) {
-      const exists = list.some(
-        (s) => s.service_type === def.type || s.name.toLowerCase().includes(def.name.toLowerCase()),
-      );
-
-      if (!exists) {
-        // Check if there is an existing template or row in the database
-        const { data: existingRow } = await supabaseAdmin
-          .from("services")
-          .select(
-            "id, name, service_date, is_open, service_type, theme, description, speaker, is_default",
-          )
-          .eq("tenant_id", tenant.id)
-          .or(`service_type.eq.${def.type},name.ilike.%${def.name}%`)
-          .order("service_date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (existingRow) {
-          if (!existingRow.is_open) {
-            await supabaseAdmin.from("services").update({ is_open: true }).eq("id", existingRow.id);
-          }
-          list.push({ ...existingRow, is_open: true });
-        } else {
-          // Create standard default service
-          const { data: created } = await supabaseAdmin
-            .from("services")
-            .insert({
-              tenant_id: tenant.id,
-              name: def.name,
-              service_type: def.type,
-              service_date: def.date,
-              is_open: true,
-              is_default: true,
-            })
-            .select(
-              "id, name, service_date, is_open, service_type, theme, description, speaker, is_default",
-            )
-            .maybeSingle();
-
-          if (created) list.push(created);
-        }
-      }
-    }
-
-    // Sort order: Sunday first, then Midweek, Prayer, then Special / Themed programs
-    const priority = (type?: string | null, name?: string) => {
-      const lower = (type || name || "").toLowerCase();
-      if (lower.includes("sunday")) return 1;
-      if (lower.includes("midweek") || lower.includes("wednesday")) return 2;
-      if (lower.includes("prayer") || lower.includes("friday")) return 3;
+    // Sort order:
+    // 1. Sunday Service (default)
+    // 2. Midweek Service (default)
+    // 3. Prayer Service (default)
+    // 4. Admin-created special services
+    const getPriority = (s: {
+      service_type?: string | null;
+      name: string;
+      is_default?: boolean | null;
+    }) => {
+      if (s.is_default || s.service_type === "sunday" || s.name === "Sunday Service") return 1;
+      if (s.is_default || s.service_type === "midweek" || s.name === "Midweek Service") return 2;
+      if (s.is_default || s.service_type === "prayer" || s.name === "Prayer Service") return 3;
       return 4;
     };
 
     return list.sort((a, b) => {
-      const pA = priority(a.service_type, a.name);
-      const pB = priority(b.service_type, b.name);
+      const pA = getPriority(a);
+      const pB = getPriority(b);
       if (pA !== pB) return pA - pB;
-      return a.service_date < b.service_date ? 1 : -1;
+      return (a.service_date || "") < (b.service_date || "") ? 1 : -1;
     });
   });
 

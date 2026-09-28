@@ -105,9 +105,9 @@ export function AttendanceRegister() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, service_date, is_open")
+        .select("id, name, service_date, service_type, is_open")
         .eq("tenant_id", tenant!.id)
-        .order("service_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(60);
       if (error) throw error;
       return data;
@@ -406,20 +406,39 @@ export function AttendanceRegister() {
               </SelectTrigger>
               <SelectContent>
                 {services.data?.map((s) => {
-                  const parts = s.service_date.split("-").map(Number);
+                  const isDefault =
+                    s.service_type === "sunday" ||
+                    s.service_type === "midweek" ||
+                    s.service_type === "prayer" ||
+                    s.name.toLowerCase() === "sunday service" ||
+                    s.name.toLowerCase() === "midweek service" ||
+                    s.name.toLowerCase() === "prayer service";
+
+                  if (isDefault) {
+                    return (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                        {s.is_open ? "" : " (closed)"}
+                      </SelectItem>
+                    );
+                  }
+
+                  const parts = (s.service_date || "").split("-").map(Number);
                   const d =
                     parts.length === 3
                       ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
                       : new Date(s.service_date);
-                  const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-                  const dateStr = d.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  });
+                  const dateStr = !isNaN(d.getTime())
+                    ? d.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : s.service_date;
+
                   return (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.name} — {dayName}, {dateStr}
-                      {s.is_open ? "" : " (closed)"}
+                      {s.name} ({dateStr}){s.is_open ? "" : " (closed)"}
                     </SelectItem>
                   );
                 })}

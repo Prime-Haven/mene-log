@@ -152,7 +152,7 @@ export const services = pgTable("services", {
   branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   name: text("name").notNull(), // "Sunday Service", "Midweek Service", "Prayer Service", or Special Program Name
   serviceType: text("service_type").notNull().default("regular"), // "regular" | "special_program"
-  serviceDate: date("service_date").notNull().defaultNow(),
+  serviceDate: date("service_date").defaultNow(),
   isOpen: boolean("is_open").notNull().default(true),
   streamUrl: text("stream_url"),
   onlineMinMinutes: integer("online_min_minutes").notNull().default(20),

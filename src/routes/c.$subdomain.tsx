@@ -482,22 +482,42 @@ function CheckIn() {
                       : "No open service available"}
                 </option>
                 {services.map((service) => {
-                  const parts = service.service_date.split("-").map(Number);
+                  const isDefault =
+                    service.is_default ||
+                    service.service_type === "sunday" ||
+                    service.service_type === "midweek" ||
+                    service.service_type === "prayer" ||
+                    service.name.toLowerCase() === "sunday service" ||
+                    service.name.toLowerCase() === "midweek service" ||
+                    service.name.toLowerCase() === "prayer service";
+
+                  // Default services: NO date attached!
+                  if (isDefault) {
+                    return (
+                      <option key={service.id} value={service.id}>
+                        {service.name}
+                      </option>
+                    );
+                  }
+
+                  // Only admin-created services have dates attached:
+                  const parts = (service.service_date || "").split("-").map(Number);
                   const d =
                     parts.length === 3
                       ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
                       : new Date(service.service_date);
-                  const dayName = d.toLocaleDateString("en-US", { weekday: "long" });
-                  const dateStr = d.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  });
+                  const dateStr = !isNaN(d.getTime())
+                    ? d.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : service.service_date;
                   const themeStr = service.theme ? ` • "${service.theme}"` : "";
                   return (
                     <option key={service.id} value={service.id}>
                       {service.name}
-                      {themeStr} — {dayName}, {dateStr}
+                      {themeStr} ({dateStr})
                     </option>
                   );
                 })}

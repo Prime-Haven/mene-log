@@ -340,21 +340,39 @@ export function Scan() {
         >
           <option value="">Select an open service</option>
           {(services ?? []).map((s) => {
-            const parts = s.service_date.split("-").map(Number);
+            const isDefault =
+              s.service_type === "sunday" ||
+              s.service_type === "midweek" ||
+              s.service_type === "prayer" ||
+              s.name.toLowerCase() === "sunday service" ||
+              s.name.toLowerCase() === "midweek service" ||
+              s.name.toLowerCase() === "prayer service";
+
+            if (isDefault) {
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              );
+            }
+
+            const parts = (s.service_date || "").split("-").map(Number);
             const d =
               parts.length === 3
                 ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
                 : new Date(s.service_date);
-            const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-            const dateStr = d.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
+            const dateStr = !isNaN(d.getTime())
+              ? d.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : s.service_date;
             const themeStr = s.theme ? ` • "${s.theme}"` : "";
             return (
               <option key={s.id} value={s.id}>
                 {s.name}
-                {themeStr} — {dayName}, {dateStr}
+                {themeStr} ({dateStr})
               </option>
             );
           })}
