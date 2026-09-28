@@ -137,7 +137,7 @@ function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {settings?.homepage.banner && (
+      {settings?.homepage?.banner && (
         <div className="fixed inset-x-0 bottom-0 z-40 bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground md:top-0 md:bottom-auto">
           {settings.homepage.banner}
         </div>
@@ -350,7 +350,7 @@ function LandingPage() {
           </div>
         </section>
 
-        {settings?.homepage.show_stats !== false && <HomepageStats />}
+        {settings?.homepage?.show_stats !== false && <HomepageStats />}
 
         <section id="features" className="bg-background px-5 py-24 sm:py-28">
           <div className="mx-auto max-w-7xl">

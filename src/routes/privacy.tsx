@@ -171,7 +171,7 @@ function PrivacyPage() {
               </div>
             </section>
           ))}
-          {settings?.legal.privacy_extra && (
+          {settings?.legal?.privacy_extra && (
             <section className="mt-10 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
               {settings.legal.privacy_extra}
             </section>

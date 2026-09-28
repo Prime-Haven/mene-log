@@ -318,12 +318,12 @@ export function ConsoleSettings({
             <div className="space-y-4">
               <Toggle
                 label='Show the "Growing together" numbers'
-                checked={s.homepage.show_stats}
+                checked={s?.homepage?.show_stats ?? true}
                 onChange={(v) => patch("homepage", { show_stats: v })}
               />
               <F label="Banner announcement (leave empty for none)">
                 <Input
-                  value={s.homepage.banner}
+                  value={s?.homepage?.banner ?? ""}
                   onChange={(e) => patch("homepage", { banner: e.target.value })}
                   maxLength={200}
                 />

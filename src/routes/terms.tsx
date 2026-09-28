@@ -157,7 +157,7 @@ function TermsPage() {
               </div>
             </section>
           ))}
-          {settings?.legal.terms_extra && (
+          {settings?.legal?.terms_extra && (
             <section className="mt-10 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
               {settings.legal.terms_extra}
             </section>
