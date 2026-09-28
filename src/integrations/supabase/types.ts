@@ -8,6 +8,121 @@ export type Database = {
   };
   public: {
     Tables: {
+      support_tickets: {
+        Row: {
+          created_at: string;
+          description: string;
+          id: string;
+          priority: "low" | "normal" | "high" | "urgent";
+          resolved_at: string | null;
+          status: "open" | "in_progress" | "resolved" | "closed";
+          subject: string;
+          submitted_by_user_id: string;
+          tenant_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          id?: string;
+          priority?: "low" | "normal" | "high" | "urgent";
+          resolved_at?: string | null;
+          status?: "open" | "in_progress" | "resolved" | "closed";
+          subject: string;
+          submitted_by_user_id: string;
+          tenant_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          id?: string;
+          priority?: "low" | "normal" | "high" | "urgent";
+          resolved_at?: string | null;
+          status?: "open" | "in_progress" | "resolved" | "closed";
+          subject?: string;
+          submitted_by_user_id?: string;
+          tenant_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      support_ticket_replies: {
+        Row: {
+          author_id: string;
+          author_type: "church" | "support" | "super_admin";
+          created_at: string;
+          id: string;
+          is_internal: boolean;
+          message: string;
+          ticket_id: string;
+        };
+        Insert: {
+          author_id: string;
+          author_type: "church" | "support" | "super_admin";
+          created_at?: string;
+          id?: string;
+          is_internal?: boolean;
+          message: string;
+          ticket_id: string;
+        };
+        Update: {
+          author_id?: string;
+          author_type?: "church" | "support" | "super_admin";
+          created_at?: string;
+          id?: string;
+          is_internal?: boolean;
+          message?: string;
+          ticket_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_replies_ticket_id_fkey";
+            columns: ["ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "support_tickets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      support_staff: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          display_name: string;
+          email: string;
+          id: string;
+          user_id: string;
+          username: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          display_name: string;
+          email: string;
+          id?: string;
+          user_id: string;
+          username: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          display_name?: string;
+          email?: string;
+          id?: string;
+          user_id?: string;
+          username?: string;
+        };
+        Relationships: [];
+      };
       ask_mene_conversations: {
         Row: {
           created_at: string;

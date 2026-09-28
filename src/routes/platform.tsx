@@ -30,6 +30,8 @@ import {
   Hourglass,
   ToggleRight,
   Lock,
+  LifeBuoy,
+  ArrowRight,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -372,6 +374,14 @@ function Platform() {
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-y-auto bg-deep p-4 text-deep-foreground lg:flex">
         <Brand />
         <div className="mt-6 flex-1">{nav}</div>
+        <Link
+          to="/support-console"
+          className="mb-2 flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-deep-foreground/75 hover:bg-deep-foreground/10 hover:text-deep-foreground transition-colors border border-deep-foreground/15"
+        >
+          <LifeBuoy className="size-3.5 text-primary" />
+          <span>Support Console</span>
+          <ArrowRight className="size-3 ml-auto opacity-60" />
+        </Link>
         <Button
           variant="ghost"
           size="sm"
@@ -388,7 +398,15 @@ function Platform() {
             <SheetDescription>Console sections</SheetDescription>
           </SheetHeader>
           <Brand />
-          <div className="mt-6">{nav}</div>
+          <div className="mt-6 flex-1">{nav}</div>
+          <Link
+            to="/support-console"
+            className="mb-2 flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-deep-foreground/75 hover:bg-deep-foreground/10 hover:text-deep-foreground transition-colors border border-deep-foreground/15"
+          >
+            <LifeBuoy className="size-3.5 text-primary" />
+            <span>Support Console</span>
+            <ArrowRight className="size-3 ml-auto opacity-60" />
+          </Link>
           <Button
             variant="ghost"
             size="sm"

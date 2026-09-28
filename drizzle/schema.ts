@@ -272,3 +272,79 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
     references: [members.id],
   }),
 }));
+
+// Support System Enums
+export const supportTicketStatusEnum = pgEnum("support_ticket_status", [
+  "open",
+  "in_progress",
+  "resolved",
+  "closed",
+]);
+
+export const supportTicketPriorityEnum = pgEnum("support_ticket_priority", [
+  "low",
+  "normal",
+  "high",
+  "urgent",
+]);
+
+export const supportReplyAuthorTypeEnum = pgEnum("support_reply_author_type", [
+  "church",
+  "support",
+  "super_admin",
+]);
+
+// Support Staff Table
+export const supportStaff = pgTable("support_staff", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().unique(),
+  username: text("username").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  email: text("email").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid("created_by"),
+});
+
+// Support Tickets Table
+export const supportTickets = pgTable("support_tickets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  submittedByUserId: uuid("submitted_by_user_id").notNull(),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: supportTicketStatusEnum("status").notNull().default("open"),
+  priority: supportTicketPriorityEnum("priority").notNull().default("normal"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
+// Support Ticket Replies Table
+export const supportTicketReplies = pgTable("support_ticket_replies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => supportTickets.id, { onDelete: "cascade" }),
+  authorType: supportReplyAuthorTypeEnum("author_type").notNull(),
+  authorId: uuid("author_id").notNull(),
+  message: text("message").notNull(),
+  isInternal: boolean("is_internal").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const supportTicketsRelations = relations(supportTickets, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [supportTickets.tenantId],
+    references: [tenants.id],
+  }),
+  replies: many(supportTicketReplies),
+}));
+
+export const supportTicketRepliesRelations = relations(supportTicketReplies, ({ one }) => ({
+  ticket: one(supportTickets, {
+    fields: [supportTicketReplies.ticketId],
+    references: [supportTickets.id],
+  }),
+}));

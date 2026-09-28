@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ListChecks,
   PhoneCall,
+  LifeBuoy,
 } from "lucide-react";
 import { MfaGate } from "@/components/TwoStep";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -173,6 +174,13 @@ const nav: NavItem[] = [
     to: "/settings",
     label: "Settings",
     icon: Settings,
+    group: "Administration",
+    show: (c) => c.isAdmin,
+  },
+  {
+    to: "/support",
+    label: "Support",
+    icon: LifeBuoy,
     group: "Administration",
     show: (c) => c.isAdmin,
   },

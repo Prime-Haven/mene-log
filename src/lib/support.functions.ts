@@ -1,0 +1,759 @@
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  admin,
+  audit,
+  findOperator,
+  hashPassword,
+  listOperatorUsers,
+  normaliseUsername,
+  operatorEmail,
+  rateLimit,
+  validOperatorPassword,
+} from "./operator.server";
+import {
+  authenticateSupportOperator,
+  getOperatorSupportRole,
+  sendSupportNotificationAlert,
+  type SupportTicketPriority,
+  type SupportTicketStatus,
+} from "./support.server";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
+
+/* =========================================================================
+   1. CHURCH-FACING SERVER FUNCTIONS
+   ========================================================================= */
+
+/** Helper to verify church admin status (owner or church_admin) */
+async function assertChurchAdmin(
+  supabaseClient: SupabaseClient<Database>,
+  tenantId: string,
+  userId: string,
+) {
+  const { data: member, error } = await supabaseClient
+    .from("tenant_users")
+    .select("role, status")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (error || !member || (member.role !== "owner" && member.role !== "church_admin")) {
+    throw new Error("Only church owners and church administrators can manage support tickets.");
+  }
+  return member;
+}
+
+/** Submit a new support ticket by a church admin */
+export const submitChurchTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+        subject: z.string().trim().min(3).max(200),
+        description: z.string().trim().min(10).max(5000),
+        priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    // Get tenant details for alert email
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("name, contact_email")
+      .eq("id", data.tenant_id)
+      .maybeSingle();
+
+    const churchName = tenant?.name || "Church Partner";
+
+    // Insert ticket
+    const { data: ticket, error: ticketError } = await db
+      .from("support_tickets")
+      .insert({
+        tenant_id: data.tenant_id,
+        submitted_by_user_id: context.userId,
+        subject: data.subject,
+        description: data.description,
+        status: "open",
+        priority: data.priority,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (ticketError || !ticket) {
+      console.error("[support] Ticket insert error:", ticketError);
+      throw new Error("Could not create support ticket. Please try again.");
+    }
+
+    // Insert initial reply so conversation thread is established
+    const { error: replyError } = await db.from("support_ticket_replies").insert({
+      ticket_id: ticket.id,
+      author_type: "church",
+      author_id: context.userId,
+      message: data.description,
+      is_internal: false,
+    });
+
+    if (replyError) {
+      console.error("[support] Initial reply error:", replyError);
+    }
+
+    // Fire email alert to primehaven26@gmail.com
+    await sendSupportNotificationAlert({
+      type: "new_ticket",
+      churchName,
+      ticketId: ticket.id,
+      subject: data.subject,
+      priority: data.priority,
+      messageSnippet: data.description,
+      submittedByEmail: tenant?.contact_email,
+    });
+
+    return { ok: true as const, ticketId: ticket.id };
+  });
+
+/** List all tickets for the active church */
+export const listChurchTickets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ tenant_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    const { data: tickets, error } = await db
+      .from("support_tickets")
+      .select(
+        "id, tenant_id, submitted_by_user_id, subject, description, status, priority, created_at, updated_at, resolved_at",
+      )
+      .eq("tenant_id", data.tenant_id)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("[support] List church tickets error:", error);
+      throw new Error("Could not load support tickets.");
+    }
+
+    // Get reply counts for each ticket
+    const ticketIds = (tickets ?? []).map((t) => t.id);
+    const replyCounts: Record<string, number> = {};
+    if (ticketIds.length > 0) {
+      const { data: replies } = await db
+        .from("support_ticket_replies")
+        .select("ticket_id")
+        .in("ticket_id", ticketIds)
+        .eq("is_internal", false);
+
+      if (replies) {
+        for (const r of replies) {
+          replyCounts[r.ticket_id] = (replyCounts[r.ticket_id] || 0) + 1;
+        }
+      }
+    }
+
+    return (tickets ?? []).map((t) => ({
+      ...t,
+      reply_count: replyCounts[t.id] || 0,
+    }));
+  });
+
+/** Get single ticket thread for church */
+export const getChurchTicketThread = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ tenant_id: z.string().uuid(), ticket_id: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    const { data: ticket, error: ticketError } = await db
+      .from("support_tickets")
+      .select(
+        "id, tenant_id, submitted_by_user_id, subject, description, status, priority, created_at, updated_at, resolved_at",
+      )
+      .eq("id", data.ticket_id)
+      .eq("tenant_id", data.tenant_id)
+      .maybeSingle();
+
+    if (ticketError || !ticket) {
+      throw new Error("Ticket not found.");
+    }
+
+    // Church only sees non-internal replies
+    const { data: replies, error: repliesError } = await db
+      .from("support_ticket_replies")
+      .select("id, ticket_id, author_type, author_id, message, is_internal, created_at")
+      .eq("ticket_id", data.ticket_id)
+      .eq("is_internal", false)
+      .order("created_at", { ascending: true });
+
+    if (repliesError) {
+      console.error("[support] Get replies error:", repliesError);
+      throw new Error("Could not load ticket conversation.");
+    }
+
+    return { ticket, replies: replies ?? [] };
+  });
+
+/** Reply to a ticket by the church */
+export const replyChurchTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+        ticket_id: z.string().uuid(),
+        message: z.string().trim().min(2).max(5000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    // Fetch ticket and tenant details
+    const { data: ticket, error: ticketError } = await db
+      .from("support_tickets")
+      .select("id, subject, status, priority, tenant:tenants(name, contact_email)")
+      .eq("id", data.ticket_id)
+      .eq("tenant_id", data.tenant_id)
+      .maybeSingle();
+
+    if (ticketError || !ticket) {
+      throw new Error("Ticket not found.");
+    }
+
+    // Insert church reply
+    const { data: reply, error: replyError } = await db
+      .from("support_ticket_replies")
+      .insert({
+        ticket_id: data.ticket_id,
+        author_type: "church",
+        author_id: context.userId,
+        message: data.message,
+        is_internal: false,
+      })
+      .select()
+      .single();
+
+    if (replyError || !reply) {
+      console.error("[support] Insert reply error:", replyError);
+      throw new Error("Could not send reply.");
+    }
+
+    // If ticket was resolved or closed, reopening to open when church responds
+    const newStatus =
+      ticket.status === "resolved" || ticket.status === "closed" ? "open" : ticket.status;
+
+    await db
+      .from("support_tickets")
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+        resolved_at: newStatus === "open" ? null : undefined,
+      })
+      .eq("id", data.ticket_id);
+
+    const tenantInfo = ticket.tenant as unknown as { name?: string; contact_email?: string } | null;
+    const churchName = tenantInfo?.name || "Church Partner";
+
+    // Send email alert to primehaven26@gmail.com
+    await sendSupportNotificationAlert({
+      type: "church_reply",
+      churchName,
+      ticketId: data.ticket_id,
+      subject: ticket.subject,
+      priority: ticket.priority as SupportTicketPriority,
+      messageSnippet: data.message,
+      submittedByEmail: tenantInfo?.contact_email,
+    });
+
+    return { ok: true as const, reply };
+  });
+
+/* =========================================================================
+   2. SUPPORT CONSOLE OPERATOR SERVER FUNCTIONS
+   ========================================================================= */
+
+/** Operator sign-in for the support console */
+export const supportOperatorSignIn = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        username: z.string().trim().min(1).max(60),
+        password: z.string().min(1).max(72),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const ip = (
+      getRequestHeader("cf-connecting-ip") ??
+      getRequestHeader("x-forwarded-for") ??
+      "unknown"
+    )
+      .split(",")[0]!
+      .trim();
+
+    return authenticateSupportOperator({
+      username: data.username,
+      password: data.password,
+      ip,
+    });
+  });
+
+/** Helper to assert support operator role from authenticated context */
+async function assertSupportOperator(userId: string) {
+  const role = await getOperatorSupportRole(userId);
+  if (!role) {
+    throw new Error("Support console access required.");
+  }
+  return role;
+}
+
+/** Check session and return operator profile and role */
+export const getSupportOperatorSession = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const role = await assertSupportOperator(context.userId);
+    const db = await admin();
+    const ops = await listOperatorUsers();
+    const user = ops.find((u) => u.id === context.userId);
+    const username = user?.app_metadata?.operator_username || "Operator";
+
+    let displayName = username;
+    if (role === "support_staff") {
+      const { data: staffRow } = await db
+        .from("support_staff")
+        .select("display_name")
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (staffRow?.display_name) displayName = staffRow.display_name;
+    }
+
+    return {
+      userId: context.userId,
+      username,
+      displayName,
+      role,
+    };
+  });
+
+/** List all tickets across all tenants for Support Console */
+export const listSupportConsoleTickets = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        status: z.enum(["all", "open", "in_progress", "resolved", "closed"]).optional(),
+        priority: z.enum(["all", "low", "normal", "high", "urgent"]).optional(),
+        search: z.string().optional(),
+      })
+      .optional()
+      .default({}),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSupportOperator(context.userId);
+    const db = await admin();
+
+    let query = db
+      .from("support_tickets")
+      .select(
+        `
+        id,
+        tenant_id,
+        submitted_by_user_id,
+        subject,
+        description,
+        status,
+        priority,
+        created_at,
+        updated_at,
+        resolved_at,
+        tenant:tenants(id, name, subdomain, contact_email)
+      `,
+      )
+      .order("updated_at", { ascending: false });
+
+    if (data?.status && data.status !== "all") {
+      query = query.eq("status", data.status);
+    }
+    if (data?.priority && data.priority !== "all") {
+      query = query.eq("priority", data.priority);
+    }
+
+    const { data: rawTickets, error } = await query;
+    if (error) {
+      console.error("[support-console] List tickets error:", error);
+      throw new Error("Could not load support tickets.");
+    }
+
+    // Get reply counts
+    const ticketIds = (rawTickets ?? []).map((t) => t.id);
+    const replyCounts: Record<string, number> = {};
+    if (ticketIds.length > 0) {
+      const { data: replies } = await db
+        .from("support_ticket_replies")
+        .select("ticket_id")
+        .in("ticket_id", ticketIds);
+
+      if (replies) {
+        for (const r of replies) {
+          replyCounts[r.ticket_id] = (replyCounts[r.ticket_id] || 0) + 1;
+        }
+      }
+    }
+
+    let tickets = (rawTickets ?? []).map((t) => {
+      const tenantInfo = t.tenant as unknown as {
+        id?: string;
+        name?: string;
+        subdomain?: string;
+        contact_email?: string;
+      } | null;
+      return {
+        id: t.id,
+        tenant_id: t.tenant_id,
+        submitted_by_user_id: t.submitted_by_user_id,
+        subject: t.subject,
+        description: t.description,
+        status: t.status as SupportTicketStatus,
+        priority: t.priority as SupportTicketPriority,
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        resolved_at: t.resolved_at,
+        tenant_name: tenantInfo?.name ?? "Unknown Church",
+        tenant_subdomain: tenantInfo?.subdomain ?? "",
+        tenant_contact_email: tenantInfo?.contact_email ?? "",
+        reply_count: replyCounts[t.id] || 0,
+      };
+    });
+
+    if (data?.search && data.search.trim().length > 0) {
+      const term = data.search.trim().toLowerCase();
+      tickets = tickets.filter(
+        (t) =>
+          t.subject.toLowerCase().includes(term) ||
+          t.tenant_name.toLowerCase().includes(term) ||
+          t.tenant_subdomain.toLowerCase().includes(term) ||
+          t.id.toLowerCase().includes(term),
+      );
+    }
+
+    return tickets;
+  });
+
+/** Get single ticket thread with internal notes for support console */
+export const getSupportConsoleTicket = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ ticket_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSupportOperator(context.userId);
+    const db = await admin();
+
+    const { data: ticket, error: ticketError } = await db
+      .from("support_tickets")
+      .select(
+        `
+        id,
+        tenant_id,
+        submitted_by_user_id,
+        subject,
+        description,
+        status,
+        priority,
+        created_at,
+        updated_at,
+        resolved_at,
+        tenant:tenants(id, name, subdomain, contact_email, contact_phone, tier, status)
+      `,
+      )
+      .eq("id", data.ticket_id)
+      .maybeSingle();
+
+    if (ticketError || !ticket) {
+      throw new Error("Ticket not found.");
+    }
+
+    // Support console sees ALL replies, including internal notes
+    const { data: replies, error: repliesError } = await db
+      .from("support_ticket_replies")
+      .select("id, ticket_id, author_type, author_id, message, is_internal, created_at")
+      .eq("ticket_id", data.ticket_id)
+      .order("created_at", { ascending: true });
+
+    if (repliesError) {
+      console.error("[support-console] Get replies error:", repliesError);
+      throw new Error("Could not load ticket conversation.");
+    }
+
+    const tenantInfo = ticket.tenant as unknown as {
+      id: string;
+      name: string;
+      subdomain: string;
+      contact_email?: string;
+      contact_phone?: string;
+      tier?: string;
+      status?: string;
+    } | null;
+
+    return {
+      ticket: {
+        id: ticket.id,
+        tenant_id: ticket.tenant_id,
+        submitted_by_user_id: ticket.submitted_by_user_id,
+        subject: ticket.subject,
+        description: ticket.description,
+        status: ticket.status as SupportTicketStatus,
+        priority: ticket.priority as SupportTicketPriority,
+        created_at: ticket.created_at,
+        updated_at: ticket.updated_at,
+        resolved_at: ticket.resolved_at,
+      },
+      tenant: tenantInfo,
+      replies: replies ?? [],
+    };
+  });
+
+/** Update ticket status or priority from support console */
+export const updateSupportConsoleTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        ticket_id: z.string().uuid(),
+        status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),
+        priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const role = await assertSupportOperator(context.userId);
+    const db = await admin();
+
+    const patch: Record<string, string | null> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.status) {
+      patch["status"] = data.status;
+      if (data.status === "resolved") {
+        patch["resolved_at"] = new Date().toISOString();
+      } else if (data.status === "open" || data.status === "in_progress") {
+        patch["resolved_at"] = null;
+      }
+    }
+    if (data.priority) {
+      patch["priority"] = data.priority;
+    }
+
+    const { error } = await db.from("support_tickets").update(patch).eq("id", data.ticket_id);
+
+    if (error) {
+      console.error("[support-console] Update ticket error:", error);
+      throw new Error("Could not update ticket.");
+    }
+
+    await audit(context.userId, "support.ticket_updated", {
+      ticket_id: data.ticket_id,
+      patch,
+      role,
+    });
+
+    return { ok: true as const };
+  });
+
+/** Reply from support console (either public reply to church or private internal staff note) */
+export const replySupportConsoleTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        ticket_id: z.string().uuid(),
+        message: z.string().trim().min(2).max(5000),
+        is_internal: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const role = await assertSupportOperator(context.userId);
+    const db = await admin();
+
+    const authorType = role === "super_admin" ? "super_admin" : "support";
+
+    const { data: reply, error: replyError } = await db
+      .from("support_ticket_replies")
+      .insert({
+        ticket_id: data.ticket_id,
+        author_type: authorType,
+        author_id: context.userId,
+        message: data.message,
+        is_internal: data.is_internal,
+      })
+      .select()
+      .single();
+
+    if (replyError || !reply) {
+      console.error("[support-console] Insert reply error:", replyError);
+      throw new Error("Could not post reply.");
+    }
+
+    // Touch ticket updated_at
+    await db
+      .from("support_tickets")
+      .update({
+        updated_at: new Date().toISOString(),
+        ...(data.is_internal ? {} : { status: "in_progress" }),
+      })
+      .eq("id", data.ticket_id);
+
+    await audit(context.userId, "support.ticket_replied", {
+      ticket_id: data.ticket_id,
+      is_internal: data.is_internal,
+      role,
+    });
+
+    return { ok: true as const, reply };
+  });
+
+/* =========================================================================
+   3. SUPPORT STAFF MANAGEMENT (SUPER ADMIN ONLY)
+   ========================================================================= */
+
+/** List support staff accounts */
+export const listSupportStaffAccounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const role = await assertSupportOperator(context.userId);
+    if (role !== "super_admin") {
+      throw new Error("Only Super Admins can manage support staff accounts.");
+    }
+
+    const db = await admin();
+    const { data: staff, error } = await db
+      .from("support_staff")
+      .select("id, user_id, username, display_name, email, created_at, created_by")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[support-staff] List error:", error);
+      throw new Error("Could not load support staff list.");
+    }
+
+    return staff ?? [];
+  });
+
+/** Create a new support staff operator */
+export const createSupportStaffAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        username: z.string().trim().min(3).max(40),
+        display_name: z.string().trim().min(2).max(60),
+        password: z.string().min(8).max(72),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const role = await assertSupportOperator(context.userId);
+    if (role !== "super_admin") {
+      throw new Error("Only Super Admins can add support staff.");
+    }
+
+    if (!validOperatorPassword(data.password)) {
+      throw new Error("Password must be 8 to 72 characters.");
+    }
+
+    const username = normaliseUsername(data.username);
+    if (await findOperator(username)) {
+      throw new Error("An operator with that username already exists.");
+    }
+
+    const db = await admin();
+    const email = operatorEmail(username);
+
+    // Create operator user in Supabase auth
+    const { data: created, error } = await db.auth.admin.createUser({
+      email,
+      password: crypto.randomUUID() + "Aa1!",
+      email_confirm: true,
+      app_metadata: {
+        operator: true,
+        operator_username: username,
+        operator_display_name: data.display_name,
+        operator_hash: hashPassword(data.password),
+        role: "support_staff",
+      },
+    });
+
+    if (error || !created.user) {
+      console.error("[support-staff] Create auth user error:", error);
+      throw new Error("Could not create operator user account.");
+    }
+
+    // Insert into support_staff table
+    const { data: record, error: staffError } = await db
+      .from("support_staff")
+      .insert({
+        user_id: created.user.id,
+        username,
+        display_name: data.display_name,
+        email,
+        created_by: context.userId,
+      })
+      .select()
+      .single();
+
+    if (staffError) {
+      console.error("[support-staff] Insert staff table error:", staffError);
+      await db.auth.admin.deleteUser(created.user.id);
+      throw new Error("Could not save support staff record.");
+    }
+
+    await audit(context.userId, "support.staff_created", {
+      username,
+      display_name: data.display_name,
+    });
+
+    return { ok: true as const, staff: record };
+  });
+
+/** Remove a support staff account */
+export const removeSupportStaffAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ staff_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const role = await assertSupportOperator(context.userId);
+    if (role !== "super_admin") {
+      throw new Error("Only Super Admins can remove support staff.");
+    }
+
+    const db = await admin();
+    const { data: staff, error: findError } = await db
+      .from("support_staff")
+      .select("id, user_id, username")
+      .eq("id", data.staff_id)
+      .maybeSingle();
+
+    if (findError || !staff) {
+      throw new Error("Support staff record not found.");
+    }
+
+    await db.from("support_staff").delete().eq("id", data.staff_id);
+    await db.auth.admin.deleteUser(staff.user_id);
+
+    await audit(context.userId, "support.staff_removed", {
+      username: staff.username,
+    });
+
+    return { ok: true as const };
+  });

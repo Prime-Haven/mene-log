@@ -1,77 +1,162 @@
-# Implementation Plan - Services Architecture & Attendance Tracking
+# Implementation Plan: Mene:Log Support Ticket System
 
-Implement a comprehensive service management and attendance tracking system with permanent default services (Sunday Service, Midweek Service, Prayer Service), full CRUD operations for custom/special themed services, dedicated tracking tabs on the Services page, date/day-of-week validation, tier-based feature access control, and seamless synchronization with public check-in pages.
-
----
-
-## 1. Objectives & User Requirements
-1. **Permanent Default Services**:
-   - Standardize `Sunday Service`, `Midweek Service`, and `Prayer Service` as permanent baseline service templates for every tenant.
-   - Prevent accidental deletion of default service archetypes while allowing administrators to edit times, themes, active toggle status, and details.
-2. **Dedicated Services Tracking Hub**:
-   - Provide dedicated categorization tabs: **Sunday Services**, **Midweek Services**, **Prayer Services**, and **Special & Themed Services**.
-   - Track attendance trends, session-by-session counts, and date-range filters (specific date, weekly period, custom date range).
-3. **Custom & Themed Services Creation (Admin CRUD)**:
-   - Allow admins to create custom services or themed Sunday/midweek events (e.g., *"Covenant Sunday - Theme: Supernatural Breakthrough"*, *"Anointing Night"*, *"Youth Camp Vigil"*).
-   - Full CRUD: Create, View, Edit (theme, speaker, date, time, target attendance, stream URL), Toggle Open/Closed for check-in, and Delete (with confirmation and cascade safeguards).
-4. **Day-of-Week & Attendance Date Integrity**:
-   - Ensure Sunday services validate or prompt when configured on Sundays.
-   - Provide flexible scheduling for midweek and prayer services, automatically recording and displaying the exact day-of-week alongside the calendar date (e.g., `Wednesday, Oct 14, 2026`).
-5. **Public Check-In Synchronization**:
-   - Update the public check-in page (`/c/$subdomain`) and usher scanner (`/scan`) so active default services and newly created admin services immediately appear in the check-in selection dropdown.
-   - Ensure member attendance taken for any selected service links cleanly to the attendance register and reports.
-6. **Tier-Gated Feature Control**:
-   - Provide full administrative control over data within the limits of the tenant's subscribed tier (Free, Basic, Standard, Premium), honoring branch limits, export features, and storage quotas cleanly without blocking core attendance recording.
+Build an enterprise-grade, secure, multi-tenant Support Ticket System for Mene:Log encompassing database tables with strict Row-Level Security, a church administrator support center in the main app, a dedicated operator support console (`/support-console`) with operator authentication and role-based gating, and automated staff email alerts via Resend.
 
 ---
 
-## 2. Proposed Changes & Architecture
+## 1. Architecture & Security Overview
 
-### Database Schema Updates (`drizzle/schema.ts` & Migration)
-- Ensure the `services` table supports:
-  - `is_default: boolean` (default `false`) to flag permanent core services (`Sunday Service`, `Midweek Service`, `Prayer Service`).
-  - `service_category: text` (`'sunday' | 'midweek' | 'prayer' | 'special'`).
-  - `theme: text` for special themes or titles (e.g., *"Supernatural Abundance"*).
-  - `day_of_week: text` for easy grouping and period tracking.
-  - Safe deletion policy: default services cannot be deleted (only toggled inactive if unused), whereas custom/special services can be deleted with their attendance records.
-
-### Frontend Pages & Components
-#### A. Services Hub (`/src/routes/_app/services.tsx`)
-- **Category Tabs**:
-  - `Sunday Service`: Filtered list and aggregate metrics for Sunday services.
-  - `Midweek Service`: Filtered list and metrics for Midweek gatherings.
-  - `Prayer Service`: Filtered list and metrics for Prayer meetings.
-  - `Special / Themed Programs`: Admin-created custom programs and special services.
-  - `All Services`: Comprehensive overview.
-- **Service CRUD Modals**:
-  - **Create Service**: Form with Name, Theme/Subtitle, Category selector, Date picker, Time, Speaker, Target Attendance, and Live Stream link.
-  - **Edit Service**: Update any field of existing services.
-  - **Delete Service**: Confirmation dialog for custom services (explaining attendance implications). Deletion disabled for default templates.
-- **Period & Date Filtering**:
-  - Quick filters for "This Week", "This Month", "Last 30 Days", or custom date selector.
-  - Direct quick-link to open the Attendance Register (`/attendance?serviceId=...`) or Scanner (`/scan?serviceId=...`).
-
-#### B. Public Check-In Page (`/src/routes/c.$subdomain.tsx`)
-- Load all active open services for the church (including current default Sunday/Midweek/Prayer services and any custom admin-created services).
-- Service selector dropdown with clear badges for Service Type, Date, and Theme.
-
-#### C. Scanner & Check-In Hubs (`/src/routes/_app/scan.tsx` & `/src/routes/_app/attendance.tsx`)
-- Ensure the active service selector includes all current default and custom services.
-- Show day-of-week context beside each service option (e.g., `Sunday Service • Sunday, Sep 28`).
-
-#### D. Tier & Permission Enforcement
-- Integrate tier entitlement checks so admins have full operational autonomy over their service schedules, check-in flows, and attendance data according to their subscription tier.
+```
+                                      +---------------------------------------------+
+                                      |            Church Tenant Admin              |
+                                      |   (owner or church_admin role in _app)      |
+                                      +---------------------+-----------------------+
+                                                            |
+                                               Creates / views tickets
+                                                & replies to threads
+                                                            v
++-----------------------+              +--------------------+-----------------------+
+|  Super Admin Operator |              |             PostgreSQL Database            |
+| (platform_admins)     |              |  - support_tickets (RLS: own tenant/staff) |
+| - Full oversight      |              |  - support_ticket_replies (internal notes) |
+| - Manage support staff|              |  - support_staff (parallel operator table) |
++-----------+-----------+              +--------------------+-----------------------+
+            |                                               ^
+            | Signs into /support-console                   |
+            v                                               |
++-----------+-----------+                                   |
+| Support Staff Operator|-----------------------------------+
+| (support_staff table) |   Views all tenants, updates status/priority,
+| - Gated: no billing,  |   posts public replies and internal notes
+|   no tier changes     |
++-----------+-----------+
+            |
+            | On new ticket or church reply
+            v
++-----------+-----------------------------------------------------------------------+
+| Resend Email Notification -> Sent to primehaven26@gmail.com with deep link        |
++-----------------------------------------------------------------------------------+
+```
 
 ---
 
-## 3. Verification & Testing Plan
-1. **Compilation & Linting**:
-   - Run `npx prettier --write` and `npm run lint` to guarantee clean code and zero syntax warnings.
-   - Run `compile_applet` to ensure full TypeScript compilation.
-2. **Functional Verification**:
-   - Verify default Sunday, Midweek, and Prayer services are created and protected from deletion.
-   - Create a themed custom service (e.g., special Sunday theme or mid-week summit) and verify it appears in the **Special** tab and the **All Services** tab.
-   - Verify editing updates the record immediately and reflects in the UI.
-   - Test deleting a custom service to verify safe removal.
-   - Check `/c/$subdomain` and `/scan` to verify the newly created service appears immediately for member check-in.
-   - Record an attendance check-in for the custom service and verify it tracks under the correct tab and attendance register.
+## 2. Proposed Changes & Implementation Phases
+
+### Phase A: Database Schema & Row-Level Security (`support-tickets-schema.sql`)
+1. **Enums & Tables**:
+   - `support_ticket_status`: `'open'`, `'in_progress'`, `'resolved'`, `'closed'`.
+   - `support_ticket_priority`: `'low'`, `'normal'`, `'high'`, `'urgent'`.
+   - `support_ticket_author_type`: `'church'`, `'support'`, `'super_admin'`.
+   - `public.support_staff`:
+     - `user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE`
+     - `created_at timestamptz NOT NULL DEFAULT now()`
+     - `created_by uuid REFERENCES auth.users(id)`
+   - `public.support_tickets`:
+     - `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`
+     - `tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE`
+     - `submitted_by_user_id uuid NOT NULL REFERENCES auth.users(id)`
+     - `subject text NOT NULL`
+     - `description text NOT NULL`
+     - `status text NOT NULL DEFAULT 'open'` (check in open, in_progress, resolved, closed)
+     - `priority text NOT NULL DEFAULT 'normal'` (check in low, normal, high, urgent)
+     - `created_at timestamptz NOT NULL DEFAULT now()`
+     - `updated_at timestamptz NOT NULL DEFAULT now()`
+     - `resolved_at timestamptz`
+   - `public.support_ticket_replies`:
+     - `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`
+     - `ticket_id uuid NOT NULL REFERENCES public.support_tickets(id) ON DELETE CASCADE`
+     - `author_type text NOT NULL` (check in church, support, super_admin)
+     - `author_id uuid NOT NULL REFERENCES auth.users(id)`
+     - `author_name text`
+     - `message text NOT NULL`
+     - `is_internal boolean NOT NULL DEFAULT false` (private staff notes)
+     - `created_at timestamptz NOT NULL DEFAULT now()`
+2. **Security Functions & RLS**:
+   - Helper function `public.is_support_or_platform_admin()` returning boolean if user is in `support_staff` OR `platform_admins`.
+   - `support_tickets` RLS:
+     - Church members with `owner` or `church_admin` role in `tenant_memberships` can `SELECT` and `INSERT` tickets matching their `tenant_id`.
+     - Support staff and platform admins can `SELECT` and `UPDATE` (status, priority, resolved_at) all tickets across all tenants.
+   - `support_ticket_replies` RLS:
+     - Church admins can `SELECT` replies for their tenant's tickets where `is_internal = false`, and `INSERT` replies with `author_type = 'church'` and `is_internal = false`.
+     - Support staff and platform admins can `SELECT` and `INSERT` all replies (including `is_internal = true` staff notes).
+3. **Audit Logging**:
+   - Integrated audit logs via `public.log_audit` for ticket creation, status transitions, and replies.
+
+---
+
+### Phase B: Server Functions & Resend Notifications (`src/lib/support.functions.ts`)
+1. **Server Functions**:
+   - `listChurchTickets`: Returns tickets for the active tenant, with reply counts and last activity.
+   - `getChurchTicketThread`: Returns single ticket and its public replies (`is_internal = false`).
+   - `createChurchTicket`: Creates ticket for tenant, sends immediate Resend notification to `primehaven26@gmail.com`.
+   - `replyToChurchTicket`: Adds church reply, sets status back to `in_progress` or `open` if resolved, triggers Resend notification.
+   - `supportConsoleSignIn`: Dual-gate operator authentication verifying user in `support_staff` OR `platform_admins`, rate-limited and MFA-verified.
+   - `listAllSupportTickets`: Returns paginated/filtered tickets across all tenants (with tenant name and subdomain) for operators.
+   - `getOperatorTicketDetails`: Returns full ticket, all replies (including private internal notes), and tenant profile.
+   - `updateTicketStatusAndPriority`: Allows operators to change status/priority with audit record.
+   - `postOperatorReply`: Handles both public response to the church and private staff notes (`is_internal = true`).
+   - `manageSupportStaff`: Allows Super Admins to list, add, and remove support staff accounts.
+2. **Email Alerts via Resend**:
+   - Direct integration using `sendEmail` in `messaging.server.ts`.
+   - Sent to: `primehaven26@gmail.com`.
+   - From: `Mene:Log <support@menelog.site>`.
+   - Formatted with clean Mene:Log brand header, church details, subject, excerpt, and one-click direct URL:
+     `https://<domain>/support-console?ticket=<ticket_id>`.
+
+---
+
+### Phase C: Church-Facing Support Center (`src/routes/_app/support.tsx` & Sidebar)
+1. **Sidebar Navigation**:
+   - Add "Support" item to `src/routes/_app/route.tsx` under "Administration" (visible to church owners and administrators).
+   - Icon: `HelpCircle` or `LifeBuoy`.
+2. **Page Architecture**:
+   - Header with eyebrow `Assistance & Inquiries`, title `Support Center`, and `Submit Ticket` button.
+   - Ticket list with status badges (`Open`, `In Progress`, `Resolved`, `Closed`), priority badges, submission timestamps, and reply counts.
+   - Filter chips for status (`All`, `Open`, `In Progress`, `Resolved`).
+   - Thread view:
+     - Clear original request card with submitter name and timestamp.
+     - Threaded replies stream with distinct styling for Church vs. Mene:Log Support Staff.
+     - Quick reply input box with Markdown / rich multiline text.
+   - "New Ticket" modal dialog:
+     - Subject, Priority (`Normal`, `Low`, `High`, `Urgent`), Description with guidance on what information helps resolve issues faster.
+
+---
+
+### Phase D: Operator Support Console (`src/routes/support-console.tsx`)
+1. **Auth & Protection**:
+   - Standalone top-level route (outside `_app` and `super-admin`).
+   - Uses username + password operator entrance with two-step verification.
+   - Verifies whether operator is `support_staff` or `super_admin`.
+   - Gated view: Support staff cannot access billing, feature flags, or church database tools.
+2. **Operator Interface**:
+   - High-density SaaS dashboard complying with `frontend-design` & `3_saas_dashboard.md`.
+   - Metric overview: Total Open, In Progress, Urgent / High Priority, Avg Resolution time.
+   - Search & filters: Filter by Church / Tenant name, status, priority, or ticket search.
+   - Split-pane / Drawer layout:
+     - Left: Dense ticket queue with unread badges, church subdomain tags, priority indicators.
+     - Right: Interactive ticket workspace:
+       - Status dropdown selector (`Open`, `In Progress`, `Resolved`, `Closed`).
+       - Priority selector (`Low`, `Normal`, `High`, `Urgent`).
+       - Conversation stream with internal notes clearly marked in high-contrast slate/amber.
+       - Dual-mode composer: Switch between "Reply to Church" (public) and "Internal Staff Note" (private to support/super admin).
+   - Staff Management tab (Super Admin only):
+     - Displays active support staff operators.
+     - Form to add new support operator username/password.
+     - Ability to revoke support staff access.
+
+---
+
+## 3. Verification Plan
+
+1. **Database Script**:
+   - Verify SQL migration execution and schema validation.
+2. **Linter & Type Checking**:
+   - Run `lint_applet` and check for clean TypeScript compilation.
+3. **Applet Compilation**:
+   - Run `compile_applet` to confirm zero compilation errors.
+4. **End-to-End Workflow Testing**:
+   - Test church admin ticket submission from `/_app/support`.
+   - Verify Resend alert dispatch logic with direct console link.
+   - Test operator authentication on `/support-console`.
+   - Test ticket status transitions, public replies, and private internal notes.
+   - Confirm support staff accounts cannot access `/platform` or super-admin endpoints.
