@@ -75,7 +75,8 @@ export function Scan() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select("id, name, service_date")
+        .select("id, name, service_date, service_type, theme")
+        .eq("tenant_id", tenant!.id)
         .eq("is_open", true)
         .order("service_date", { ascending: false })
         .limit(20);
@@ -338,11 +339,25 @@ export function Scan() {
           onChange={(e) => setServiceId(e.target.value)}
         >
           <option value="">Select an open service</option>
-          {(services ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} — {s.service_date}
-            </option>
-          ))}
+          {(services ?? []).map((s) => {
+            const parts = s.service_date.split("-").map(Number);
+            const d =
+              parts.length === 3
+                ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
+                : new Date(s.service_date);
+            const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+            const dateStr = d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            });
+            const themeStr = s.theme ? ` • "${s.theme}"` : "";
+            return (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {themeStr} — {dayName}, {dateStr}
+              </option>
+            );
+          })}
         </select>
         {(services ?? []).length === 0 && (
           <p className="mt-2 text-sm text-destructive">

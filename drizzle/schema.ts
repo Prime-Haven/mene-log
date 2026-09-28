@@ -158,6 +158,8 @@ export const services = pgTable("services", {
   onlineMinMinutes: integer("online_min_minutes").notNull().default(20),
   description: text("description"),
   speaker: text("speaker"),
+  theme: text("theme"), // Custom theme/dubbing, e.g. "Overflowing Grace", "Youth Awakening"
+  isDefault: boolean("is_default").notNull().default(false), // Permanent weekly template (Sunday, Midweek, Prayer)
   targetAttendance: integer("target_attendance"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -84,7 +84,12 @@ type Register = {
 export function AttendanceRegister() {
   const { tenant, canManageMembers, membership } = useTenant();
   const qc = useQueryClient();
-  const [serviceId, setServiceId] = useState<string>("");
+  const [serviceId, setServiceId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("serviceId") || "";
+    }
+    return "";
+  });
   const [search, setSearch] = useState("");
   const [filterTab, setFilterTab] = useState<"all" | "present" | "absent">("all");
   const [quickAddOpen, setQuickAddOpen] = useState(false);
@@ -400,12 +405,24 @@ export function AttendanceRegister() {
                 <SelectValue placeholder="Choose a service" />
               </SelectTrigger>
               <SelectContent>
-                {services.data?.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} — {s.service_date}
-                    {s.is_open ? "" : " (closed)"}
-                  </SelectItem>
-                ))}
+                {services.data?.map((s) => {
+                  const parts = s.service_date.split("-").map(Number);
+                  const d =
+                    parts.length === 3
+                      ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
+                      : new Date(s.service_date);
+                  const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
+                  const dateStr = d.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                  return (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} — {dayName}, {dateStr}
+                      {s.is_open ? "" : " (closed)"}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
 

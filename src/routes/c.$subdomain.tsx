@@ -170,8 +170,16 @@ function CheckIn() {
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   useEffect(() => {
-    if (services.length === 1) setForm((current) => ({ ...current, service_id: services[0]!.id }));
-  }, [services]);
+    if (services.length > 0 && !form.service_id) {
+      const today = new Date().toISOString().slice(0, 10);
+      const todayService = services.find((s) => s.service_date === today);
+      if (todayService) {
+        setForm((current) => ({ ...current, service_id: todayService.id }));
+      } else {
+        setForm((current) => ({ ...current, service_id: services[0]!.id }));
+      }
+    }
+  }, [services, form.service_id]);
 
   useEffect(() => {
     if (!done || isiPhone) return; // iPhone saves via press-and-hold
@@ -473,11 +481,26 @@ function CheckIn() {
                       ? "Select a service"
                       : "No open service available"}
                 </option>
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name} — {service.service_date}
-                  </option>
-                ))}
+                {services.map((service) => {
+                  const parts = service.service_date.split("-").map(Number);
+                  const d =
+                    parts.length === 3
+                      ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
+                      : new Date(service.service_date);
+                  const dayName = d.toLocaleDateString("en-US", { weekday: "long" });
+                  const dateStr = d.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
+                  const themeStr = service.theme ? ` • "${service.theme}"` : "";
+                  return (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                      {themeStr} — {dayName}, {dateStr}
+                    </option>
+                  );
+                })}
               </select>
               {!servicesLoading && services.length === 0 && (
                 <p className="text-xs text-destructive">

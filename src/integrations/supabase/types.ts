@@ -1074,6 +1074,7 @@ export type Database = {
           created_at: string;
           description: string | null;
           id: string;
+          is_default: boolean;
           is_open: boolean;
           name: string;
           online_min_minutes: number;
@@ -1083,12 +1084,14 @@ export type Database = {
           stream_url: string | null;
           target_attendance: number | null;
           tenant_id: string;
+          theme: string | null;
         };
         Insert: {
           branch_id?: string | null;
           created_at?: string;
           description?: string | null;
           id?: string;
+          is_default?: boolean;
           is_open?: boolean;
           name: string;
           online_min_minutes?: number;
@@ -1098,12 +1101,14 @@ export type Database = {
           stream_url?: string | null;
           target_attendance?: number | null;
           tenant_id: string;
+          theme?: string | null;
         };
         Update: {
           branch_id?: string | null;
           created_at?: string;
           description?: string | null;
           id?: string;
+          is_default?: boolean;
           is_open?: boolean;
           name?: string;
           online_min_minutes?: number;
@@ -1113,6 +1118,7 @@ export type Database = {
           stream_url?: string | null;
           target_attendance?: number | null;
           tenant_id?: string;
+          theme?: string | null;
         };
         Relationships: [
           {
@@ -1864,6 +1870,11 @@ export type Database = {
           id: string;
           name: string;
           service_date: string;
+          service_type?: string | null;
+          theme?: string | null;
+          description?: string | null;
+          speaker?: string | null;
+          is_default?: boolean | null;
         }[];
       };
       public_platform_stats: { Args: never; Returns: Json };
