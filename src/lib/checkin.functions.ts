@@ -120,6 +120,21 @@ export const submitSelfCheckin = createServerFn({ method: "POST" })
     });
 
     if (error) {
+      if (
+        error.message.includes("unique or exclusion constraint") ||
+        error.message.includes("ON CONFLICT")
+      ) {
+        console.error(
+          "[Check-in Constraint Error] PostgreSQL raised missing unique constraint on attendance table. " +
+            "Please run attendance-conflict-fix.sql (Migration 0024) in the Supabase SQL Editor.",
+          error,
+        );
+        return {
+          ok: false as const,
+          message:
+            "A database index update is required for check-in: please run the attendance-conflict-fix.sql script in your Supabase SQL Editor.",
+        };
+      }
       // Surface only the human-readable message, never provider internals.
       return { ok: false as const, message: error.message.replace(/^.*?:\s*/, "") };
     }

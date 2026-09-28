@@ -169,6 +169,13 @@
       "when": 1790555299999,
       "tag": "0023_billing_and_prime_haven_console_expansion",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790555355555,
+      "tag": "0024_fix_attendance_qr_conflict",
+      "breakpoints": true
     }
   ]
 }
