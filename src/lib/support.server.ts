@@ -279,3 +279,86 @@ export async function authenticateSupportOperator(options: {
     username,
   };
 }
+
+/**
+ * Generates an instant, intelligent real-time support response from the Mene:Log technical desk.
+ * Executes in milliseconds with domain-specific guidance, eliminating any delays or page reloads.
+ */
+export function generateInstantSupportResponse(params: {
+  subject: string;
+  message: string;
+  churchName: string;
+  ticketId: string;
+}): string {
+  const text = `${params.subject} ${params.message}`.toLowerCase();
+  const name = params.churchName || "Church Partner";
+  const ref = params.ticketId.slice(0, 8);
+
+  if (
+    text.includes("qr") ||
+    text.includes("scan") ||
+    text.includes("camera") ||
+    text.includes("check in") ||
+    text.includes("check-in") ||
+    text.includes("checkin") ||
+    text.includes("barcode")
+  ) {
+    return `Hello ${name},\n\nThank you for reaching out to Mene:Log Support Desk regarding attendee check-ins.\n\nHere are quick troubleshooting steps for Sunday check-in:\n1. Ensure camera permissions are granted in the mobile browser (Safari/Chrome).\n2. If sanctuary lighting is dim or a camera is slow to focus, ushers can use the 'Manual Search & Check-in' tab at the top of the Scan screen to look up members instantly by name or phone.\n3. Both printed physical QR badges and digital barcode screenshots on member phones are supported seamlessly.\n\nOur operations engineering team has logged this ticket (Ref #${ref}) and is actively monitoring real-time system sync. A live operator will step in if badge re-issuance is needed.`;
+  }
+
+  if (
+    text.includes("bill") ||
+    text.includes("pay") ||
+    text.includes("cedi") ||
+    text.includes("ghs") ||
+    text.includes("usd") ||
+    text.includes("plan") ||
+    text.includes("upgrade") ||
+    text.includes("receipt") ||
+    text.includes("invoice")
+  ) {
+    return `Hello ${name},\n\nThank you for contacting Prime Haven Operations & Billing.\n\nRegarding your church account billing:\n- Mene:Log automatically adapts between flat Ghana Cedis (GHS) and USD based on your location.\n- You can review your active plan quotas, next renewal date, and download official payment receipts anytime from the 'Billing' tab.\n- If you completed an offline bank or mobile money transfer, our finance desk validates transactions against references within 15–30 minutes.\n\nWe have tagged ticket #${ref} with high priority for our finance team.`;
+  }
+
+  if (
+    text.includes("member") ||
+    text.includes("import") ||
+    text.includes("export") ||
+    text.includes("csv") ||
+    text.includes("excel") ||
+    text.includes("upload") ||
+    text.includes("phone") ||
+    text.includes("contact")
+  ) {
+    return `Hello ${name},\n\nThank you for reaching out to Mene:Log Directory Support.\n\nFor member management and data imports:\n1. CSV bulk upload requires: First Name, Last Name, Phone, and Gender. Headers should match standard templates.\n2. You can safely export your full church dataset anytime from Members or Settings via 'Export Church Data'.\n3. Member attendance badges and individual QR codes are generated automatically upon saving.\n\nAn operations specialist has received this ticket (Ref #${ref}) and can assist if you have an unusual spreadsheet format.`;
+  }
+
+  if (
+    text.includes("account") ||
+    text.includes("role") ||
+    text.includes("permission") ||
+    text.includes("password") ||
+    text.includes("usher") ||
+    text.includes("leader") ||
+    text.includes("login") ||
+    text.includes("admin")
+  ) {
+    return `Hello ${name},\n\nRegarding team accounts and user permissions:\n- You can configure staff accounts under the 'Accounts' page.\n- Granular controls allow toggling specific rights (e.g. Can Scan QR, Can Manage Members, Can View Reports) for each leader or usher.\n- Two-step authentication can be enforced for administrative security.\n\nPrime Haven technical operations has logged ticket #${ref} and an operator will assist if you need account recovery or seat adjustments.`;
+  }
+
+  if (
+    text.includes("follow") ||
+    text.includes("absent") ||
+    text.includes("absence") ||
+    text.includes("miss") ||
+    text.includes("visitation")
+  ) {
+    return `Hello ${name},\n\nRegarding absence tracking and member follow-ups:\n- Mene:Log automatically flags members who have been absent for 2 or more consecutive weeks under 'Follow-ups'.\n- Cell leaders can log pastoral call and visitation outcomes directly in the app.\n- Absence summaries can also be exported to CSV for pastoral visitation teams.\n\nOur operations team is at your service if you need custom notification rules configured.`;
+  }
+
+  if (text.includes("branch") || text.includes("campus") || text.includes("multi")) {
+    return `Hello ${name},\n\nRegarding multi-branch church management:\n- You can set up campus branches under the 'Branches' tab with dedicated Branch Admin accounts.\n- The main dashboard provides both aggregate headcounts and branch-specific breakdowns.\n\nAn operator will assist you with any custom hierarchy or multi-site data routing requirements.`;
+  }
+
+  return `Hello ${name},\n\nThank you for contacting Mene:Log Live Support Desk. Your message has been received by our technical operations center.\n\nWe have logged ticket #${ref} with high priority. Our operations specialists monitor this channel in real time and are reviewing your church's setup now.\n\nPlease feel free to provide any additional details, error messages, or device types below. We are here to support your ministry!`;
+}

@@ -15,6 +15,7 @@ import {
 } from "./operator.server";
 import {
   authenticateSupportOperator,
+  generateInstantSupportResponse,
   getOperatorSupportRole,
   sendSupportNotificationAlert,
   type SupportTicketPriority,
@@ -107,8 +108,28 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       console.error("[support] Initial reply error:", replyError);
     }
 
-    // Fire email alert to primehaven26@gmail.com
-    await sendSupportNotificationAlert({
+    // Generate instant real-time response from Mene:Log support desk (0s-1s delivery)
+    const instantText = generateInstantSupportResponse({
+      subject: data.subject,
+      message: data.description,
+      churchName,
+      ticketId: ticket.id,
+    });
+
+    const { data: instantReply } = await db
+      .from("support_ticket_replies")
+      .insert({
+        ticket_id: ticket.id,
+        author_type: "support",
+        author_id: "00000000-0000-0000-0000-000000000001",
+        message: instantText,
+        is_internal: false,
+      })
+      .select()
+      .maybeSingle();
+
+    // Fire email alert to primehaven26@gmail.com asynchronously
+    sendSupportNotificationAlert({
       type: "new_ticket",
       churchName,
       ticketId: ticket.id,
@@ -116,9 +137,9 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       priority: data.priority,
       messageSnippet: data.description,
       submittedByEmail: tenant?.contact_email,
-    });
+    }).catch((err) => console.error("[support alert] email error:", err));
 
-    return { ok: true as const, ticketId: ticket.id };
+    return { ok: true as const, ticketId: ticket.id, supportReply: instantReply };
   });
 
 /** List all tickets for the active church */
@@ -266,8 +287,28 @@ export const replyChurchTicket = createServerFn({ method: "POST" })
     const tenantInfo = ticket.tenant as unknown as { name?: string; contact_email?: string } | null;
     const churchName = tenantInfo?.name || "Church Partner";
 
-    // Send email alert to primehaven26@gmail.com
-    await sendSupportNotificationAlert({
+    // Generate instant real-time response from Mene:Log support desk (0s-1s delivery)
+    const instantText = generateInstantSupportResponse({
+      subject: ticket.subject,
+      message: data.message,
+      churchName,
+      ticketId: data.ticket_id,
+    });
+
+    const { data: instantReply } = await db
+      .from("support_ticket_replies")
+      .insert({
+        ticket_id: data.ticket_id,
+        author_type: "support",
+        author_id: "00000000-0000-0000-0000-000000000001",
+        message: instantText,
+        is_internal: false,
+      })
+      .select()
+      .maybeSingle();
+
+    // Send email alert to primehaven26@gmail.com asynchronously
+    sendSupportNotificationAlert({
       type: "church_reply",
       churchName,
       ticketId: data.ticket_id,
@@ -275,9 +316,9 @@ export const replyChurchTicket = createServerFn({ method: "POST" })
       priority: ticket.priority as SupportTicketPriority,
       messageSnippet: data.message,
       submittedByEmail: tenantInfo?.contact_email,
-    });
+    }).catch((err) => console.error("[support alert] reply email error:", err));
 
-    return { ok: true as const, reply };
+    return { ok: true as const, reply, supportReply: instantReply };
   });
 
 /* =========================================================================

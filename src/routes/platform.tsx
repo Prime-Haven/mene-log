@@ -261,6 +261,7 @@ function Platform() {
     queryKey: ["platform-reviews"],
     enabled: isOperator,
     retry: false,
+    refetchInterval: 3000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("platform_reviews");
       if (error) throw error;
@@ -271,6 +272,7 @@ function Platform() {
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["platform-snapshot"] });
     qc.invalidateQueries({ queryKey: ["platform-reviews"] });
+    qc.invalidateQueries({ queryKey: ["public-reviews"] });
   };
   const act = useMutation({
     mutationFn: (input: OperatorActionInput) => actionFn({ data: input }),
@@ -1598,66 +1600,168 @@ function Messaging({ d, act }: { d: Snapshot; act: Act }) {
 }
 
 function Reviews({ reviews, rpc }: { reviews: Review[]; rpc: Rpc }) {
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  const pendingCount = reviews.filter((r) => r.status === "pending").length;
+  const approvedCount = reviews.filter((r) => r.status === "approved").length;
+  const rejectedCount = reviews.filter((r) => r.status === "rejected").length;
+
+  const filtered = reviews.filter((r) => {
+    if (filter === "all") return true;
+    return r.status === filter;
+  });
+
   const set = (id: string, status: string) =>
     rpc.mutate({
       fn: "platform_set_review_status",
       args: { p_review: id, p_status: status },
       done:
         status === "approved"
-          ? "Review is live on the homepage"
+          ? "Review is now LIVE on the Mene:Log homepage"
           : status === "rejected"
-            ? "Review hidden"
-            : "Review moved back to pending",
+            ? "Review hidden from homepage"
+            : "Review moved back to pending queue",
     });
+
   return (
     <>
       <Title
-        eyebrow="Homepage"
-        title="Reviews"
-        sub="Approved reviews appear on the homepage. Hide any at any time."
+        eyebrow="Homepage Moderation"
+        title="Church Reviews"
+        sub="All church reviews submitted by administrators appear here. Once you approve, they appear directly on the Mene:Log homepage carousel."
       />
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button
+          size="sm"
+          variant={filter === "all" ? "default" : "outline"}
+          onClick={() => setFilter("all")}
+          className="text-xs"
+        >
+          All Reviews ({reviews.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={filter === "pending" ? "default" : "outline"}
+          onClick={() => setFilter("pending")}
+          className={`text-xs gap-1.5 ${
+            pendingCount > 0 && filter !== "pending"
+              ? "border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+              : ""
+          }`}
+        >
+          <span>Pending Approval</span>
+          {pendingCount > 0 && (
+            <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-bold text-white">
+              {pendingCount}
+            </span>
+          )}
+        </Button>
+        <Button
+          size="sm"
+          variant={filter === "approved" ? "default" : "outline"}
+          onClick={() => setFilter("approved")}
+          className="text-xs"
+        >
+          Approved / Live on Homepage ({approvedCount})
+        </Button>
+        <Button
+          size="sm"
+          variant={filter === "rejected" ? "default" : "outline"}
+          onClick={() => setFilter("rejected")}
+          className="text-xs"
+        >
+          Hidden ({rejectedCount})
+        </Button>
+      </div>
+
       <div className="surface divide-y">
-        {reviews.map((r) => (
-          <div key={r.id} className="grid gap-3 p-4 sm:grid-cols-[1fr_auto]">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-semibold">{r.church_name}</p>
+        {filtered.map((r) => (
+          <div key={r.id} className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] items-start">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-bold text-base text-foreground">{r.church_name}</p>
                 <div className="flex">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={i}
-                      className={`size-3.5 ${i < r.rating ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                      className={`size-4 ${
+                        i < r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"
+                      }`}
                     />
                   ))}
                 </div>
                 <Badge
-                  variant={r.status === "approved" ? "default" : "outline"}
-                  className="capitalize"
+                  variant={
+                    r.status === "approved"
+                      ? "default"
+                      : r.status === "pending"
+                        ? "outline"
+                        : "secondary"
+                  }
+                  className={`capitalize text-xs ${
+                    r.status === "approved"
+                      ? "bg-emerald-600 hover:bg-emerald-600 text-white"
+                      : r.status === "pending"
+                        ? "border-amber-500/40 text-amber-500 bg-amber-500/10"
+                        : "text-muted-foreground"
+                  }`}
                 >
-                  {r.status}
+                  {r.status === "approved" ? "✓ Live on Homepage" : r.status}
                 </Badge>
               </div>
-              <p className="mt-1 text-sm">“{r.quote}”</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {r.author_name}
-                {r.author_role ? ` · ${r.author_role}` : ""} · {fmtDate(r.created_at)}
+
+              <blockquote className="rounded-xl border border-border/60 bg-muted/20 p-3.5 text-sm italic text-foreground leading-relaxed">
+                “{r.quote}”
+              </blockquote>
+
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{r.author_name}</span>
+                {r.author_role ? ` · ${r.author_role}` : ""} · Submitted {fmtDate(r.created_at)}
               </p>
             </div>
-            <div className="flex items-start gap-2">
+
+            <div className="flex items-center gap-2 pt-1 sm:pt-0">
               {r.status !== "approved" && (
-                <Button size="sm" onClick={() => set(r.id, "approved")}>
-                  <Check className="size-4" /> Show
+                <Button
+                  size="sm"
+                  onClick={() => set(r.id, "approved")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1"
+                >
+                  <Check className="size-3.5" /> Approve & Publish
                 </Button>
               )}
               {r.status !== "rejected" && (
-                <Button size="sm" variant="outline" onClick={() => set(r.id, "rejected")}>
-                  <X className="size-4" /> Hide
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => set(r.id, "rejected")}
+                  className="text-xs gap-1 hover:text-destructive"
+                >
+                  <X className="size-3.5" /> Hide
+                </Button>
+              )}
+              {r.status !== "pending" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => set(r.id, "pending")}
+                  className="text-xs text-muted-foreground"
+                >
+                  Reset
                 </Button>
               )}
             </div>
           </div>
         ))}
-        {!reviews.length && <Empty>No reviews yet.</Empty>}
+        {!filtered.length && (
+          <Empty>
+            {filter === "all"
+              ? "No church reviews received yet."
+              : `No reviews currently in ${filter} status.`}
+          </Empty>
+        )}
       </div>
     </>
   );

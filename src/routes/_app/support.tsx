@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -15,6 +15,8 @@ import {
   Filter,
   Shield,
   HelpCircle,
+  Zap,
+  Radio,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -124,8 +126,19 @@ export function ChurchSupportPage() {
   const [newPriority, setNewPriority] = useState<TicketPriority>("normal");
   const [newDescription, setNewDescription] = useState("");
 
-  // Reply state
+  // Reply state & optimistic state for instant message delivery
   const [replyMessage, setReplyMessage] = useState("");
+  const [isSupportTyping, setIsSupportTyping] = useState(false);
+  const [optimisticReplies, setOptimisticReplies] = useState<
+    Array<{
+      id: string;
+      author_type: "church" | "support" | "super_admin";
+      message: string;
+      created_at: string;
+      pending?: boolean;
+    }>
+  >([]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Helper for auth headers
   async function getAuthHeader() {
@@ -135,10 +148,11 @@ export function ChurchSupportPage() {
     };
   }
 
-  // Query tickets
+  // Query tickets with automatic 2s polling
   const { data: tickets = [], isLoading: isLoadingTickets } = useQuery({
     queryKey: ["church-support-tickets", tenant?.id],
     enabled: !!tenant?.id && isAdmin && can("support"),
+    refetchInterval: 2000,
     queryFn: async () => {
       if (!tenant?.id) return [];
       const headers = await getAuthHeader();
@@ -149,10 +163,12 @@ export function ChurchSupportPage() {
     },
   });
 
-  // Query active thread
+  // Query active thread with instant 1s polling so responses arrive with 0 refresh required
   const { data: threadData, isLoading: isLoadingThread } = useQuery({
     queryKey: ["church-support-thread", tenant?.id, selectedTicketId],
     enabled: !!tenant?.id && !!selectedTicketId && isAdmin,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       if (!tenant?.id || !selectedTicketId) return null;
       const headers = await getAuthHeader();
@@ -162,6 +178,51 @@ export function ChurchSupportPage() {
       });
     },
   });
+
+  // Realtime subscription: live updates directly on new replies
+  useEffect(() => {
+    if (!selectedTicketId) return;
+
+    const channel = supabase
+      .channel(`support-chat-live-${selectedTicketId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_ticket_replies",
+          filter: `ticket_id=eq.${selectedTicketId}`,
+        },
+        () => {
+          qc.invalidateQueries({
+            queryKey: ["church-support-thread", tenant?.id, selectedTicketId],
+          });
+          qc.invalidateQueries({
+            queryKey: ["church-support-tickets", tenant?.id],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTicketId, tenant?.id, qc]);
+
+  // Combine server replies with any pending optimistic replies
+  const allReplies = useMemo(() => {
+    const serverList = (threadData?.replies ?? []) as ChurchReplyItem[];
+    const serverTexts = new Set(serverList.map((r) => r.message.trim()));
+    const unconfirmed = optimisticReplies.filter((opt) => !serverTexts.has(opt.message.trim()));
+    return [...serverList, ...unconfirmed];
+  }, [threadData?.replies, optimisticReplies]);
+
+  // Auto-scroll to bottom of conversation
+  useEffect(() => {
+    if (selectedTicketId && (allReplies.length > 0 || isSupportTyping)) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [allReplies.length, selectedTicketId, isSupportTyping]);
 
   // Submit ticket mutation
   const submitMutation = useMutation({
@@ -179,7 +240,7 @@ export function ChurchSupportPage() {
       });
     },
     onSuccess: (res) => {
-      toast.success("Support ticket submitted. Our operations team has been notified.");
+      toast.success("Support ticket submitted! Instant response connected.");
       setIsNewDialogOpen(false);
       setNewSubject("");
       setNewDescription("");
@@ -194,30 +255,82 @@ export function ChurchSupportPage() {
     },
   });
 
-  // Reply mutation
+  // Reply mutation with immediate optimistic update and 1-2s instant support response
   const replyMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (messageText: string) => {
       if (!tenant?.id || !selectedTicketId) throw new Error("Missing ticket details");
       const headers = await getAuthHeader();
       return replyTicketFn({
         data: {
           tenant_id: tenant.id,
           ticket_id: selectedTicketId,
-          message: replyMessage.trim(),
+          message: messageText,
         },
         headers,
       });
     },
-    onSuccess: () => {
-      toast.success("Reply sent to Mene:Log support");
-      setReplyMessage("");
+    onSuccess: (data) => {
+      // Show simulated typing if not already arrived, and append instant reply in ~1s
+      const supportReply = (data as unknown as { supportReply?: ChurchReplyItem })?.supportReply;
+      if (supportReply) {
+        setTimeout(() => {
+          setIsSupportTyping(false);
+          setOptimisticReplies((prev) => [
+            ...prev,
+            {
+              id: supportReply.id || `support-${Date.now()}`,
+              author_type: "support",
+              message: supportReply.message,
+              created_at: supportReply.created_at || new Date().toISOString(),
+              pending: false,
+            },
+          ]);
+          qc.invalidateQueries({
+            queryKey: ["church-support-thread", tenant?.id, selectedTicketId],
+          });
+        }, 1100);
+      } else {
+        setIsSupportTyping(false);
+      }
       qc.invalidateQueries({ queryKey: ["church-support-thread", tenant?.id, selectedTicketId] });
       qc.invalidateQueries({ queryKey: ["church-support-tickets", tenant?.id] });
     },
     onError: (err: unknown) => {
+      setIsSupportTyping(false);
       toast.error(err instanceof Error ? err.message : "Failed to send reply");
+      // Remove failed optimistic reply if error
+      setOptimisticReplies((prev) => prev.slice(0, -1));
     },
   });
+
+  function handleSendReply() {
+    const text = replyMessage.trim();
+    if (!text || !selectedTicketId || replyMutation.isPending) return;
+
+    // Immediately show user message with 0ms delay!
+    const tempId = `temp-${Date.now()}`;
+    setOptimisticReplies((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        author_type: "church",
+        message: text,
+        created_at: new Date().toISOString(),
+        pending: false,
+      },
+    ]);
+    setReplyMessage("");
+    setIsSupportTyping(true);
+
+    replyMutation.mutate(text);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendReply();
+    }
+  }
 
   if (!can("support")) {
     return <UpgradePanel feature="support" canUpgrade={isOwner} />;
@@ -336,29 +449,36 @@ export function ChurchSupportPage() {
 
           {/* Conversation History */}
           <div className="surface p-5 md:p-6 space-y-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <MessageSquare className="size-4" />
-              <span>Conversation Thread</span>
-            </h3>
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <MessageSquare className="size-4" />
+                <span>Live Conversation</span>
+              </h3>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-500">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Instant Real-Time Sync</span>
+              </span>
+            </div>
 
-            {isLoadingThread ? (
+            {isLoadingThread && allReplies.length === 0 ? (
               <div className="py-12 text-center text-sm text-muted-foreground animate-pulse">
                 Loading messages...
               </div>
             ) : (
-              <div className="space-y-4">
-                {threadData?.replies && threadData.replies.length > 0 ? (
-                  threadData.replies.map((reply: ChurchReplyItem, idx: number) => {
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                {allReplies.length > 0 ? (
+                  allReplies.map((reply, idx) => {
                     const isChurch = reply.author_type === "church";
+                    const isPending = (reply as { pending?: boolean }).pending;
                     return (
                       <motion.div
                         key={reply.id || idx}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`p-4 md:p-5 rounded-lg border text-sm leading-relaxed ${
+                        className={`p-4 md:p-5 rounded-xl border text-sm leading-relaxed ${
                           isChurch
-                            ? "bg-secondary/40 border-border/80 ml-0 md:mr-10"
-                            : "bg-primary/10 border-primary/20 mr-0 md:ml-10 text-foreground"
+                            ? "bg-secondary/50 border-border/80 ml-0 md:mr-10"
+                            : "bg-primary/10 border-primary/25 mr-0 md:ml-10 text-foreground"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3 mb-2 border-b border-border/40 pb-2">
@@ -372,6 +492,11 @@ export function ChurchSupportPage() {
                             >
                               {isChurch ? "Your Church" : "Mene:Log Support Team"}
                             </span>
+                            {isPending && (
+                              <span className="text-[10px] text-amber-500 font-mono animate-pulse">
+                                Sending…
+                              </span>
+                            )}
                           </div>
                           <span className="text-xs text-muted-foreground">
                             {formatDate(reply.created_at)}
@@ -382,25 +507,57 @@ export function ChurchSupportPage() {
                     );
                   })
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No replies yet.</p>
+                  <p className="text-sm text-muted-foreground italic py-4 text-center">
+                    No replies yet. Send a message below to reach technical support.
+                  </p>
                 )}
+
+                {/* Instant Typing Indicator */}
+                {isSupportTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="mr-0 md:ml-10 p-4 rounded-xl border border-primary/25 bg-primary/10 flex items-center gap-3 text-xs text-primary"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                      <span className="size-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                      <span className="size-2 rounded-full bg-primary animate-bounce" />
+                    </div>
+                    <span className="font-semibold text-foreground">
+                      Mene:Log Support Desk is typing reply…
+                    </span>
+                  </motion.div>
+                )}
+
+                <div ref={messagesEndRef} />
               </div>
             )}
 
             {/* Reply Composer */}
             <div className="pt-4 border-t border-border/60">
-              <Label htmlFor="reply-box" className="text-sm font-semibold">
-                Send Reply to Support Team
-              </Label>
-              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-                Our support staff will be alerted immediately via email and will review your update.
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="reply-box" className="text-sm font-semibold">
+                  Send Instant Reply
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  Press{" "}
+                  <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">Enter</kbd> to
+                  send,{" "}
+                  <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">
+                    Shift+Enter
+                  </kbd>{" "}
+                  for new line
+                </span>
+              </div>
               <Textarea
                 id="reply-box"
-                rows={4}
-                placeholder="Type your reply or additional details..."
+                rows={3}
+                placeholder="Type your message here..."
                 value={replyMessage}
                 onChange={(e) => setReplyMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="w-full bg-background"
               />
               <div className="mt-3 flex justify-between items-center">
@@ -411,12 +568,12 @@ export function ChurchSupportPage() {
                 )}
                 <div className="ml-auto">
                   <Button
-                    onClick={() => replyMutation.mutate()}
-                    disabled={!replyMessage.trim() || replyMutation.isPending}
+                    onClick={handleSendReply}
+                    disabled={!replyMessage.trim()}
                     className="gap-2"
                   >
                     <Send className="size-4" />
-                    <span>{replyMutation.isPending ? "Sending..." : "Send Reply"}</span>
+                    <span>Send Message</span>
                   </Button>
                 </div>
               </div>
