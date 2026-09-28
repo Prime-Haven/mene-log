@@ -1,31 +1,27 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+  Sun,
+  BookOpen,
+  Flame,
   Calendar,
-  Sparkles,
+  CalendarDays,
   Users,
   Target,
   Plus,
-  Play,
-  CheckCircle2,
-  Tv,
   Pencil,
   Trash2,
   Lock,
   Unlock,
-  ExternalLink,
-  ChevronRight,
-  Filter,
-  BarChart3,
-  CalendarDays,
-  ShieldCheck,
-  Flame,
-  Info,
-  Clock,
+  Tv,
+  Search,
   ArrowUpRight,
   RefreshCw,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
@@ -46,13 +42,13 @@ import {
 export const Route = createFileRoute("/_app/services")({
   head: () => ({
     meta: [
-      { title: "Church Services & Attendance Tracking — Mene:Log" },
+      { title: "Church Services & Programs — Mene:Log" },
       {
         name: "description",
         content:
-          "Track Sunday, Midweek, and Prayer attendance, and manage special church programs.",
+          "Manage weekly church services, Sunday, Midweek, and Prayer attendance, and special church programs.",
       },
-      { property: "og:title", content: "Church Services & Attendance Tracking — Mene:Log" },
+      { property: "og:title", content: "Church Services & Programs — Mene:Log" },
       {
         property: "og:description",
         content:
@@ -83,15 +79,15 @@ type ServiceRecord = {
   attendance: { count: number }[];
 };
 
-type ServiceCategoryTab = "sunday" | "midweek" | "prayer" | "special" | "all";
-
 export function Services() {
   const { tenant, membership, can } = useTenant();
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const liveOn = can("watch_live");
 
-  const [activeTab, setActiveTab] = useState<ServiceCategoryTab>("sunday");
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "special" | "sunday" | "midweek" | "prayer">(
+    "all",
+  );
 
   // Create Service Dialog State
   const [createOpen, setCreateOpen] = useState(false);
@@ -117,7 +113,7 @@ export function Services() {
     null,
   );
 
-  // Fetch all services with attendance counts
+  // Fetch all services
   const { data: services = [], isLoading } = useQuery({
     queryKey: ["services", tenant?.id],
     enabled: !!tenant,
@@ -135,12 +131,11 @@ export function Services() {
     },
   });
 
-  // Consolidate & Reset to Clean Defaults (Sunday, Midweek, Prayer - No dates attached!)
-  const resetToCleanDefaults = useMutation({
+  // Consolidate & Ensure Default Services
+  const ensureDefaults = useMutation({
     mutationFn: async () => {
       if (!tenant) return;
 
-      // 1. Check existing services
       const defaults = [
         { name: "Sunday Service", type: "sunday" },
         { name: "Midweek Service", type: "midweek" },
@@ -148,13 +143,11 @@ export function Services() {
       ];
 
       for (const def of defaults) {
-        // Find if canonical default exists
         const canonical = services.find(
           (s) => s.is_default && (s.service_type === def.type || s.name === def.name),
         );
 
         if (!canonical) {
-          // Check if any matching service exists to designate as canonical default
           const match = services.find(
             (s) =>
               s.service_type === def.type || s.name.toLowerCase().includes(def.name.toLowerCase()),
@@ -180,7 +173,6 @@ export function Services() {
             });
           }
         } else {
-          // Ensure clean canonical name and open status
           await supabase
             .from("services")
             .update({
@@ -192,47 +184,19 @@ export function Services() {
             .eq("id", canonical.id);
         }
       }
-
-      // Remove any duplicate default instances created earlier
-      const canonicalIds = new Set<string>();
-      for (const def of defaults) {
-        const found = (services ?? []).find(
-          (s) => s.is_default && (s.service_type === def.type || s.name === def.name),
-        );
-        if (found) canonicalIds.add(found.id);
-      }
-
-      // Delete old duplicate non-canonical services with "Sunday Service", "Midweek Service", "Prayer Service"
-      const duplicatesToDelete = services.filter((s) => {
-        if (canonicalIds.has(s.id)) return false;
-        const lower = s.name.toLowerCase();
-        return (
-          lower === "sunday service" ||
-          lower === "midweek service" ||
-          lower === "prayer service" ||
-          lower.startsWith("sunday service") ||
-          lower.startsWith("midweek service") ||
-          lower.startsWith("prayer service")
-        );
-      });
-
-      for (const dup of duplicatesToDelete) {
-        await supabase.from("attendance").delete().eq("service_id", dup.id);
-        await supabase.from("services").delete().eq("id", dup.id);
-      }
     },
     onSuccess: () => {
-      toast.success("Defaults consolidated: Sunday, Midweek, and Prayer services active");
+      toast.success("Default weekly services ready and open");
       qc.invalidateQueries({ queryKey: ["services"] });
       qc.invalidateQueries({ queryKey: ["open-services"] });
       qc.invalidateQueries({ queryKey: ["public-open-services"] });
     },
     onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Could not reset default services"),
+      toast.error(e instanceof Error ? e.message : "Could not initialize default services"),
   });
 
-  // Create new Custom / Special Service (HAS DATE ATTACHED!)
-  const createCustomService = useMutation({
+  // Create new Custom Service
+  const createService = useMutation({
     mutationFn: async () => {
       if (!tenant) throw new Error("Church account unavailable");
       const title = formName.trim();
@@ -249,13 +213,13 @@ export function Services() {
           name: title,
           service_type: formCategory,
           theme: formTheme.trim() || null,
-          service_date: formDate, // Only newly created services have dates attached!
+          service_date: formDate,
           speaker: formSpeaker.trim() || null,
           description: formDescription.trim() || null,
           target_attendance: targetNum && !isNaN(targetNum) ? targetNum : null,
           stream_url: stream,
           is_open: true,
-          is_default: false, // Custom services are not default templates and can be deleted
+          is_default: false,
         })
         .select("id")
         .single();
@@ -264,7 +228,7 @@ export function Services() {
       return data.id;
     },
     onSuccess: () => {
-      toast.success("New service created and ready on check-in page!");
+      toast.success("New program created and published to check-in page");
       setCreateOpen(false);
       resetForm();
       qc.invalidateQueries({ queryKey: ["services"] });
@@ -274,7 +238,7 @@ export function Services() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create service"),
   });
 
-  // Update existing Service
+  // Update Service
   const updateService = useMutation({
     mutationFn: async () => {
       if (!editing) return;
@@ -292,7 +256,6 @@ export function Services() {
         stream_url: stream,
       };
 
-      // Only custom services update date & theme
       if (!editing.is_default) {
         updateData.service_date = formDate;
         updateData.theme = formTheme.trim() || null;
@@ -303,7 +266,7 @@ export function Services() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Service details updated");
+      toast.success("Service updated");
       setEditing(null);
       resetForm();
       qc.invalidateQueries({ queryKey: ["services"] });
@@ -320,7 +283,7 @@ export function Services() {
       if (error) throw error;
     },
     onSuccess: (_, { is_open }) => {
-      toast.success(is_open ? "Service opened for check-in" : "Service closed for check-in");
+      toast.success(is_open ? "Service opened for check-in" : "Service closed");
       qc.invalidateQueries({ queryKey: ["services"] });
       qc.invalidateQueries({ queryKey: ["open-services"] });
       qc.invalidateQueries({ queryKey: ["public-open-services"] });
@@ -328,29 +291,28 @@ export function Services() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update status"),
   });
 
-  // Delete Service (Only for newly created services! Default templates protected)
+  // Delete Service (For admin-created services)
   const deleteService = useMutation({
     mutationFn: async (svc: ServiceRecord) => {
       if (svc.is_default) {
         throw new Error(
-          "Default services (Sunday Service, Midweek Service, Prayer Service) are permanent templates and cannot be deleted. You can toggle them Closed to disable check-in.",
+          "Default weekly services are permanent and cannot be deleted. You can toggle them closed to stop check-ins.",
         );
       }
 
-      // Try RPC first
       try {
         const { error } = await supabase.rpc("delete_service", { p_service: svc.id });
         if (!error) return;
       } catch {
-        // Direct cascade fallback
+        // Fallback
       }
 
       await supabase.from("attendance").delete().eq("service_id", svc.id);
-      const { error } = await supabase.from("services").delete().eq("id", svc.id);
-      if (error) throw error;
+      const { error: delErr } = await supabase.from("services").delete().eq("id", svc.id);
+      if (delErr) throw delErr;
     },
     onSuccess: () => {
-      toast.success("Service deleted successfully");
+      toast.success("Service deleted");
       setDeleteTarget(null);
       qc.invalidateQueries({ queryKey: ["services"] });
       qc.invalidateQueries({ queryKey: ["open-services"] });
@@ -376,7 +338,7 @@ export function Services() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Live stream settings saved");
+      toast.success("Stream settings saved");
       setLiveDialog(null);
       qc.invalidateQueries({ queryKey: ["services"] });
     },
@@ -412,9 +374,8 @@ export function Services() {
     setFormStreamUrl(svc.stream_url ?? "");
   }
 
-  // Segregate default templates from admin-created services
+  // Identify canonical default services
   const defaultServices = useMemo(() => {
-    // 3 canonical defaults: Sunday, Midweek, Prayer
     const sun = services.find(
       (s) =>
         s.is_default && (s.service_type === "sunday" || s.name.toLowerCase().includes("sunday")),
@@ -435,144 +396,69 @@ export function Services() {
     };
   }, [services]);
 
-  // Admin-created custom services (all non-defaults)
+  // Admin-created custom programs
   const customServices = useMemo(() => {
     return services.filter((s) => !s.is_default);
   }, [services]);
 
-  // Tab categorization
-  const currentTabServices = useMemo(() => {
-    if (activeTab === "sunday") {
-      const items: ServiceRecord[] = [];
-      if (defaultServices.sunday) items.push(defaultServices.sunday);
-      items.push(
-        ...customServices.filter(
-          (s) => s.service_type === "sunday" || s.name.toLowerCase().includes("sunday"),
-        ),
+  // Filtered list of custom services
+  const filteredCustom = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return customServices.filter((s) => {
+      if (filterType !== "all") {
+        if (filterType === "sunday" && s.service_type !== "sunday") return false;
+        if (filterType === "midweek" && s.service_type !== "midweek") return false;
+        if (filterType === "prayer" && s.service_type !== "prayer") return false;
+        if (
+          filterType === "special" &&
+          (s.service_type === "sunday" ||
+            s.service_type === "midweek" ||
+            s.service_type === "prayer")
+        )
+          return false;
+      }
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.theme ?? "").toLowerCase().includes(q) ||
+        (s.speaker ?? "").toLowerCase().includes(q) ||
+        (s.service_date ?? "").includes(q)
       );
-      return items;
-    }
-    if (activeTab === "midweek") {
-      const items: ServiceRecord[] = [];
-      if (defaultServices.midweek) items.push(defaultServices.midweek);
-      items.push(
-        ...customServices.filter(
-          (s) => s.service_type === "midweek" || s.name.toLowerCase().includes("midweek"),
-        ),
-      );
-      return items;
-    }
-    if (activeTab === "prayer") {
-      const items: ServiceRecord[] = [];
-      if (defaultServices.prayer) items.push(defaultServices.prayer);
-      items.push(
-        ...customServices.filter(
-          (s) => s.service_type === "prayer" || s.name.toLowerCase().includes("prayer"),
-        ),
-      );
-      return items;
-    }
-    if (activeTab === "special") {
-      return customServices.filter(
-        (s) =>
-          s.service_type !== "sunday" &&
-          s.service_type !== "midweek" &&
-          s.service_type !== "prayer" &&
-          !s.name.toLowerCase().includes("sunday") &&
-          !s.name.toLowerCase().includes("midweek") &&
-          !s.name.toLowerCase().includes("prayer"),
-      );
-    }
-    // "all"
-    return services;
-  }, [activeTab, defaultServices, customServices, services]);
+    });
+  }, [customServices, search, filterType]);
 
-  // Metrics for attendance
-  const metrics = useMemo(() => {
-    const sunAttendees =
-      (defaultServices.sunday?.attendance[0]?.count ?? 0) +
-      customServices
-        .filter((s) => s.service_type === "sunday" || s.name.toLowerCase().includes("sunday"))
-        .reduce((sum, s) => sum + (s.attendance[0]?.count ?? 0), 0);
-
-    const midAttendees =
-      (defaultServices.midweek?.attendance[0]?.count ?? 0) +
-      customServices
-        .filter((s) => s.service_type === "midweek" || s.name.toLowerCase().includes("midweek"))
-        .reduce((sum, s) => sum + (s.attendance[0]?.count ?? 0), 0);
-
-    const prayAttendees =
-      (defaultServices.prayer?.attendance[0]?.count ?? 0) +
-      customServices
-        .filter((s) => s.service_type === "prayer" || s.name.toLowerCase().includes("prayer"))
-        .reduce((sum, s) => sum + (s.attendance[0]?.count ?? 0), 0);
-
-    const specialAttendees = customServices
-      .filter(
-        (s) =>
-          s.service_type !== "sunday" &&
-          s.service_type !== "midweek" &&
-          s.service_type !== "prayer" &&
-          !s.name.toLowerCase().includes("sunday") &&
-          !s.name.toLowerCase().includes("midweek") &&
-          !s.name.toLowerCase().includes("prayer"),
-      )
-      .reduce((sum, s) => sum + (s.attendance[0]?.count ?? 0), 0);
-
-    return {
-      sunday: sunAttendees,
-      midweek: midAttendees,
-      prayer: prayAttendees,
-      special: specialAttendees,
-      total: sunAttendees + midAttendees + prayAttendees + specialAttendees,
-    };
-  }, [defaultServices, customServices]);
-
-  // Helper to format attached date for admin-created services
   const formatAttachedDate = (dateStr?: string | null) => {
-    if (!dateStr) return null;
+    if (!dateStr) return "—";
     const parts = dateStr.split("-").map(Number);
     const d =
       parts.length === 3 ? new Date(parts[0]!, parts[1]! - 1, parts[2]!) : new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
-    const full = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    return `${weekday}, ${full}`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
   return (
-    <div className="space-y-8">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-eyebrow">Church Programs</span>
-            <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-wider">
-              {tenant?.tier.toUpperCase()} TIER
-            </Badge>
-          </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink font-display">
-            Services & Attendance Tracking
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
-            <strong>Sunday Service</strong>, <strong>Midweek Service</strong>, and{" "}
-            <strong>Prayer Service</strong> are permanent defaults ready on the check-in form.
-            Create special or themed programs with specific dates that you can edit and delete at
-            any time.
+          <p className="text-eyebrow">Program Operations</p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink font-display">Services</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage permanent weekly service check-ins and special church programs.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => resetToCleanDefaults.mutate()}
-            disabled={resetToCleanDefaults.isPending}
-            className="text-xs font-semibold"
-            title="Consolidate services into Sunday, Midweek, and Prayer defaults"
+            onClick={() => ensureDefaults.mutate()}
+            disabled={ensureDefaults.isPending}
+            className="text-xs"
+            title="Consolidate and check defaults"
           >
             <RefreshCw
-              className={`size-3.5 mr-1.5 ${resetToCleanDefaults.isPending ? "animate-spin" : ""}`}
+              className={`size-3.5 mr-1.5 ${ensureDefaults.isPending ? "animate-spin" : ""}`}
             />
             Ensure Defaults
           </Button>
@@ -581,364 +467,473 @@ export function Services() {
             size="sm"
             onClick={() => {
               resetForm();
-              setFormCategory(activeTab === "all" ? "special" : activeTab);
               setCreateOpen(true);
             }}
-            className="text-xs font-semibold shadow-sm"
+            className="text-xs font-semibold"
           >
-            <Plus className="size-4 mr-1.5" /> Create New Service
+            <Plus className="size-4 mr-1.5" /> Create Service
           </Button>
         </div>
       </div>
 
-      {/* Hero Metric Cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Sunday Service Metric */}
-        <div
-          onClick={() => setActiveTab("sunday")}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-panel ${
-            activeTab === "sunday"
-              ? "border-primary bg-primary/[0.04] ring-1 ring-primary/30"
-              : "border-border/80 bg-card/60"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Sunday Service
-            </span>
-            <span className="text-lg">☀️</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-ink">{metrics.sunday}</span>
-            <span className="text-xs text-muted-foreground">attendees recorded</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Default permanent template</p>
+      {/* 3 Permanent Weekly Services Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Weekly Services
+          </h2>
+          <span className="text-xs text-muted-foreground font-mono">
+            Always ready on public check-in
+          </span>
         </div>
 
-        {/* Midweek Service Metric */}
-        <div
-          onClick={() => setActiveTab("midweek")}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-panel ${
-            activeTab === "midweek"
-              ? "border-primary bg-primary/[0.04] ring-1 ring-primary/30"
-              : "border-border/80 bg-card/60"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Midweek Service
-            </span>
-            <span className="text-lg">📖</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-ink">{metrics.midweek}</span>
-            <span className="text-xs text-muted-foreground">attendees recorded</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Default permanent template</p>
-        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {/* Sunday Service Card */}
+          <div className="surface p-4 border border-border/80 flex flex-col justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                    <Sun className="size-4" />
+                  </div>
+                  <h3 className="font-bold text-sm text-ink">Sunday Service</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    defaultServices.sunday &&
+                    toggleOpen.mutate({
+                      id: defaultServices.sunday.id,
+                      is_open: !defaultServices.sunday.is_open,
+                    })
+                  }
+                  className="text-xs font-medium cursor-pointer transition-opacity hover:opacity-80"
+                  title="Toggle check-in status"
+                >
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                      defaultServices.sunday?.is_open
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`size-2 rounded-full ${
+                        defaultServices.sunday?.is_open
+                          ? "bg-emerald-500"
+                          : "bg-muted-foreground/40"
+                      }`}
+                    />
+                    {defaultServices.sunday?.is_open ? "Open" : "Closed"}
+                  </span>
+                </button>
+              </div>
 
-        {/* Prayer Service Metric */}
-        <div
-          onClick={() => setActiveTab("prayer")}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-panel ${
-            activeTab === "prayer"
-              ? "border-primary bg-primary/[0.04] ring-1 ring-primary/30"
-              : "border-border/80 bg-card/60"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Prayer Service
-            </span>
-            <span className="text-lg">🙏</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-ink">{metrics.prayer}</span>
-            <span className="text-xs text-muted-foreground">attendees recorded</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Default permanent template</p>
-        </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Permanent template for all Sunday worship check-ins.
+              </p>
+            </div>
 
-        {/* Special Programs Metric */}
-        <div
-          onClick={() => setActiveTab("special")}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-panel ${
-            activeTab === "special"
-              ? "border-primary bg-primary/[0.04] ring-1 ring-primary/30"
-              : "border-border/80 bg-card/60"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Special Programs
-            </span>
-            <span className="text-lg">✨</span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-ink">{metrics.special}</span>
-            <span className="text-xs text-muted-foreground">attendees recorded</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Admin created with specific dates</p>
-        </div>
-      </div>
+            <div className="flex items-center justify-between border-t border-border/60 pt-3">
+              <div>
+                <span className="text-lg font-bold font-mono text-ink">
+                  {defaultServices.sunday?.attendance[0]?.count ?? 0}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1.5">attendees</span>
+              </div>
 
-      {/* Category Tabs */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-border/80 pb-3">
-          {[
-            { id: "sunday", label: "Sunday Services", icon: "☀️" },
-            { id: "midweek", label: "Midweek Services", icon: "📖" },
-            { id: "prayer", label: "Prayer Services", icon: "🙏" },
-            { id: "special", label: "Special & Themed Programs", icon: "✨" },
-            { id: "all", label: "All Services", icon: "📋" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as ServiceCategoryTab)}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
-                activeTab === tab.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-ink"
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Service Cards List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-24 rounded-2xl border border-border/60 bg-muted/20 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : currentTabServices.length === 0 ? (
-          <div className="surface border border-dashed p-10 text-center space-y-3">
-            <Calendar className="mx-auto size-8 text-muted-foreground/60" />
-            <p className="text-sm font-semibold text-ink">No services found in this category.</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Click below to create a new service or initialize default templates.
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setFormCategory(activeTab === "all" ? "special" : activeTab);
-                  setCreateOpen(true);
-                }}
-                className="text-xs font-semibold"
-              >
-                <Plus className="size-4 mr-1.5" /> Create Service
-              </Button>
+              <div className="flex items-center gap-1">
+                {defaultServices.sunday && (
+                  <>
+                    <Button asChild size="sm" variant="outline" className="h-8 text-xs font-medium">
+                      <Link
+                        to="/attendance"
+                        search={{ serviceId: defaultServices.sunday.id } as Record<string, unknown>}
+                      >
+                        Register <ArrowUpRight className="size-3 ml-1" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground"
+                      title="Edit"
+                      onClick={() => openEdit(defaultServices.sunday!)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="grid gap-3">
-            {currentTabServices.map((s) => {
-              const isDefault = s.is_default;
-              const attachedDateStr = !isDefault ? formatAttachedDate(s.service_date) : null;
-              const attendees = s.attendance[0]?.count ?? 0;
-              const hasTarget = s.target_attendance && s.target_attendance > 0;
-              const targetPct = hasTarget
-                ? Math.min(100, Math.round((attendees / s.target_attendance!) * 100))
-                : 0;
 
-              return (
-                <div
-                  key={s.id}
-                  className={`surface flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 transition-all hover:border-primary/40 hover:shadow-panel ${
-                    isDefault ? "border-l-4 border-l-primary" : ""
-                  }`}
-                >
-                  {/* Left: Info */}
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-bold text-base text-ink tracking-tight truncate">
-                        {s.name}
-                      </h3>
-
-                      {/* Attached Date badge for admin-created services ONLY */}
-                      {attachedDateStr && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold flex items-center gap-1"
-                        >
-                          <Calendar className="size-3" /> {attachedDateStr}
-                        </Badge>
-                      )}
-
-                      {/* Theme badge if present */}
-                      {s.theme && (
-                        <Badge variant="outline" className="text-xs font-semibold text-primary">
-                          "{s.theme}"
-                        </Badge>
-                      )}
-
-                      {/* Permanent Default Badge */}
-                      {isDefault ? (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground"
-                        >
-                          Permanent Default
-                        </Badge>
-                      ) : null}
-
-                      {/* Open / Closed Status */}
-                      <Badge
-                        variant={s.is_open ? "default" : "outline"}
-                        className={`text-[10px] uppercase font-bold ${
-                          s.is_open ? "bg-emerald-600 hover:bg-emerald-600" : ""
-                        }`}
-                      >
-                        {s.is_open ? "Open for Check-in" : "Closed"}
-                      </Badge>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      {isDefault ? (
-                        <span className="text-muted-foreground">
-                          Available anytime on public check-in
-                        </span>
-                      ) : null}
-                      {s.speaker && (
-                        <span>
-                          Speaker: <strong className="text-ink">{s.speaker}</strong>
-                        </span>
-                      )}
-                      {s.description && <span className="truncate max-w-sm">{s.description}</span>}
-                    </div>
-
-                    {/* Target attendance progress if set */}
-                    {hasTarget && (
-                      <div className="mt-2 pt-2 max-w-sm">
-                        <div className="flex items-center justify-between text-[11px] mb-1">
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Target className="size-3" /> Target: {s.target_attendance}
-                          </span>
-                          <span className="font-mono font-bold text-ink">{targetPct}%</span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all duration-500"
-                            style={{ width: `${targetPct}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
+          {/* Midweek Service Card */}
+          <div className="surface p-4 border border-border/80 flex flex-col justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                    <BookOpen className="size-4" />
                   </div>
-
-                  {/* Right: Metrics & Actions */}
-                  <div className="flex flex-wrap items-center gap-3 shrink-0 self-end sm:self-center">
-                    {/* Attendee Counter Box */}
-                    <div className="text-right px-3 py-1.5 rounded-xl bg-muted/40 border border-border/60">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <Users className="size-3.5 text-primary" />
-                        <span className="text-lg font-bold font-mono text-ink">{attendees}</span>
-                      </div>
-                      <span className="text-[10px] uppercase font-semibold text-muted-foreground">
-                        Attendees
-                      </span>
-                    </div>
-
-                    {/* Actions Group */}
-                    <div className="flex items-center gap-1.5">
-                      {/* Register Button */}
-                      <Button asChild size="sm" className="text-xs font-semibold h-9 shadow-sm">
-                        <Link
-                          to="/attendance"
-                          search={{ serviceId: s.id } as Record<string, unknown>}
-                        >
-                          Register <ArrowUpRight className="size-3.5 ml-1" />
-                        </Link>
-                      </Button>
-
-                      {/* Toggle Open/Closed */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9"
-                        title={s.is_open ? "Close Service" : "Open Service"}
-                        onClick={() => toggleOpen.mutate({ id: s.id, is_open: !s.is_open })}
-                        disabled={toggleOpen.isPending}
-                      >
-                        {s.is_open ? (
-                          <Unlock className="size-4 text-emerald-600" />
-                        ) : (
-                          <Lock className="size-4 text-muted-foreground" />
-                        )}
-                      </Button>
-
-                      {/* Edit Service */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                        title="Edit Service Details"
-                        onClick={() => openEdit(s)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-
-                      {/* Stream link */}
-                      {liveOn && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                          title="Stream link"
-                          onClick={() =>
-                            setLiveDialog({
-                              id: s.id,
-                              url: s.stream_url ?? "",
-                              min: s.online_min_minutes ?? 20,
-                            })
-                          }
-                        >
-                          <Tv className="size-4" />
-                        </Button>
-                      )}
-
-                      {/* Delete Service:
-                          Only newly created services can be deleted!
-                          Default templates show a disabled/protected state. */}
-                      {isDefault ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground/30 hover:text-muted-foreground"
-                          title="Default templates are permanent and cannot be deleted"
-                          onClick={() => setDeleteTarget(s)}
-                        >
-                          <ShieldCheck className="size-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                          title="Delete Service"
-                          onClick={() => setDeleteTarget(s)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  <h3 className="font-bold text-sm text-ink">Midweek Service</h3>
                 </div>
-              );
-            })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    defaultServices.midweek &&
+                    toggleOpen.mutate({
+                      id: defaultServices.midweek.id,
+                      is_open: !defaultServices.midweek.is_open,
+                    })
+                  }
+                  className="text-xs font-medium cursor-pointer transition-opacity hover:opacity-80"
+                  title="Toggle check-in status"
+                >
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                      defaultServices.midweek?.is_open
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`size-2 rounded-full ${
+                        defaultServices.midweek?.is_open
+                          ? "bg-emerald-500"
+                          : "bg-muted-foreground/40"
+                      }`}
+                    />
+                    {defaultServices.midweek?.is_open ? "Open" : "Closed"}
+                  </span>
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground pt-1">
+                Permanent template for Bible studies and midweek services.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border/60 pt-3">
+              <div>
+                <span className="text-lg font-bold font-mono text-ink">
+                  {defaultServices.midweek?.attendance[0]?.count ?? 0}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1.5">attendees</span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {defaultServices.midweek && (
+                  <>
+                    <Button asChild size="sm" variant="outline" className="h-8 text-xs font-medium">
+                      <Link
+                        to="/attendance"
+                        search={
+                          { serviceId: defaultServices.midweek.id } as Record<string, unknown>
+                        }
+                      >
+                        Register <ArrowUpRight className="size-3 ml-1" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground"
+                      title="Edit"
+                      onClick={() => openEdit(defaultServices.midweek!)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Prayer Service Card */}
+          <div className="surface p-4 border border-border/80 flex flex-col justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+                    <Flame className="size-4" />
+                  </div>
+                  <h3 className="font-bold text-sm text-ink">Prayer Service</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    defaultServices.prayer &&
+                    toggleOpen.mutate({
+                      id: defaultServices.prayer.id,
+                      is_open: !defaultServices.prayer.is_open,
+                    })
+                  }
+                  className="text-xs font-medium cursor-pointer transition-opacity hover:opacity-80"
+                  title="Toggle check-in status"
+                >
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-xs font-medium ${
+                      defaultServices.prayer?.is_open
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`size-2 rounded-full ${
+                        defaultServices.prayer?.is_open
+                          ? "bg-emerald-500"
+                          : "bg-muted-foreground/40"
+                      }`}
+                    />
+                    {defaultServices.prayer?.is_open ? "Open" : "Closed"}
+                  </span>
+                </button>
+              </div>
+
+              <p className="text-xs text-muted-foreground pt-1">
+                Permanent template for prayer meetings, vigils, and intercession.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border/60 pt-3">
+              <div>
+                <span className="text-lg font-bold font-mono text-ink">
+                  {defaultServices.prayer?.attendance[0]?.count ?? 0}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1.5">attendees</span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {defaultServices.prayer && (
+                  <>
+                    <Button asChild size="sm" variant="outline" className="h-8 text-xs font-medium">
+                      <Link
+                        to="/attendance"
+                        search={{ serviceId: defaultServices.prayer.id } as Record<string, unknown>}
+                      >
+                        Register <ArrowUpRight className="size-3 ml-1" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground"
+                      title="Edit"
+                      onClick={() => openEdit(defaultServices.prayer!)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Create Service Modal (Admin creates new service with specific date) */}
+      {/* Special & Custom Programs Section */}
+      <div className="space-y-4 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-ink">Special Programs & Events</h2>
+            <p className="text-xs text-muted-foreground">
+              Programs created with attached dates. These appear in the check-in form and can be
+              edited or deleted.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search programs..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 w-48 sm:w-64 pl-8 text-xs"
+              />
+            </div>
+
+            <div className="flex rounded-lg border border-border/80 bg-muted/40 p-0.5">
+              {(
+                [
+                  { id: "all", label: "All" },
+                  { id: "special", label: "Special" },
+                  { id: "sunday", label: "Sunday" },
+                  { id: "midweek", label: "Midweek" },
+                  { id: "prayer", label: "Prayer" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFilterType(tab.id)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    filterType === tab.id
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Programs Table */}
+        <div className="surface overflow-x-auto border border-border/80">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-muted/20">
+              <tr className="text-left text-xs font-semibold text-muted-foreground">
+                <th className="px-4 py-3">Program Name</th>
+                <th className="px-4 py-3">Attached Date</th>
+                <th className="px-4 py-3">Speaker / Minister</th>
+                <th className="px-4 py-3">Attendance</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-xs text-muted-foreground">
+                    Loading programs…
+                  </td>
+                </tr>
+              ) : filteredCustom.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <Calendar className="mx-auto size-7 text-muted-foreground/40 mb-2" />
+                    <p className="text-xs font-medium text-ink">No special programs found</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Create an event, convention, or themed program with an attached date.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 text-xs"
+                      onClick={() => {
+                        resetForm();
+                        setCreateOpen(true);
+                      }}
+                    >
+                      <Plus className="size-3.5 mr-1" /> Create Program
+                    </Button>
+                  </td>
+                </tr>
+              ) : (
+                filteredCustom.map((s) => {
+                  const attendees = s.attendance[0]?.count ?? 0;
+                  const hasTarget = s.target_attendance && s.target_attendance > 0;
+                  return (
+                    <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="font-semibold text-ink">{s.name}</div>
+                        {s.theme && (
+                          <div className="text-xs text-primary font-medium mt-0.5">"{s.theme}"</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {formatAttachedDate(s.service_date)}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-ink">{s.speaker || "—"}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5 font-mono text-xs">
+                          <span className="font-bold text-ink">{attendees}</span>
+                          {hasTarget && (
+                            <span className="text-muted-foreground">/ {s.target_attendance}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleOpen.mutate({ id: s.id, is_open: !s.is_open })}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium hover:opacity-80"
+                          title="Toggle check-in status"
+                        >
+                          <span
+                            className={`size-2 rounded-full ${
+                              s.is_open ? "bg-emerald-500" : "bg-muted-foreground/40"
+                            }`}
+                          />
+                          <span
+                            className={
+                              s.is_open
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {s.is_open ? "Open" : "Closed"}
+                          </span>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs font-medium"
+                          >
+                            <Link
+                              to="/attendance"
+                              search={{ serviceId: s.id } as Record<string, unknown>}
+                            >
+                              Register <ArrowUpRight className="size-3 ml-1" />
+                            </Link>
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-foreground"
+                            title="Edit"
+                            onClick={() => openEdit(s)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+
+                          {liveOn && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              title="Stream link"
+                              onClick={() =>
+                                setLiveDialog({
+                                  id: s.id,
+                                  url: s.stream_url ?? "",
+                                  min: s.online_min_minutes ?? 20,
+                                })
+                              }
+                            >
+                              <Tv className="size-3.5" />
+                            </Button>
+                          )}
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:bg-destructive/10"
+                            title="Delete Program"
+                            onClick={() => setDeleteTarget(s)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Create / Edit Modal */}
       <Dialog
         open={createOpen || !!editing}
         onOpenChange={(open) => {
@@ -955,15 +950,15 @@ export function Services() {
               {editing
                 ? editing.is_default
                   ? `Edit ${editing.name}`
-                  : "Edit Service"
-                : "Create New Service"}
+                  : "Edit Program"
+                : "Create Program"}
             </DialogTitle>
             <DialogDescription>
               {editing
                 ? editing.is_default
-                  ? "Update minister, stream link, or target attendance for this default template."
-                  : "Update date, name, speaker, or details for this service."
-                : "Create a special service day or themed program. It will appear on your check-in page with its attached date."}
+                  ? "Update details, speaker, or target for this default weekly template."
+                  : "Update date, name, or speaker for this program."
+                : "Create a special program with an attached date for your church check-in."}
             </DialogDescription>
           </DialogHeader>
 
@@ -971,20 +966,20 @@ export function Services() {
             onSubmit={(e) => {
               e.preventDefault();
               if (editing) updateService.mutate();
-              else createCustomService.mutate();
+              else createService.mutate();
             }}
             className="space-y-4 pt-2"
           >
-            {/* Category selection (only when creating new service or editing custom service) */}
+            {/* Category selection */}
             {(!editing || !editing.is_default) && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Service Category</Label>
+                <Label className="text-xs font-semibold">Category</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { id: "sunday", label: "Sunday Themed", icon: "☀️" },
-                    { id: "midweek", label: "Midweek Special", icon: "📖" },
-                    { id: "prayer", label: "Prayer Vigil", icon: "🙏" },
-                    { id: "special", label: "Special Program", icon: "✨" },
+                    { id: "special", label: "Special Event" },
+                    { id: "sunday", label: "Sunday Themed" },
+                    { id: "midweek", label: "Midweek Special" },
+                    { id: "prayer", label: "Prayer Vigil" },
                   ].map((c) => (
                     <button
                       key={c.id}
@@ -992,13 +987,12 @@ export function Services() {
                       onClick={() =>
                         setFormCategory(c.id as "sunday" | "midweek" | "prayer" | "special")
                       }
-                      className={`rounded-xl border p-2.5 text-center text-xs font-semibold transition-all ${
+                      className={`rounded-lg border p-2 text-center text-xs font-medium transition-all ${
                         formCategory === c.id
-                          ? "border-primary bg-primary/10 text-primary shadow-sm"
-                          : "border-border/80 bg-muted/20 text-muted-foreground hover:bg-muted/50"
+                          ? "border-primary bg-primary/10 text-primary font-semibold"
+                          : "border-border/80 bg-muted/20 text-muted-foreground hover:bg-muted/40"
                       }`}
                     >
-                      <div className="text-base mb-0.5">{c.icon}</div>
                       {c.label}
                     </button>
                   ))}
@@ -1009,7 +1003,7 @@ export function Services() {
             {/* Service Name */}
             <div className="space-y-1.5">
               <Label htmlFor="srv-name" className="text-xs font-semibold">
-                Service / Program Name *
+                Program Name *
               </Label>
               <Input
                 id="srv-name"
@@ -1022,12 +1016,12 @@ export function Services() {
               />
             </div>
 
-            {/* Date attached (Only for newly created or custom services! NOT for default templates) */}
+            {/* Attached Date (Only for non-default services) */}
             {(!editing || !editing.is_default) && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="srv-date" className="text-xs font-semibold">
-                    Service Date *
+                    Attached Date *
                   </Label>
                   <Input
                     id="srv-date"
@@ -1037,12 +1031,6 @@ export function Services() {
                     onChange={(e) => setFormDate(e.target.value)}
                     className="h-10 rounded-xl font-mono text-sm"
                   />
-                  {formDate && (
-                    <p className="text-[11px] text-muted-foreground">
-                      Attached date:{" "}
-                      <strong className="text-ink">{formatAttachedDate(formDate)}</strong>
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -1051,7 +1039,7 @@ export function Services() {
                   </Label>
                   <Input
                     id="srv-theme"
-                    placeholder="e.g. Divine Speed, Night of Power"
+                    placeholder="e.g. Divine Acceleration"
                     value={formTheme}
                     onChange={(e) => setFormTheme(e.target.value)}
                     className="h-10 rounded-xl"
@@ -1060,7 +1048,7 @@ export function Services() {
               </div>
             )}
 
-            {/* Target and Speaker */}
+            {/* Speaker & Target */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="srv-speaker" className="text-xs font-semibold">
@@ -1068,7 +1056,7 @@ export function Services() {
                 </Label>
                 <Input
                   id="srv-speaker"
-                  placeholder="e.g. Pastor Paul, Guest Minister"
+                  placeholder="e.g. Pastor Paul"
                   value={formSpeaker}
                   onChange={(e) => setFormSpeaker(e.target.value)}
                   className="h-10 rounded-xl"
@@ -1083,7 +1071,7 @@ export function Services() {
                   id="srv-target"
                   type="number"
                   min={1}
-                  placeholder="e.g. 200"
+                  placeholder="e.g. 250"
                   value={formTarget}
                   onChange={(e) => setFormTarget(e.target.value)}
                   className="h-10 rounded-xl font-mono text-sm"
@@ -1091,10 +1079,10 @@ export function Services() {
               </div>
             </div>
 
-            {/* Description */}
+            {/* Notes */}
             <div className="space-y-1.5">
               <Label htmlFor="srv-desc" className="text-xs font-semibold">
-                Description / Notes (optional)
+                Notes / Description (optional)
               </Label>
               <Textarea
                 id="srv-desc"
@@ -1106,22 +1094,20 @@ export function Services() {
               />
             </div>
 
-            {/* Stream URL */}
+            {/* Stream Link */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="srv-stream" className="text-xs font-semibold">
-                  Watch Live Stream Link (optional)
+                  Live Stream URL (optional)
                 </Label>
                 {!liveOn && (
-                  <span className="text-[10px] text-amber-600 font-semibold">
-                    (Standard/Premium feature)
-                  </span>
+                  <span className="text-[10px] text-muted-foreground">Standard/Premium tier</span>
                 )}
               </div>
               <Input
                 id="srv-stream"
                 type="url"
-                placeholder="https://youtube.com/live/... or https://facebook.com/..."
+                placeholder="https://youtube.com/live/..."
                 value={formStreamUrl}
                 onChange={(e) => setFormStreamUrl(e.target.value)}
                 className="h-10 rounded-xl font-mono text-xs"
@@ -1142,17 +1128,17 @@ export function Services() {
               </Button>
               <Button
                 type="submit"
-                disabled={createCustomService.isPending || updateService.isPending}
+                disabled={createService.isPending || updateService.isPending}
                 className="font-semibold"
               >
-                {editing ? "Save Changes" : "Create Service"}
+                {editing ? "Save Changes" : "Create Program"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete / Safeguard Confirmation Dialog */}
+      {/* Delete Program Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
@@ -1163,28 +1149,24 @@ export function Services() {
                 </>
               ) : (
                 <>
-                  <Trash2 className="size-5 text-destructive" /> Delete Service
+                  <Trash2 className="size-5 text-destructive" /> Delete Program
                 </>
               )}
             </DialogTitle>
             <DialogDescription>
               {deleteTarget?.is_default ? (
                 <span>
-                  <strong>"{deleteTarget.name}"</strong> is a permanent church default template.
-                  Default services cannot be deleted so member check-in and QR codes remain
-                  reliable.
-                  <br />
-                  <br />
-                  If you want to temporarily disable check-ins, you can toggle it to{" "}
-                  <strong>Closed</strong>.
+                  <strong>"{deleteTarget.name}"</strong> is a permanent church default template. It
+                  cannot be deleted so member check-in stays reliable. You can toggle it to{" "}
+                  <strong>Closed</strong> to stop check-ins.
                 </span>
               ) : (
                 <span>
-                  Are you sure you want to delete the service{" "}
-                  <strong>"{deleteTarget?.name}"</strong> ({deleteTarget?.service_date})?
+                  Are you sure you want to delete <strong>"{deleteTarget?.name}"</strong> (
+                  {formatAttachedDate(deleteTarget?.service_date)})?
                   <br />
                   <br />
-                  This will remove the service and its attendance records. Member profiles remain
+                  This will remove the program and its attendance records. Member profiles remain
                   safe.
                 </span>
               )}
@@ -1205,7 +1187,7 @@ export function Services() {
                   }
                 }}
               >
-                <Lock className="size-3.5 mr-1.5" /> Close Service Instead
+                <Lock className="size-3.5 mr-1.5" /> Close Service
               </Button>
             ) : (
               <Button
@@ -1213,7 +1195,7 @@ export function Services() {
                 disabled={deleteService.isPending}
                 onClick={() => deleteTarget && deleteService.mutate(deleteTarget)}
               >
-                Delete Service
+                Delete Program
               </Button>
             )}
           </DialogFooter>
@@ -1245,9 +1227,7 @@ export function Services() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Minimum Watch Time to Count Attendance
-                </Label>
+                <Label className="text-xs font-semibold">Minimum Watch Time (Minutes)</Label>
                 <Input
                   type="number"
                   min={1}
@@ -1258,7 +1238,6 @@ export function Services() {
                   }
                   className="h-10 rounded-xl font-mono text-sm"
                 />
-                <span className="text-[11px] text-muted-foreground">Minutes</span>
               </div>
 
               <DialogFooter className="pt-2">
