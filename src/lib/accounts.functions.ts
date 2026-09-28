@@ -30,7 +30,7 @@ const schema = z.object({
  */
 export const inviteAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => schema.parse(data))
+  .validator((data: unknown) => schema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -169,7 +169,7 @@ export const inviteAccount = createServerFn({ method: "POST" })
  */
 export const updateAccountPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         tenant_id: z.string().uuid(),
@@ -238,7 +238,7 @@ export const updateAccountPermissions = createServerFn({ method: "POST" })
  */
 export const removeAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         tenant_id: z.string().uuid(),

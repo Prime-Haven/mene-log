@@ -58,7 +58,7 @@ export type ChurchSettingsData = z.infer<typeof churchSettingsSchema>;
  */
 export const saveChurchSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => churchSettingsSchema.parse(data))
+  .validator((data: unknown) => churchSettingsSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -131,7 +131,7 @@ export const saveChurchSettings = createServerFn({ method: "POST" })
  */
 export const resetWeeklyServices = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ tenant_id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ tenant_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -164,7 +164,7 @@ export const resetWeeklyServices = createServerFn({ method: "POST" })
  */
 export const clearTestAttendanceRecords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ tenant_id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ tenant_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
