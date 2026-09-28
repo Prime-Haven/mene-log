@@ -29,7 +29,8 @@ export type Feature =
   | "broadcasts"
   | "automations"
   | "audit"
-  | "import";
+  | "import"
+  | "support";
 
 export type Limit = "staff_seats" | "member_limit" | "daily_messages";
 
@@ -61,6 +62,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     watch_live: false,
     leader_hierarchy: false,
     import: false,
+    support: false,
     staff_seats: 1,
     member_limit: 150,
     daily_messages: 0,
@@ -90,6 +92,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     watch_live: false,
     leader_hierarchy: false,
     import: true,
+    support: false,
     staff_seats: 3,
     member_limit: 500,
     daily_messages: 200,
@@ -119,6 +122,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     watch_live: false,
     leader_hierarchy: false,
     import: true,
+    support: true,
     staff_seats: 10,
     member_limit: 3000,
     daily_messages: 1000,
@@ -148,6 +152,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     watch_live: true,
     leader_hierarchy: true,
     import: true,
+    support: true,
     staff_seats: 40,
     member_limit: 25000,
     daily_messages: 5000,
@@ -190,6 +195,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   automations: "Automatic messages",
   audit: "Activity log",
   import: "Bulk member import",
+  support: "Dedicated Helpdesk & Support Tickets",
 };
 
 /** The cheapest package that unlocks a capability. */

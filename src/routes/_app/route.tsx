@@ -183,6 +183,7 @@ const nav: NavItem[] = [
     icon: LifeBuoy,
     group: "Administration",
     show: (c) => c.isAdmin,
+    feature: "support",
   },
 ];
 

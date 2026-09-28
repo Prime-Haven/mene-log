@@ -6,6 +6,7 @@ import {
   date,
   timestamp,
   integer,
+  jsonb,
   pgEnum,
   customType,
 } from "drizzle-orm/pg-core";
@@ -59,6 +60,7 @@ export const tenants = pgTable("tenants", {
   groupVocabulary: text("group_vocabulary").notNull().default("Group"),
   parentTenantId: uuid("parent_tenant_id"),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  settings: jsonb("settings").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -84,6 +86,7 @@ export const tenantUsers = pgTable("tenant_users", {
   role: appRoleEnum("role").notNull(),
   branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   positionId: uuid("position_id"),
+  permissions: jsonb("permissions").notNull().default({}),
   status: accountStatusEnum("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

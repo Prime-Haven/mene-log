@@ -37,6 +37,9 @@ export type Membership = {
     absence_threshold: number;
     require_mfa: boolean;
     parent_tenant_id: string | null;
+    contact_phone?: string | null;
+    contact_email?: string | null;
+    settings?: Record<string, unknown> | null;
   };
 };
 
@@ -48,7 +51,7 @@ export function useTenant() {
       const { data, error } = await supabase
         .from("tenant_users")
         .select(
-          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, approval_reason, approval_risk_flags, correction_requested_at, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa, parent_tenant_id)",
+          "id, role, branch_id, position_id, tenant:tenants(id, name, subdomain, tier, status, approval_status, approval_reason, approval_risk_flags, correction_requested_at, trial_ends_at, extra_member_slots, logo_path, background_path, brand_primary, brand_accent, welcome_message, submit_button_text, group_vocabulary, reply_to_email, sms_sender_id, quiet_hour_start, quiet_hour_end, absence_threshold, require_mfa, parent_tenant_id, contact_phone, contact_email, settings)",
         )
         .eq("status", "active")
         .order("created_at", { ascending: true })

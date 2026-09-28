@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,15 +11,31 @@ import {
   UserCheck,
   CheckCircle2,
   UserX,
+  Sliders,
+  Settings,
+  Lock,
+  Trash2,
+  KeyRound,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant, type AppRole } from "@/hooks/useTenant";
-import { inviteAccount } from "@/lib/accounts.functions";
+import { inviteAccount, updateAccountPermissions, removeAccount } from "@/lib/accounts.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { planLabel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_app/accounts")({
@@ -29,10 +45,13 @@ export const Route = createFileRoute("/_app/accounts")({
       {
         name: "description",
         content:
-          "Invite administrators, branch managers, leaders and ushers with tiered permissions.",
+          "Manage team seats, administrators, leaders and ushers with customizable permissions.",
       },
       { property: "og:title", content: "Team Accounts — Mene:Log" },
-      { property: "og:description", content: "Manage staff roles and access for your church." },
+      {
+        property: "og:description",
+        content: "Manage staff roles and granular access for your church.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -41,12 +60,76 @@ export const Route = createFileRoute("/_app/accounts")({
   component: Accounts,
 });
 
+type StaffPermissions = {
+  can_manage_members: boolean;
+  can_manage_attendance: boolean;
+  can_scan_qr: boolean;
+  can_manage_services: boolean;
+  can_manage_followups: boolean;
+  can_view_reports: boolean;
+  can_send_messages: boolean;
+  can_manage_settings: boolean;
+};
+
+const DEFAULT_PERMISSIONS: Record<AppRole, StaffPermissions> = {
+  owner: {
+    can_manage_members: true,
+    can_manage_attendance: true,
+    can_scan_qr: true,
+    can_manage_services: true,
+    can_manage_followups: true,
+    can_view_reports: true,
+    can_send_messages: true,
+    can_manage_settings: true,
+  },
+  church_admin: {
+    can_manage_members: true,
+    can_manage_attendance: true,
+    can_scan_qr: true,
+    can_manage_services: true,
+    can_manage_followups: true,
+    can_view_reports: true,
+    can_send_messages: true,
+    can_manage_settings: false,
+  },
+  branch_admin: {
+    can_manage_members: true,
+    can_manage_attendance: true,
+    can_scan_qr: true,
+    can_manage_services: true,
+    can_manage_followups: true,
+    can_view_reports: true,
+    can_send_messages: false,
+    can_manage_settings: false,
+  },
+  leader: {
+    can_manage_members: true,
+    can_manage_attendance: true,
+    can_scan_qr: true,
+    can_manage_services: false,
+    can_manage_followups: true,
+    can_view_reports: false,
+    can_send_messages: false,
+    can_manage_settings: false,
+  },
+  usher: {
+    can_manage_members: false,
+    can_manage_attendance: true,
+    can_scan_qr: true,
+    can_manage_services: false,
+    can_manage_followups: false,
+    can_view_reports: false,
+    can_send_messages: false,
+    can_manage_settings: false,
+  },
+};
+
 const roleOptions: Array<{ value: AppRole; label: string; desc: string; tiers: string[] }> = [
   {
     value: "church_admin",
     label: "Church Admin",
-    desc: "Full administrative access to services, reports, and data",
-    tiers: ["standard", "premium"],
+    desc: "Full administrative access with customizable feature controls",
+    tiers: ["basic", "standard", "premium"],
   },
   {
     value: "branch_admin",
@@ -68,26 +151,56 @@ const roleOptions: Array<{ value: AppRole; label: string; desc: string; tiers: s
   },
 ];
 
+type AccountRow = {
+  id: string;
+  role: AppRole;
+  status: "active" | "suspended";
+  created_at: string;
+  position_id: string | null;
+  permissions?: Partial<StaffPermissions> | null;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+};
+
 export function Accounts() {
-  const { tenant, tier, membership } = useTenant();
+  const { tenant, tier, isOwner, isAdmin, membership, limit } = useTenant();
   const qc = useQueryClient();
   const invite = useServerFn(inviteAccount);
+  const updatePerms = useServerFn(updateAccountPermissions);
+  const removeAcc = useServerFn(removeAccount);
+
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AppRole>("usher");
   const [positionId, setPositionId] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
 
-  const { data: accounts, isLoading } = useQuery({
+  // Invite permissions customizer
+  const [customPermsOpen, setCustomPermsOpen] = useState(false);
+  const [invitePerms, setInvitePerms] = useState<StaffPermissions>(() => DEFAULT_PERMISSIONS.usher);
+
+  // Edit Permissions Dialog State
+  const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
+  const [editRole, setEditRole] = useState<AppRole>("usher");
+  const [editPerms, setEditPerms] = useState<StaffPermissions>(() => DEFAULT_PERMISSIONS.usher);
+
+  // Remove Account Dialog State
+  const [deleteAccountTarget, setDeleteAccountTarget] = useState<AccountRow | null>(null);
+
+  const { data: accounts = [], isLoading } = useQuery({
     queryKey: ["accounts", tenant?.id],
     enabled: !!tenant,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_users")
-        .select("id, role, status, created_at, position_id, profiles:user_id(full_name, email)")
+        .select(
+          "id, role, status, created_at, position_id, permissions, profiles:user_id(full_name, email)",
+        )
         .eq("tenant_id", tenant!.id)
         .order("created_at");
       if (error) throw error;
-      return data;
+      return (data as unknown as AccountRow[]) ?? [];
     },
   });
 
@@ -105,8 +218,24 @@ export function Accounts() {
     },
   });
 
+  // Allowed roles for current tier
+  const allowedRoles = roleOptions.filter((r) => r.tiers.includes(tier ?? "basic"));
+
+  // Seat calculations
+  const maxSeats = tier === "free" ? 1 : limit("staff_seats");
+  const activeCount = accounts.filter((a) => a.status === "active").length;
+  const isSeatLimitReached = activeCount >= maxSeats;
+
+  // Send invitation
   const send = useMutation({
     mutationFn: async () => {
+      if (isSeatLimitReached) {
+        throw new Error(
+          tier === "free"
+            ? "Free tier is restricted to 1 account. Upgrade to Standard to invite up to 2 team members."
+            : `You have reached your limit of ${maxSeats} accounts for the ${planLabel(tier)} package.`,
+        );
+      }
       const result = await invite({
         data: {
           tenant_id: tenant!.id,
@@ -114,19 +243,22 @@ export function Accounts() {
           role,
           branch_id: membership?.branch_id ?? null,
           position_id: positionId || null,
+          permissions: invitePerms,
         },
       });
       if (!result.ok) throw new Error(result.message);
       return result;
     },
     onSuccess: () => {
-      toast.success("Invitation sent successfully");
+      toast.success("Invitation sent successfully with assigned permissions");
       setEmail("");
+      setCustomPermsOpen(false);
       qc.invalidateQueries({ queryKey: ["accounts"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not invite account"),
   });
 
+  // Toggle active / suspended
   const setStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "active" | "suspended" }) => {
       const { error } = await supabase.from("tenant_users").update({ status }).eq("id", id);
@@ -139,9 +271,66 @@ export function Accounts() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update account"),
   });
 
-  const allowed = roleOptions.filter((r) => r.tiers.includes(tier ?? "basic"));
+  // Save edited permissions
+  const savePermissions = useMutation({
+    mutationFn: async () => {
+      if (!editingAccount || !tenant) return;
+      const res = await updatePerms({
+        data: {
+          tenant_id: tenant.id,
+          account_id: editingAccount.id,
+          role: editRole,
+          permissions: editPerms,
+        },
+      });
+      if (!res.ok) throw new Error(res.message);
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Team member permissions updated");
+      setEditingAccount(null);
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update permissions"),
+  });
 
-  const filteredAccounts = (accounts ?? []).filter((a) => {
+  // Remove account
+  const deleteAccount = useMutation({
+    mutationFn: async () => {
+      if (!deleteAccountTarget || !tenant) return;
+      const res = await removeAcc({
+        data: {
+          tenant_id: tenant.id,
+          account_id: deleteAccountTarget.id,
+        },
+      });
+      if (!res.ok) throw new Error(res.message);
+      return res;
+    },
+    onSuccess: () => {
+      toast.success("Account removed from church workspace");
+      setDeleteAccountTarget(null);
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove account"),
+  });
+
+  const handleRoleChange = (newRole: AppRole) => {
+    setRole(newRole);
+    setInvitePerms({ ...DEFAULT_PERMISSIONS[newRole] });
+  };
+
+  const handleOpenEdit = (acc: AccountRow) => {
+    setEditingAccount(acc);
+    setEditRole(acc.role);
+    const existing = (acc.permissions ?? {}) as Partial<StaffPermissions>;
+    setEditPerms({
+      ...DEFAULT_PERMISSIONS[acc.role],
+      ...existing,
+    });
+  };
+
+  const filteredAccounts = accounts.filter((a) => {
     if (filterRole === "all") return true;
     return a.role === filterRole;
   });
@@ -151,102 +340,290 @@ export function Accounts() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-eyebrow">Access Control</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">Staff & Team Accounts</h1>
+          <p className="text-eyebrow">Access Control & Staff</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">Team Accounts & Permissions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Members never log in. Only authorized staff and ushers can sign in to your church
-            workspace.
+            Church members never log in. Only appointed administrators, pastors, and ushers have
+            access.
           </p>
         </div>
 
-        <Badge
-          variant="outline"
-          className="border-primary/30 bg-primary/10 text-primary font-display font-semibold px-3 py-1 text-xs"
-        >
-          <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "basic")} Package
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge
+            variant="outline"
+            className="border-primary/30 bg-primary/10 text-primary font-display font-semibold px-3 py-1 text-xs"
+          >
+            <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "basic")} Package
+          </Badge>
+
+          <Badge
+            variant="secondary"
+            className={`font-mono text-xs px-3 py-1 font-semibold ${
+              isSeatLimitReached
+                ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                : "bg-muted text-foreground"
+            }`}
+          >
+            {activeCount} of {maxSeats} seats used
+          </Badge>
+        </div>
       </div>
 
-      {/* Invite Account Card */}
+      {/* Tier Seat Policy Overview Banner */}
+      {tier === "free" ? (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Lock className="size-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                Free Tier: Single Administrator Account
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The Free plan includes 1 owner login. Upgrade to Standard to invite up to 2
+                additional staff members (3 seats total), or Pro for 10 seats with customized
+                permissions.
+              </p>
+            </div>
+          </div>
+          {isOwner && (
+            <Link to="/billing">
+              <Button size="sm" className="font-semibold text-xs shrink-0">
+                <Sparkles className="size-3.5 mr-1.5" /> Upgrade Plan
+              </Button>
+            </Link>
+          )}
+        </div>
+      ) : tier === "basic" ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="font-bold text-foreground">Standard Tier Account Capacity:</span>{" "}
+            <span className="text-muted-foreground">
+              Up to 3 separate accounts (1 primary church owner + 2 additional team members). You
+              can customize permissions for each holder.
+            </span>
+          </div>
+          {isSeatLimitReached && isOwner && (
+            <Link to="/billing">
+              <Button size="sm" variant="outline" className="text-xs h-8">
+                Upgrade to Pro (10 seats)
+              </Button>
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="font-bold text-foreground">{planLabel(tier)} Package Capacity:</span>{" "}
+            <span className="text-muted-foreground">
+              Up to {maxSeats} team logins with granular permission delegation across members,
+              services, follow-ups, and reports.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Account Card (Available if seats remaining or admin) */}
       <div className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-4">
-        <div>
-          <h2 className="font-display text-base font-bold text-ink flex items-center gap-2">
-            <UserPlus className="size-4 text-primary" /> Invite Team Member
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Enter an email address and choose their role. They will receive an email invitation with
-            instructions to join.
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-base font-bold text-ink flex items-center gap-2">
+              <UserPlus className="size-4 text-primary" /> Invite Team Member
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Enter an email address, select their role, and optionally tailor the exact
+              capabilities they can access.
+            </p>
+          </div>
+
+          {tier !== "free" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs font-semibold h-8"
+              onClick={() => setCustomPermsOpen(!customPermsOpen)}
+            >
+              <Sliders className="size-3.5 mr-1.5 text-primary" />
+              {customPermsOpen ? "Hide Custom Permissions" : "Customize Permissions"}
+            </Button>
+          )}
         </div>
 
-        <form
-          className="grid gap-4 sm:grid-cols-[1.5fr_1.2fr_1fr_auto] sm:items-end"
-          onSubmit={(e) => {
-            e.preventDefault();
-            send.mutate();
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="iemail" className="text-xs font-semibold">
-              Email Address *
-            </Label>
-            <Input
-              id="iemail"
-              type="email"
-              placeholder="e.g. usher@church.org"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-10 rounded-xl"
-            />
+        {tier === "free" ? (
+          <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground space-y-2">
+            <p>Additional team accounts are unavailable on the Free package.</p>
+            {isOwner && (
+              <Link to="/billing">
+                <Button size="sm" variant="outline" className="font-semibold text-xs">
+                  Upgrade to Standard to invite team members
+                </Button>
+              </Link>
+            )}
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="irole" className="text-xs font-semibold">
-              Assigned Role *
-            </Label>
-            <select
-              id="irole"
-              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
-              value={role}
-              onChange={(e) => setRole(e.target.value as AppRole)}
-            >
-              {allowed.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="ipos" className="text-xs font-semibold">
-              Group / Cell (Leaders only)
-            </Label>
-            <select
-              id="ipos"
-              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium disabled:opacity-50 focus:ring-2 focus:ring-primary/20"
-              value={positionId}
-              onChange={(e) => setPositionId(e.target.value)}
-              disabled={role !== "leader"}
-            >
-              <option value="">None / Unassigned</option>
-              {(positions ?? []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.group_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={send.isPending || !email.trim()}
-            className="h-10 rounded-xl font-semibold px-5"
+        ) : (
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              send.mutate();
+            }}
           >
-            <UserPlus className="size-4 mr-1.5" /> Invite
-          </Button>
-        </form>
+            <div className="grid gap-4 sm:grid-cols-[1.5fr_1.2fr_1fr_auto] sm:items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="iemail" className="text-xs font-semibold">
+                  Email Address *
+                </Label>
+                <Input
+                  id="iemail"
+                  type="email"
+                  placeholder="e.g. pastor.john@church.org"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isSeatLimitReached}
+                  className="h-10 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="irole" className="text-xs font-semibold">
+                  Assigned Role *
+                </Label>
+                <select
+                  id="irole"
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20"
+                  value={role}
+                  onChange={(e) => handleRoleChange(e.target.value as AppRole)}
+                  disabled={isSeatLimitReached}
+                >
+                  {allowedRoles.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="ipos" className="text-xs font-semibold">
+                  Cell / Group (Leaders only)
+                </Label>
+                <select
+                  id="ipos"
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium disabled:opacity-50 focus:ring-2 focus:ring-primary/20"
+                  value={positionId}
+                  onChange={(e) => setPositionId(e.target.value)}
+                  disabled={role !== "leader" || isSeatLimitReached}
+                >
+                  <option value="">None / Unassigned</option>
+                  {(positions ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.group_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={send.isPending || !email.trim() || isSeatLimitReached}
+                className="h-10 rounded-xl font-semibold px-5"
+              >
+                <UserPlus className="size-4 mr-1.5" /> Invite
+              </Button>
+            </div>
+
+            {/* Granular Permissions Section */}
+            {customPermsOpen && (
+              <div className="p-4 rounded-xl border bg-muted/20 space-y-3">
+                <p className="text-xs font-bold text-foreground">
+                  Custom Permissions for this invitation:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_manage_members}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_manage_members: Boolean(v) }))
+                      }
+                    />
+                    <span>Manage Members & Profiles</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_manage_attendance}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_manage_attendance: Boolean(v) }))
+                      }
+                    />
+                    <span>Attendance Records & CRUD</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_scan_qr}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_scan_qr: Boolean(v) }))
+                      }
+                    />
+                    <span>QR Scanner & Manual Entry</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_manage_services}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_manage_services: Boolean(v) }))
+                      }
+                    />
+                    <span>Services & Special Programs</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_manage_followups}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_manage_followups: Boolean(v) }))
+                      }
+                    />
+                    <span>First-timer & Pastoral Care</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_view_reports}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_view_reports: Boolean(v) }))
+                      }
+                    />
+                    <span>View Attendance Reports</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_send_messages}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_send_messages: Boolean(v) }))
+                      }
+                    />
+                    <span>Send Emails & Broadcasts</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={invitePerms.can_manage_settings}
+                      onCheckedChange={(v) =>
+                        setInvitePerms((p) => ({ ...p, can_manage_settings: Boolean(v) }))
+                      }
+                    />
+                    <span>Church Branding & Settings</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Role Explanations */}
@@ -295,8 +672,8 @@ export function Accounts() {
               onChange={(e) => setFilterRole(e.target.value)}
               className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs font-medium"
             >
-              <option value="all">All Roles ({(accounts ?? []).length})</option>
-              <option value="owner">Owners</option>
+              <option value="all">All Roles ({accounts.length})</option>
+              <option value="owner">Church Owner</option>
               <option value="church_admin">Church Admins</option>
               <option value="branch_admin">Branch Admins</option>
               <option value="leader">Leaders</option>
@@ -318,24 +695,69 @@ export function Accounts() {
         ) : (
           <ul className="divide-y divide-border/60">
             {filteredAccounts.map((a) => {
-              const profile = a.profiles as unknown as {
-                full_name: string | null;
-                email: string | null;
-              } | null;
+              const profile = a.profiles;
+              const isChurchOwner = a.role === "owner";
+              const userPerms = a.permissions as Partial<StaffPermissions> | null;
 
               return (
                 <li
                   key={a.id}
-                  className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-muted/20 transition-colors"
+                  className="flex flex-wrap items-center justify-between gap-4 p-4 hover:bg-muted/20 transition-colors"
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm text-foreground">
-                      {profile?.full_name || profile?.email || "Invited User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{profile?.email}</p>
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm text-foreground">
+                        {profile?.full_name || profile?.email || "Invited User"}
+                      </p>
+                      {isChurchOwner && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold"
+                        >
+                          Account Owner
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{profile?.email}</p>
+
+                    {/* Permissions tags */}
+                    {!isChurchOwner && userPerms && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        {userPerms.can_manage_members && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Members
+                          </span>
+                        )}
+                        {userPerms.can_manage_attendance && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Attendance
+                          </span>
+                        )}
+                        {userPerms.can_scan_qr && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Scanner
+                          </span>
+                        )}
+                        {userPerms.can_manage_services && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Services
+                          </span>
+                        )}
+                        {userPerms.can_manage_followups && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Follow-ups
+                          </span>
+                        )}
+                        {userPerms.can_view_reports && (
+                          <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-foreground">
+                            Reports
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <Badge
                       variant="secondary"
                       className="capitalize text-xs font-semibold px-2.5 py-1"
@@ -354,10 +776,23 @@ export function Accounts() {
                       {a.status}
                     </Badge>
 
-                    {a.role !== "owner" && (
+                    {/* Edit Permissions button for non-owners */}
+                    {!isChurchOwner && isOwner && (
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-8 text-xs font-semibold gap-1.5"
+                        onClick={() => handleOpenEdit(a)}
+                      >
+                        <Sliders className="size-3.5 text-primary" />
+                        Permissions
+                      </Button>
+                    )}
+
+                    {!isChurchOwner && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="h-8 text-xs font-semibold"
                         onClick={() =>
                           setStatus.mutate({
@@ -369,6 +804,17 @@ export function Accounts() {
                         {a.status === "active" ? "Suspend" : "Restore"}
                       </Button>
                     )}
+
+                    {!isChurchOwner && isOwner && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteAccountTarget(a)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </li>
               );
@@ -376,6 +822,223 @@ export function Accounts() {
           </ul>
         )}
       </div>
+
+      {/* Edit Permissions Modal */}
+      <Dialog open={!!editingAccount} onOpenChange={(open) => !open && setEditingAccount(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-5 text-primary" />
+              Manage Account Permissions
+            </DialogTitle>
+            <DialogDescription>
+              Control the specific capabilities and system access for{" "}
+              <strong className="text-foreground">
+                {editingAccount?.profiles?.full_name || editingAccount?.profiles?.email}
+              </strong>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Assigned Role</Label>
+              <select
+                className="h-9 w-full rounded-lg border border-input bg-background px-3 text-xs font-medium"
+                value={editRole}
+                onChange={(e) => {
+                  const newR = e.target.value as AppRole;
+                  setEditRole(newR);
+                  setEditPerms((prev) => ({
+                    ...prev,
+                    ...DEFAULT_PERMISSIONS[newR],
+                  }));
+                }}
+              >
+                {allowedRoles.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2 border-t pt-3">
+              <Label className="text-xs font-semibold text-foreground">
+                Granular Permissions & Feature Access
+              </Label>
+              <div className="space-y-2.5 text-xs">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_manage_members}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_manage_members: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Manage Members & Profiles</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Add, view, edit member records and download rosters.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_manage_attendance}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_manage_attendance: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Attendance Register & CRUD</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Mark present, delete attendance records, and add quick walk-ins.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_scan_qr}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_scan_qr: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      QR Scanner & Member Code Check-in
+                    </p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Use device camera to scan member codes at the door.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_manage_services}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_manage_services: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Services & Special Programs</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Create conferences, edit themes, speakers, and close services.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_manage_followups}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_manage_followups: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">First-timer & Pastoral Care</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Log member care interactions and follow-up notes.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_view_reports}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_view_reports: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Analytics & Reports</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      View church growth, attendance retention, and demographic trends.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_send_messages}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_send_messages: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Broadcast Messaging</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Compose and send email and SMS broadcasts to congregation.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={editPerms.can_manage_settings}
+                    onCheckedChange={(v) =>
+                      setEditPerms((p) => ({ ...p, can_manage_settings: Boolean(v) }))
+                    }
+                  />
+                  <div>
+                    <p className="font-semibold text-foreground">Church Settings & Branding</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Update church contact details, logo, colors, and vocabulary.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setEditingAccount(null)}>
+              Cancel
+            </Button>
+            <Button disabled={savePermissions.isPending} onClick={() => savePermissions.mutate()}>
+              {savePermissions.isPending ? "Saving…" : "Save Permissions"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete / Revoke Account Confirmation Dialog */}
+      <Dialog
+        open={!!deleteAccountTarget}
+        onOpenChange={(open) => !open && setDeleteAccountTarget(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="size-5" />
+              Remove Team Member?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove{" "}
+              <strong>
+                {deleteAccountTarget?.profiles?.full_name || deleteAccountTarget?.profiles?.email}
+              </strong>{" "}
+              from your church workspace? They will immediately lose login access. Their attendance
+              logs and created records will remain in the database.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => setDeleteAccountTarget(null)}>
+              Keep Account
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteAccount.isPending}
+              onClick={() => deleteAccount.mutate()}
+            >
+              {deleteAccount.isPending ? "Removing…" : "Yes, Remove Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

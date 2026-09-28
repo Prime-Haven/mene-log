@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useTenant } from "@/hooks/useTenant";
+import { UpgradePanel } from "@/components/FeatureGate";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,7 +106,7 @@ function formatDate(iso: string) {
 }
 
 export function ChurchSupportPage() {
-  const { tenant, isAdmin } = useTenant();
+  const { tenant, isAdmin, isOwner, can } = useTenant();
   const qc = useQueryClient();
 
   const fetchTicketsFn = useServerFn(listChurchTickets);
@@ -137,7 +138,7 @@ export function ChurchSupportPage() {
   // Query tickets
   const { data: tickets = [], isLoading: isLoadingTickets } = useQuery({
     queryKey: ["church-support-tickets", tenant?.id],
-    enabled: !!tenant?.id && isAdmin,
+    enabled: !!tenant?.id && isAdmin && can("support"),
     queryFn: async () => {
       if (!tenant?.id) return [];
       const headers = await getAuthHeader();
@@ -217,6 +218,10 @@ export function ChurchSupportPage() {
       toast.error(err instanceof Error ? err.message : "Failed to send reply");
     },
   });
+
+  if (!can("support")) {
+    return <UpgradePanel feature="support" canUpgrade={isOwner} />;
+  }
 
   if (!isAdmin) {
     return (
