@@ -12,8 +12,14 @@ const textOf = (message: UIMessage) =>
     .trim();
 
 function userClient(token: string) {
-  const url = process.env["SUPABASE_URL"];
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+  const url =
+    process.env["SUPABASE_URL"] ||
+    process.env["VITE_SUPABASE_URL"] ||
+    "https://pmkimlbvdzgduxgxucsx.supabase.co";
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    "sb_publishable_UWtwnrZyj1q_4jHqR4517w_yt1pXFUQ";
   if (!url || !key) throw new Error("Data service is unavailable");
   return createClient<Database>(url, key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
