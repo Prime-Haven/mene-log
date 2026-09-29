@@ -505,7 +505,7 @@ function CheckIn() {
                   const d =
                     parts.length === 3
                       ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
-                      : new Date(service.service_date);
+                      : new Date(service.service_date ?? "");
                   const dateStr = !isNaN(d.getTime())
                     ? d.toLocaleDateString("en-US", {
                         month: "short",

@@ -262,7 +262,7 @@ export function Services() {
         updateData.service_type = formCategory;
       }
 
-      const { error } = await supabase.from("services").update(updateData).eq("id", editing.id);
+      const { error } = await supabase.from("services").update(updateData as never).eq("id", editing.id);
       if (error) throw error;
     },
     onSuccess: () => {

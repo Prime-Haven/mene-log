@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   UserPlus,
@@ -76,7 +76,7 @@ type StaffPermissions = {
   can_manage_settings: boolean;
 };
 
-const DEFAULT_PERMISSIONS: Record<AppRole, StaffPermissions> = {
+const DEFAULT_PERMISSIONS = {
   owner: {
     can_manage_members: true,
     can_manage_attendance: true,

@@ -328,7 +328,6 @@ export const requestBranch = createServerFn({ method: "POST" })
     const db = await adminDb();
     const ip = (
       getRequestHeader("cf-connecting-ip") ??
-      getRequestHeader("x-forwarded-for") ??
       "unknown"
     )
       .split(",")[0]!

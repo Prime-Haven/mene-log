@@ -427,7 +427,7 @@ export function AttendanceRegister() {
                   const d =
                     parts.length === 3
                       ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
-                      : new Date(s.service_date);
+                      : new Date(s.service_date ?? "");
                   const dateStr = !isNaN(d.getTime())
                     ? d.toLocaleDateString("en-US", {
                         month: "short",

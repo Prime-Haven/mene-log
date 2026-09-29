@@ -338,7 +338,6 @@ export const supportOperatorSignIn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const ip = (
       getRequestHeader("cf-connecting-ip") ??
-      getRequestHeader("x-forwarded-for") ??
       "unknown"
     )
       .split(",")[0]!
@@ -399,7 +398,8 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         search: z.string().optional(),
       })
       .optional()
-      .default({}),
+      .default({})
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertSupportOperator(context.userId);
