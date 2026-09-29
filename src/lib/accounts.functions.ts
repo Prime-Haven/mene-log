@@ -216,7 +216,7 @@ export const updateAccountPermissions = createServerFn({ method: "POST" })
 
     const { error: updateError } = await supabaseAdmin
       .from("tenant_users")
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq("id", data.account_id)
       .eq("tenant_id", data.tenant_id);
 

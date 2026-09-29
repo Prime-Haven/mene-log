@@ -110,7 +110,7 @@ export const saveChurchSettings = createServerFn({ method: "POST" })
 
     const { error } = await supabaseAdmin
       .from("tenants")
-      .update(updatePayload)
+      .update(updatePayload as never)
       .eq("id", data.tenant_id);
 
     if (error) throw error;
