@@ -297,7 +297,7 @@ function Onboarding() {
 
       await qc.invalidateQueries({ queryKey: ["membership"] });
       setSubmitted("complete");
-      toast.success("Your 14-day trial is ready and your church was submitted for approval.");
+      toast.success("Your 30-day trial is ready and your church was submitted for approval.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not complete onboarding");
     } finally {
@@ -322,14 +322,14 @@ function Onboarding() {
             {submitted === "verification" ? (
               <>
                 We sent a verification link to <b className="text-foreground">{email}</b>. Your
-                church and 14-day trial will be created after you confirm it.
+                church and 30-day trial will be created after you confirm it.
               </>
             ) : (
               <>
                 Your account for <b className="text-foreground">{churchName}</b> is now on a{" "}
                 {(tier as string) === "free"
                   ? "Free plan"
-                  : `14-day ${tierCopy.find((x) => x.id === tier)?.name ?? ""} trial`}{" "}
+                  : `30-day ${tierCopy.find((x) => x.id === tier)?.name ?? ""} trial`}{" "}
                 and has been submitted for approval.
               </>
             )}
@@ -386,7 +386,7 @@ function Onboarding() {
           Set up your church on Mene:Log
         </h1>
         <p className="mt-3 max-w-xl text-sm text-deep-foreground/70">
-          Four focused steps, then your 14-day trial begins. Pay from Billing when you are ready.
+          Four focused steps, then your 30-day trial begins. Pay from Billing when you are ready.
         </p>
 
         {/* Progress Bar */}
@@ -669,7 +669,7 @@ function Onboarding() {
                   </div>
                 ) : (
                   <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                    <p className="font-semibold">14-day {selectedTier.name} trial</p>
+                    <p className="font-semibold">30-day {selectedTier.name} trial</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       No payment is collected now. Your price will be{" "}
                       {interval === "yearly"
@@ -707,7 +707,7 @@ function Onboarding() {
                   ? "Continue"
                   : (tier as string) === "free"
                     ? "Create free account"
-                    : "Start 14-day trial"}
+                    : "Start 30-day trial"}
               {!busy && <ArrowRight className="size-4" />}
             </Button>
           </div>

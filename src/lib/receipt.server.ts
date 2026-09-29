@@ -122,7 +122,96 @@ export async function sendReceiptOnce(
       _target: opts.reference,
       _detail: { to: opts.to },
     });
+
+    // Alert Prime Haven operations desk
+    await sendReceipt({
+      ...opts,
+      to: "primehaven26@gmail.com",
+      churchName: tenant?.name ?? "Your church",
+      renewsOn: opts.kind === "subscription" ? (sub?.period_end ?? null) : null,
+    }).catch((e) => console.error("[receipt] Prime Haven alert copy failed:", e));
   } else {
     console.error("receipt_send_failed", result.error);
   }
+}
+
+/** Sends an alert when a payment fails or charge is rejected, alerting both the church and primehaven26@gmail.com */
+export async function sendPaymentFailedAlert(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  opts: {
+    tenantId?: string | null;
+    reference: string;
+    to?: string | null;
+    churchName?: string | null;
+    amountMinor?: number | null;
+    currency?: string | null;
+    reason?: string | null;
+  },
+) {
+  const operEmail = "primehaven26@gmail.com";
+  let church = opts.churchName;
+  let churchEmail = opts.to;
+
+  if (opts.tenantId && (!church || !churchEmail)) {
+    const { data: t } = await admin
+      .from("tenants")
+      .select("name, contact_email")
+      .eq("id", opts.tenantId)
+      .maybeSingle();
+    if (t) {
+      if (!church) church = t.name;
+      if (!churchEmail) churchEmail = t.contact_email;
+    }
+  }
+
+  const safeChurch = esc(church || "Church Account");
+  const safeReason = esc(
+    opts.reason || "Payment authorization or provider deduction was declined.",
+  );
+  const billingUrl = `${SITE}/billing`;
+
+  const html = `<!doctype html><html><body style="margin:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:24px 0"><tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;border:1px solid #fee2e2;border-radius:14px;overflow:hidden">
+<tr><td style="background:#0b0f19;padding:22px 28px"><img src="${SITE}/favicon.png" width="36" height="36" alt="Mene:Log" style="vertical-align:middle;border-radius:8px"/>
+<span style="color:#ffffff;font-size:20px;font-weight:700;vertical-align:middle;margin-left:10px">Mene:Log</span></td></tr>
+<tr><td style="padding:28px 28px 6px"><p style="margin:0;color:#ef4444;font-size:12px;font-weight:700;letter-spacing:2px">PAYMENT UNSUCCESSFUL</p>
+<h1 style="margin:8px 0 4px;font-size:24px;color:#0f172a">Payment could not be completed</h1>
+<p style="margin:0;color:#64748b;font-size:14px">Payment attempt for ${safeChurch}</p></td></tr>
+<tr><td style="padding:16px 28px">
+<p style="font-size:14px;color:#334155;line-height:1.6">A payment attempt for <strong>${safeChurch}</strong> did not clear successfully.</p>
+<div style="background:#fef2f2;border:1px solid #fecaca;padding:14px 18px;border-radius:10px;margin:18px 0;font-size:13px;color:#991b1b">
+  <strong>Reference:</strong> ${esc(opts.reference)}<br/>
+  <strong>Reason:</strong> ${safeReason}
+</div>
+<p style="font-size:14px;color:#334155;line-height:1.6">All your church records and attendance history remain completely safe. You can retry the payment or use an alternate payment method (Mobile Money or Debit Card) by clicking below.</p>
+<div style="text-align:center;margin:28px 0 12px">
+  <a href="${billingUrl}" style="background:#2563eb;color:#ffffff;padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px;display:inline-block">Open Billing & Retry Payment &rarr;</a>
+</div>
+</td></tr>
+<tr><td style="background:#f8fafc;padding:18px 28px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b;text-align:center">
+Mene:Log Subscriptions Desk · Contact support@menelog.site if you need any assistance.
+</td></tr>
+</table></td></tr></table></body></html>`;
+
+  // 1. Send alert to church admin if email known
+  if (churchEmail) {
+    await sendEmail({
+      to: churchEmail,
+      subject: `[Mene:Log] Payment Unsuccessful for ${church || "Your Church"}`,
+      html,
+      fromName: "Mene:Log Subscriptions",
+      replyTo: "support@menelog.site",
+    }).catch((e) => console.error("[payment-failed] Church email alert failed:", e));
+  }
+
+  // 2. Alert Prime Haven operations desk
+  await sendEmail({
+    to: operEmail,
+    subject: `[Payment Failed Alert] ${church || "Church"} (${opts.reference})`,
+    html,
+    fromName: "Mene:Log Billing Desk",
+    replyTo: "support@menelog.site",
+  }).catch((e) => console.error("[payment-failed] Operator email alert failed:", e));
 }

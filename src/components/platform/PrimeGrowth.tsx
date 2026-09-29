@@ -103,7 +103,7 @@ export function PrimeGrowth({ d }: { d: Snapshot }) {
             <span className="text-sm font-normal text-muted-foreground">(30d) · {new90} (90d)</span>
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {trialChurches.length} currently on active 14-day trials
+            {trialChurches.length} currently on active 30-day trials
           </p>
         </div>
 

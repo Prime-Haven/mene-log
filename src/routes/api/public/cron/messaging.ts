@@ -27,6 +27,13 @@ export const Route = createFileRoute("/api/public/cron/messaging")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { processQueue } = await import("@/lib/queue.server");
+        const { checkAndSendTrialExpiryAlerts } = await import("@/lib/trial-alerts.server");
+
+        // Send 30-day trial expiration warnings (7 days, 3 days, and on expiry)
+        const trialAlerts = await checkAndSendTrialExpiryAlerts(supabaseAdmin).catch((e) => {
+          console.error("[cron] trial alerts failed", e);
+          return { checked: 0, sent: 0 };
+        });
 
         // Trials that ended without payment drop to Free forever (no-op until premium-upgrade.sql is run).
         await (supabaseAdmin.rpc as unknown as (f: string) => Promise<unknown>)(
@@ -43,6 +50,7 @@ export const Route = createFileRoute("/api/public/cron/messaging")({
             queued: automations ?? null,
             sent: drained.sent,
             failed: drained.failed,
+            trialAlertsSent: trialAlerts.sent,
             automationsError: error ? true : undefined,
           },
           { status: error ? 500 : 200 },

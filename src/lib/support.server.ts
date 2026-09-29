@@ -172,6 +172,52 @@ export async function sendSupportNotificationAlert(options: {
 }
 
 /**
+ * Sends an instant SMS alert via Arkesel to +233550160237 and the church's contact phone number
+ * using the "Mene Log" sender ID whenever a support ticket is created.
+ */
+export async function sendSupportTicketSmsAlert(options: {
+  ticketId: string;
+  churchName: string;
+  churchPhone?: string | null;
+  subject: string;
+  priority: string;
+}) {
+  try {
+    const { sendSms, smsConfigured } = await import("./messaging.server");
+    if (!smsConfigured()) {
+      console.warn("[support-sms] SMS service is not configured (missing Arkesel key)");
+      return;
+    }
+
+    const hotline = "+233550160237";
+    const priorityTag =
+      options.priority === "urgent" || options.priority === "high"
+        ? `[${options.priority.toUpperCase()}] `
+        : "";
+    const hotlineMsg = `[Mene:Log Support] ${priorityTag}New ticket from ${options.churchName}: "${options.subject.slice(0, 50)}". ID: ${options.ticketId.slice(0, 8)}`;
+
+    // 1. Send SMS to prime support hotline (+233550160237)
+    await sendSms({
+      to: hotline,
+      body: hotlineMsg,
+      sender: "Mene Log",
+    }).catch((e) => console.error("[support-sms] Hotline SMS dispatch failed:", e));
+
+    // 2. Send SMS to church contact phone if provided
+    if (options.churchPhone && options.churchPhone.replace(/[^\d+]/g, "").length >= 9) {
+      const churchMsg = `[Mene:Log Support] We received your ticket "${options.subject.slice(0, 45)}". Our team is reviewing it. Reply at menelog.site/support`;
+      await sendSms({
+        to: options.churchPhone,
+        body: churchMsg,
+        sender: "Mene Log",
+      }).catch((e) => console.error("[support-sms] Church SMS dispatch failed:", e));
+    }
+  } catch (err) {
+    console.error("[support-sms] Error dispatching support ticket SMS:", err);
+  }
+}
+
+/**
  * Sends a real-time email alert to primehaven26@gmail.com whenever a new church
  * registers or completes onboarding on Mene:Log.
  */
@@ -272,6 +318,118 @@ export async function sendNewChurchSignupAlert(options: {
     console.error("[signup alert] Failed to send new church notification email:", err);
     return { ok: false, error: String(err) };
   }
+}
+
+/**
+ * Sends an email alert to the main/head office church administrator whenever a branch
+ * church registers on the check-in page.
+ */
+export async function sendBranchSignupAlertToHeadOffice(options: {
+  headOfficeName: string;
+  headOfficeEmail?: string | null;
+  branchName: string;
+  branchSubdomain: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string | null;
+}) {
+  const branchesUrl = `${SITE_URL}/branches`;
+  const safeHead = options.headOfficeName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeBranch = options.branchName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeLeader = options.contactName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeEmail = options.contactEmail.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safePhone = (options.contactPhone || "Not specified").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const emailSubject = `[Branch Registration] New Branch Registered: ${options.branchName} - Action Required`;
+
+  const html = `<!doctype html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="margin:0;background:#0b0f19;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#f1f5f9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#111827;border:1px solid #1f2937;border-radius:16px;overflow:hidden">
+          <tr>
+            <td style="background:#030712;padding:20px 24px;border-bottom:1px solid #1f2937">
+              <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.02em">${safeHead} · Branch Management</span>
+              <span style="float:right;display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:9999px;background:#3b82f622;color:#3b82f6;border:1px solid #3b82f666">
+                BRANCH REGISTRATION
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px">
+              <p style="margin:0 0 6px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600">
+                New Branch Church Request
+              </p>
+              <h2 style="margin:0 0 16px;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3">
+                ${safeBranch}
+              </h2>
+              <p style="margin:0 0 20px;color:#d1d5db;font-size:14px;line-height:1.6">
+                A new branch has submitted a registration to be linked under <strong>${safeHead}</strong>. As the head church administrator, please review and approve or manage this branch in your console.
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1f2937;border-radius:10px;padding:14px;margin-bottom:20px">
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px;width:130px">Branch Name:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px;font-weight:600">${safeBranch}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Proposed URL:</td>
+                  <td style="padding:6px 0;color:#60a5fa;font-size:13px;font-family:monospace">menelog.site/c/${options.branchSubdomain}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Branch Leader:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safeLeader}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Leader Email:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safeEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Contact Phone:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safePhone}</td>
+                </tr>
+              </table>
+
+              <div style="text-align:center;margin-top:24px">
+                <a href="${branchesUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">
+                  Review & Approve Branch in Console &rarr;
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#090d16;padding:16px 24px;border-top:1px solid #1f2937;font-size:12px;color:#6b7280;text-align:center">
+              Mene:Log Multi-Campus Platform · ${options.headOfficeEmail || "support@menelog.site"}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  // 1. Send to head office email if available
+  if (options.headOfficeEmail) {
+    await sendEmail({
+      to: options.headOfficeEmail,
+      subject: emailSubject,
+      html,
+      fromName: "Mene:Log Branch Network",
+      replyTo: "support@menelog.site",
+    }).catch((e) => console.error("[branch-alert] Head office email failed:", e));
+  }
+
+  // 2. Alert Prime Haven desk
+  await sendEmail({
+    to: "primehaven26@gmail.com",
+    subject: `[Prime Haven Alert] ${emailSubject}`,
+    html,
+    fromName: "Mene:Log Branch Desk",
+    replyTo: "support@menelog.site",
+  }).catch((e) => console.error("[branch-alert] Prime Haven email failed:", e));
 }
 
 /**

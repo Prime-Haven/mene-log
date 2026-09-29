@@ -209,7 +209,7 @@ export function Billing() {
           </p>
           <p className="mt-1.5 text-xs text-muted-foreground">
             {trialActive
-              ? "14-day full feature trial"
+              ? "30-day full feature trial"
               : sub?.auto_renew
                 ? "Auto-renewal enabled"
                 : "Manual renewal each period"}
@@ -233,7 +233,7 @@ export function Billing() {
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm flex items-start gap-3">
           <Sparkles className="size-5 shrink-0 text-primary mt-0.5" />
           <div>
-            <p className="font-semibold text-foreground">Your 14-day trial is currently active</p>
+            <p className="font-semibold text-foreground">Your 30-day trial is currently active</p>
             <p className="mt-0.5 text-muted-foreground">
               Explore all features freely. Select and activate your package below before the trial
               period concludes to ensure seamless continuity.

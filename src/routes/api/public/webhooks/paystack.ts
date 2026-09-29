@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { intervalFromReference } from "@/lib/pricing";
-import { sendReceiptOnce } from "@/lib/receipt.server";
+import { sendReceiptOnce, sendPaymentFailedAlert } from "@/lib/receipt.server";
 
 /**
  * Paystack webhook. Every request is verified with an HMAC-SHA512 signature over
@@ -29,6 +29,7 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
           data?: {
             reference?: string;
             status?: string;
+            gateway_response?: string;
             channel?: string;
             paid_at?: string;
             amount?: number;
@@ -52,11 +53,26 @@ export const Route = createFileRoute("/api/public/webhooks/paystack")({
           return new Response("Bad payload", { status: 400 });
         }
 
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Handle payment failures: alert church administrator and primehaven26@gmail.com
+        if (event.event === "charge.failed" || event.event === "invoice.payment_failed") {
+          if (event.data?.reference) {
+            await sendPaymentFailedAlert(supabaseAdmin, {
+              tenantId: event.data.metadata?.tenant_id,
+              reference: event.data.reference,
+              to: event.data.customer?.email,
+              amountMinor: event.data.amount,
+              currency: event.data.currency,
+              reason: event.data.gateway_response || event.data.status,
+            });
+          }
+          return new Response("handled_failed");
+        }
+
         if (event.event !== "charge.success" || !event.data?.reference) {
           return new Response("ignored");
         }
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         if (event.data.metadata?.kind === "space") {
           const { error } = await supabaseAdmin.rpc("apply_space_purchase", {

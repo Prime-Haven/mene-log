@@ -18,6 +18,7 @@ import {
   generateInstantSupportResponse,
   getOperatorSupportRole,
   sendSupportNotificationAlert,
+  sendSupportTicketSmsAlert,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "./support.server";
@@ -66,10 +67,10 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
     const db = await admin();
     await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
 
-    // Get tenant details for alert email
+    // Get tenant details for alert email & SMS
     const { data: tenant } = await db
       .from("tenants")
-      .select("name, contact_email")
+      .select("name, contact_email, contact_phone")
       .eq("id", data.tenant_id)
       .maybeSingle();
 
@@ -138,6 +139,15 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       messageSnippet: data.description,
       submittedByEmail: tenant?.contact_email,
     }).catch((err) => console.error("[support alert] email error:", err));
+
+    // Fire SMS alert to +233550160237 and church phone asynchronously with 'Mene Log' sender ID
+    sendSupportTicketSmsAlert({
+      ticketId: ticket.id,
+      churchName,
+      churchPhone: tenant?.contact_phone,
+      subject: data.subject,
+      priority: data.priority,
+    }).catch((err) => console.error("[support alert] sms error:", err));
 
     return { ok: true as const, ticketId: ticket.id, supportReply: instantReply };
   });

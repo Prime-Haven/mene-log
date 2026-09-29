@@ -7,12 +7,12 @@ const PRODUCT_ANSWERS = [
   {
     terms: ["price", "pricing", "plan", "package", "cost", "much", "pay", "subscription"],
     answer:
-      "Mene:Log has Free, Standard, Pro and Premium plans. Paid plans include a 14-day trial, and yearly billing saves 8% on Standard, 10% on Pro and 15% on Premium. You can see the full breakdown on the pricing section of the homepage.",
+      "Mene:Log has Free, Standard, Pro and Premium plans. Paid plans include a 30-day trial, and yearly billing saves 8% on Standard, 10% on Pro and 15% on Premium. You can see the full breakdown on the pricing section of the homepage.",
   },
   {
     terms: ["free", "trial"],
     answer:
-      "The Free plan is free forever — no card needed. Paid plans start with a 14-day trial; if a trial ends without payment the church simply returns to the Free plan and keeps its records.",
+      "The Free plan is free forever — no card needed. Paid plans start with a 30-day trial; if a trial ends without payment the church simply returns to the Free plan and keeps its records.",
   },
   {
     terms: ["qr", "check-in", "check in", "checkin", "attendance"],

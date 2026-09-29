@@ -362,7 +362,7 @@ export const requestBranch = createServerFn({ method: "POST" })
     const { data: parent } = await db
       .from("tenants")
       .select(
-        "id, name, tier, status, parent_tenant_id, brand_primary, brand_accent, logo_path, background_path, group_vocabulary",
+        "id, name, tier, status, parent_tenant_id, brand_primary, brand_accent, logo_path, background_path, group_vocabulary, contact_email",
       )
       .eq("subdomain", data.parent)
       .maybeSingle();
@@ -414,6 +414,31 @@ export const requestBranch = createServerFn({ method: "POST" })
       _target: data.subdomain,
       _detail: { name: data.name },
     });
+
+    // Alert the head office church administrator via email
+    let headAdminEmail = parent.contact_email;
+    if (!headAdminEmail) {
+      const { data: ownerUser } = await db
+        .from("tenant_users")
+        .select("user_id, profiles:user_id(email)")
+        .eq("tenant_id", parent.id)
+        .eq("role", "owner")
+        .limit(1)
+        .maybeSingle();
+      headAdminEmail = (ownerUser?.profiles as { email?: string } | undefined)?.email ?? null;
+    }
+
+    const { sendBranchSignupAlertToHeadOffice } = await import("./support.server");
+    void sendBranchSignupAlertToHeadOffice({
+      headOfficeName: parent.name,
+      headOfficeEmail: headAdminEmail,
+      branchName: data.name,
+      branchSubdomain: data.subdomain,
+      contactName: data.contact_name,
+      contactEmail: data.email,
+      contactPhone: data.phone,
+    });
+
     return {
       ok: true as const,
       message: `Request sent. ${parent.name} will review it. Once approved, you can sign in directly with your password.`,

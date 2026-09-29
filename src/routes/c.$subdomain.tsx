@@ -20,6 +20,7 @@ import {
   User,
   Phone,
   Building2,
+  AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -170,6 +171,91 @@ function CheckIn() {
   const isiPhone =
     typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const markTouched = (field: string) => {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+  };
+
+  const validateFullName = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return "Full name is required";
+    if (trimmed.length < 2) return "Name must be at least 2 characters";
+    if (!/[a-zA-Z]/.test(trimmed)) return "Name must contain letters";
+    return null;
+  };
+
+  const validatePhone = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return "Phone number is required";
+    const clean = trimmed.replace(/[\s()-]/g, "");
+    if (clean.length < 9) return "Phone number must be at least 9 digits";
+    if (clean.length > 17) return "Phone number is too long";
+    if (clean.startsWith("+")) {
+      if (!/^\+[0-9]{9,16}$/.test(clean)) {
+        return "Enter a valid international phone format (e.g. +233 24 123 4567)";
+      }
+    } else {
+      if (!/^[0-9]{9,15}$/.test(clean)) {
+        return "Enter valid digits only (e.g. 024 123 4567)";
+      }
+      if (clean.startsWith("0") && clean.length !== 10) {
+        return "Local Ghanaian phone number must be 10 digits (e.g. 024 000 0000)";
+      }
+    }
+    return null;
+  };
+
+  const validateEmail = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return "Enter a valid email address (e.g. name@example.com)";
+    }
+    return null;
+  };
+
+  const validateDob = (val: string): string | null => {
+    if (!val) return "Date of birth is required";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) return "Enter a valid date (YYYY-MM-DD)";
+    const [y, m, d] = val.split("-").map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    if (isNaN(dateObj.getTime())) return "Invalid calendar date";
+    const now = new Date();
+    if (dateObj > now) return "Date of birth cannot be in the future";
+    const ageYears = (now.getTime() - dateObj.getTime()) / (365.25 * 24 * 3600 * 1000);
+    if (ageYears < 1) return "Age must be at least 1 year old";
+    if (ageYears > 120) return "Please enter a realistic birth date (under 120 years)";
+    return null;
+  };
+
+  const validateResidential = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return "Where you live is required";
+    if (trimmed.length < 2) return "Please enter your suburb, area, or landmark";
+    return null;
+  };
+
+  const validateOccupation = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return "Occupation is required";
+    if (trimmed.length < 2) return "Please enter your occupation or status (e.g. Student)";
+    return null;
+  };
+
+  const fieldErrors = {
+    full_name: validateFullName(form.full_name),
+    phone: validatePhone(form.phone),
+    email: validateEmail(form.email),
+    date_of_birth: validateDob(form.date_of_birth),
+    gender: !form.gender ? "Please select your gender" : null,
+    marital_status: !form.marital_status ? "Please select your marital status" : null,
+    residential_area: validateResidential(form.residential_area),
+    occupation: validateOccupation(form.occupation),
+  };
+
+  const hasFormErrors = Object.values(fieldErrors).some((err) => err !== null);
+
   useEffect(() => {
     if (services.length > 0 && !form.service_id) {
       const today = new Date().toISOString().slice(0, 10);
@@ -214,6 +300,20 @@ function CheckIn() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setTouched({
+      full_name: true,
+      phone: true,
+      email: true,
+      date_of_birth: true,
+      gender: true,
+      marital_status: true,
+      residential_area: true,
+      occupation: true,
+    });
+    if (hasFormErrors) {
+      setError("Please check and correct the highlighted fields above.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -531,94 +631,221 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="n" className="text-xs font-semibold text-white/90">
-                Full name
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="n" className="text-xs font-semibold text-white/90">
+                  Full name
+                </Label>
+                {touched.full_name && !fieldErrors.full_name && (
+                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Valid
+                  </span>
+                )}
+              </div>
               <Input
                 id="n"
                 required
                 minLength={2}
                 value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                onBlur={() => markTouched("full_name")}
+                onChange={(e) => {
+                  markTouched("full_name");
+                  setForm({ ...form, full_name: e.target.value });
+                }}
                 placeholder="First and last name"
-                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                className={`h-11 rounded-xl text-white transition-colors ${
+                  touched.full_name && fieldErrors.full_name
+                    ? "border-rose-500/70 bg-rose-500/10 placeholder:text-rose-300/40 focus:border-rose-400 focus:bg-rose-500/15"
+                    : touched.full_name && !fieldErrors.full_name
+                      ? "border-emerald-500/50 bg-emerald-500/5 placeholder:text-white/40 focus:border-emerald-400"
+                      : "border-white/20 bg-white/10 placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                }`}
               />
+              {touched.full_name && fieldErrors.full_name && (
+                <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.full_name}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="p" className="text-xs font-semibold text-white/90">
-                Phone number
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="p" className="text-xs font-semibold text-white/90">
+                  Phone number
+                </Label>
+                {touched.phone && !fieldErrors.phone && (
+                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Valid
+                  </span>
+                )}
+              </div>
               <Input
                 id="p"
                 required
                 inputMode="tel"
-                placeholder="024 000 0000"
+                placeholder="024 000 0000 or +233..."
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                onBlur={() => markTouched("phone")}
+                onChange={(e) => {
+                  markTouched("phone");
+                  setForm({ ...form, phone: e.target.value });
+                }}
+                className={`h-11 rounded-xl text-white transition-colors ${
+                  touched.phone && fieldErrors.phone
+                    ? "border-rose-500/70 bg-rose-500/10 placeholder:text-rose-300/40 focus:border-rose-400 focus:bg-rose-500/15"
+                    : touched.phone && !fieldErrors.phone
+                      ? "border-emerald-500/50 bg-emerald-500/5 placeholder:text-white/40 focus:border-emerald-400"
+                      : "border-white/20 bg-white/10 placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                }`}
               />
+              {touched.phone && fieldErrors.phone && (
+                <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.phone}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-white/90">
-                Email <span className="font-normal text-white/50">(optional)</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="email" className="text-xs font-semibold text-white/90">
+                  Email <span className="font-normal text-white/50">(optional)</span>
+                </Label>
+                {touched.email && form.email && !fieldErrors.email && (
+                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Valid
+                  </span>
+                )}
+              </div>
               <Input
                 id="email"
                 type="email"
                 inputMode="email"
                 maxLength={160}
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onBlur={() => markTouched("email")}
+                onChange={(e) => {
+                  markTouched("email");
+                  setForm({ ...form, email: e.target.value });
+                }}
                 placeholder="your.email@example.com"
-                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                className={`h-11 rounded-xl text-white transition-colors ${
+                  touched.email && fieldErrors.email
+                    ? "border-rose-500/70 bg-rose-500/10 placeholder:text-rose-300/40 focus:border-rose-400 focus:bg-rose-500/15"
+                    : touched.email && form.email && !fieldErrors.email
+                      ? "border-emerald-500/50 bg-emerald-500/5 placeholder:text-white/40 focus:border-emerald-400"
+                      : "border-white/20 bg-white/10 placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                }`}
               />
+              {touched.email && fieldErrors.email && (
+                <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="d" className="text-xs font-semibold text-white/90">
-                  Date of birth
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="d" className="text-xs font-semibold text-white/90">
+                    Date of birth
+                  </Label>
+                  {touched.date_of_birth && !fieldErrors.date_of_birth && (
+                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="size-3" /> Valid
+                    </span>
+                  )}
+                </div>
                 <Input
                   id="d"
                   type="date"
                   required
                   max={new Date().toISOString().slice(0, 10)}
                   value={form.date_of_birth}
-                  onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white focus:border-primary focus:bg-white/15"
+                  onBlur={() => markTouched("date_of_birth")}
+                  onChange={(e) => {
+                    markTouched("date_of_birth");
+                    setForm({ ...form, date_of_birth: e.target.value });
+                  }}
+                  className={`h-11 rounded-xl text-white transition-colors ${
+                    touched.date_of_birth && fieldErrors.date_of_birth
+                      ? "border-rose-500/70 bg-rose-500/10 focus:border-rose-400 focus:bg-rose-500/15"
+                      : touched.date_of_birth && !fieldErrors.date_of_birth
+                        ? "border-emerald-500/50 bg-emerald-500/5 focus:border-emerald-400"
+                        : "border-white/20 bg-white/10 focus:border-primary focus:bg-white/15"
+                  }`}
                 />
+                {touched.date_of_birth && fieldErrors.date_of_birth && (
+                  <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                    <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.date_of_birth}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="g" className="text-xs font-semibold text-white/90">
-                  Gender
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="g" className="text-xs font-semibold text-white/90">
+                    Gender
+                  </Label>
+                  {touched.gender && !fieldErrors.gender && (
+                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="size-3" /> Selected
+                    </span>
+                  )}
+                </div>
                 <select
                   id="g"
                   required
-                  className={selectClass}
+                  className={`${selectClass} ${
+                    touched.gender && fieldErrors.gender
+                      ? "border-rose-500/70 bg-rose-500/10 focus:border-rose-400"
+                      : touched.gender && !fieldErrors.gender
+                        ? "border-emerald-500/50 bg-emerald-500/5"
+                        : ""
+                  }`}
                   value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                  onBlur={() => markTouched("gender")}
+                  onChange={(e) => {
+                    markTouched("gender");
+                    setForm({ ...form, gender: e.target.value });
+                  }}
                 >
                   <option value="" className="bg-neutral-900 text-white">Select gender</option>
                   <option value="male" className="bg-neutral-900 text-white">Male</option>
                   <option value="female" className="bg-neutral-900 text-white">Female</option>
                 </select>
+                {touched.gender && fieldErrors.gender && (
+                  <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                    <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.gender}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="marital" className="text-xs font-semibold text-white/90">
-                Marital status
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="marital" className="text-xs font-semibold text-white/90">
+                  Marital status
+                </Label>
+                {touched.marital_status && !fieldErrors.marital_status && (
+                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Selected
+                  </span>
+                )}
+              </div>
               <select
                 id="marital"
                 required
-                className={selectClass}
+                className={`${selectClass} ${
+                  touched.marital_status && fieldErrors.marital_status
+                    ? "border-rose-500/70 bg-rose-500/10 focus:border-rose-400"
+                    : touched.marital_status && !fieldErrors.marital_status
+                      ? "border-emerald-500/50 bg-emerald-500/5"
+                      : ""
+                }`}
                 value={form.marital_status}
-                onChange={(e) => setForm({ ...form, marital_status: e.target.value })}
+                onBlur={() => markTouched("marital_status")}
+                onChange={(e) => {
+                  markTouched("marital_status");
+                  setForm({ ...form, marital_status: e.target.value });
+                }}
               >
                 <option value="" className="bg-neutral-900 text-white">Select status</option>
                 <option value="single" className="bg-neutral-900 text-white">Single</option>
@@ -628,37 +855,86 @@ function CheckIn() {
                 <option value="separated" className="bg-neutral-900 text-white">Separated</option>
                 <option value="prefer_not_to_say" className="bg-neutral-900 text-white">Prefer not to say</option>
               </select>
+              {touched.marital_status && fieldErrors.marital_status && (
+                <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.marital_status}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="a" className="text-xs font-semibold text-white/90">
-                Where do you live?
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="a" className="text-xs font-semibold text-white/90">
+                  Where do you live?
+                </Label>
+                {touched.residential_area && !fieldErrors.residential_area && (
+                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Valid
+                  </span>
+                )}
+              </div>
               <Input
                 id="a"
                 required
                 maxLength={120}
                 value={form.residential_area}
-                onChange={(e) => setForm({ ...form, residential_area: e.target.value })}
+                onBlur={() => markTouched("residential_area")}
+                onChange={(e) => {
+                  markTouched("residential_area");
+                  setForm({ ...form, residential_area: e.target.value });
+                }}
                 placeholder="Suburb, neighborhood or landmark"
-                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                className={`h-11 rounded-xl text-white transition-colors ${
+                  touched.residential_area && fieldErrors.residential_area
+                    ? "border-rose-500/70 bg-rose-500/10 placeholder:text-rose-300/40 focus:border-rose-400 focus:bg-rose-500/15"
+                    : touched.residential_area && !fieldErrors.residential_area
+                      ? "border-emerald-500/50 bg-emerald-500/5 placeholder:text-white/40 focus:border-emerald-400"
+                      : "border-white/20 bg-white/10 placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                }`}
               />
+              {touched.residential_area && fieldErrors.residential_area && (
+                <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.residential_area}
+                </p>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="occupation" className="text-xs font-semibold text-white/90">
-                  Occupation
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="occupation" className="text-xs font-semibold text-white/90">
+                    Occupation
+                  </Label>
+                  {touched.occupation && !fieldErrors.occupation && (
+                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                      <CheckCircle2 className="size-3" /> Valid
+                    </span>
+                  )}
+                </div>
                 <Input
                   id="occupation"
                   required
                   maxLength={120}
                   value={form.occupation}
-                  onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                  onBlur={() => markTouched("occupation")}
+                  onChange={(e) => {
+                    markTouched("occupation");
+                    setForm({ ...form, occupation: e.target.value });
+                  }}
                   placeholder="e.g. Student, Accountant"
-                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                  className={`h-11 rounded-xl text-white transition-colors ${
+                    touched.occupation && fieldErrors.occupation
+                      ? "border-rose-500/70 bg-rose-500/10 placeholder:text-rose-300/40 focus:border-rose-400 focus:bg-rose-500/15"
+                      : touched.occupation && !fieldErrors.occupation
+                        ? "border-emerald-500/50 bg-emerald-500/5 placeholder:text-white/40 focus:border-emerald-400"
+                        : "border-white/20 bg-white/10 placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                  }`}
                 />
+                {touched.occupation && fieldErrors.occupation && (
+                  <p className="text-xs text-rose-400 font-medium flex items-center gap-1.5 mt-1">
+                    <AlertCircle className="size-3.5 shrink-0" /> {fieldErrors.occupation}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="education" className="text-xs font-semibold text-white/90">

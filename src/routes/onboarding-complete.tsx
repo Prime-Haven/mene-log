@@ -76,7 +76,7 @@ function OnboardingComplete() {
 
       window.sessionStorage.removeItem("menelog-onboarding-draft");
       setState("complete");
-      setMessage("Your email is verified and your 14-day trial has started.");
+      setMessage("Your email is verified and your 30-day trial has started.");
     }
     void complete();
     return () => {
