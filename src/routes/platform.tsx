@@ -378,6 +378,7 @@ function Platform() {
         <div className="mt-6 flex-1">{nav}</div>
         <Link
           to="/support-console"
+          search={{ ticketId: undefined }}
           className="mb-2 flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-deep-foreground/75 hover:bg-deep-foreground/10 hover:text-deep-foreground transition-colors border border-deep-foreground/15"
         >
           <LifeBuoy className="size-3.5 text-primary" />
@@ -403,6 +404,7 @@ function Platform() {
           <div className="mt-6 flex-1">{nav}</div>
           <Link
             to="/support-console"
+            search={{ ticketId: undefined }}
             className="mb-2 flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-deep-foreground/75 hover:bg-deep-foreground/10 hover:text-deep-foreground transition-colors border border-deep-foreground/15"
           >
             <LifeBuoy className="size-3.5 text-primary" />
