@@ -39,9 +39,8 @@ const checkinSchema = z.object({
 export const orNull = <T>(value: T | null): T => value as unknown as T;
 
 export const clientIp = createServerOnlyFn((): string => {
-  const forwarded = getRequestHeader("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-real-ip") ?? "unknown";
+  // Trust only the edge-provided address; client-sent forwarding headers can be forged.
+  return getRequestHeader("cf-connecting-ip") ?? "unknown";
 });
 
 export const getChurchBranding = createServerFn({ method: "GET" })

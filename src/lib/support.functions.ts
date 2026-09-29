@@ -338,7 +338,7 @@ export const supportOperatorSignIn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const ip = (
       getRequestHeader("cf-connecting-ip") ??
-      getRequestHeader("x-forwarded-for") ??
+      getRequestHeader("x-real-ip") ??
       "unknown"
     )
       .split(",")[0]!
