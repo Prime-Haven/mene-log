@@ -78,7 +78,7 @@ function WatchLive() {
     setBusy(true);
     try {
       const res = await start({ data: { subdomain, code: clean } });
-      if (!res.ok) setError(res.message);
+      if (!res.ok) setError(res.message ?? "");
       else {
         setCode(clean);
         setSession(res);
@@ -216,7 +216,7 @@ function Player({
       try {
         const r = await ping({ data: { subdomain, code, service_id: service.id } });
         if (!active) return;
-        if (!r.ok) setEnded(r.message);
+        if (!r.ok) setEnded(r.message ?? "");
         else {
           if (r.seconds > secondsRef.current) setSeconds(r.seconds);
           if (r.recorded) setRecorded(true);

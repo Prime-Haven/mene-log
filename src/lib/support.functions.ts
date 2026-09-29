@@ -398,7 +398,8 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         search: z.string().optional(),
       })
       .optional()
-      .default({}),
+      .default({})
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertSupportOperator(context.userId);

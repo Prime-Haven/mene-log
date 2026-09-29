@@ -212,7 +212,7 @@ export function Scan() {
       }
 
       // If RPC failed or wasn't decisive, execute resilient client fallback
-      if (!res || (!res.ok && res.reason !== "out_of_scope")) {
+      if (!res || (!(res as any).ok && (res as any).reason !== "out_of_scope")) {
         res = await clientFallbackCheckin(cleanToken, serviceId);
       }
 
@@ -360,7 +360,7 @@ export function Scan() {
             const d =
               parts.length === 3
                 ? new Date(parts[0]!, parts[1]! - 1, parts[2]!)
-                : new Date(s.service_date);
+                : new Date(s.service_date ?? "");
             const dateStr = !isNaN(d.getTime())
               ? d.toLocaleDateString("en-US", {
                   month: "short",

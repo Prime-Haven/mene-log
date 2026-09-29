@@ -320,12 +320,12 @@ export function ChurchSettingsPage() {
         throw new Error("Type 'CLEAR ATTENDANCE' exactly to confirm");
       }
       const res = await clearAttendanceFn({ data: { tenant_id: tenant.id } });
-      if (!res.ok) throw new Error(res.message);
+      if (!res.ok) throw new Error((res as { message?: string }).message);
       return res;
     },
     onSuccess: (res) => {
       toast.success(
-        `Cleared ${res.deleted_count} test attendance logs. Member records and services are preserved.`,
+        `Cleared ${res?.deleted_count} test attendance logs. Member records and services are preserved.`,
       );
       setClearAttendanceModal(false);
       setConfirmClearInput("");
@@ -1091,7 +1091,7 @@ export function ChurchSettingsPage() {
           </div>
 
           {/* 2FA Setup Component for current user */}
-          <TwoStepSettings />
+          <TwoStepSettings tenantId={tenant?.id ?? ""} isOwner={isOwner} requireMfa={requireMfa} />
         </div>
       )}
 
