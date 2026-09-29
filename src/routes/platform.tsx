@@ -2185,7 +2185,7 @@ function Health({ d }: { d: Snapshot }) {
         <div className="surface mb-4 p-4">
           <p className="text-sm font-semibold">Live test · {fmtDateTime(r.checked_at)}</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-4">
-            {liveRows.map(([k, v]) => (
+            {liveRows.map(([k, v]: readonly [string, { ok: boolean; ms: number }]) => (
               <div
                 key={k}
                 className={`rounded-lg border p-3 text-sm ${v.ok ? "border-success/40" : "border-destructive/40"}`}
