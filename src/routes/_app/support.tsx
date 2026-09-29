@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Zap,
   Radio,
+  Bell,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SupportSmsConfigPanel } from "@/components/SupportSmsConfigPanel";
 import {
   Dialog,
   DialogContent,
@@ -118,6 +120,7 @@ export function ChurchSupportPage() {
 
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -125,6 +128,22 @@ export function ChurchSupportPage() {
   const [newSubject, setNewSubject] = useState("");
   const [newPriority, setNewPriority] = useState<TicketPriority>("normal");
   const [newDescription, setNewDescription] = useState("");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
+  // Query branches list for ticket routing
+  const { data: branchList = [] } = useQuery({
+    queryKey: ["church-branches-list", tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const { data } = await supabase
+        .from("branches")
+        .select("id, name, city, is_default")
+        .eq("tenant_id", tenant.id)
+        .order("is_default", { ascending: false });
+      return data ?? [];
+    },
+    enabled: !!tenant?.id,
+  });
 
   // Reply state & optimistic state for instant message delivery
   const [replyMessage, setReplyMessage] = useState("");
@@ -232,6 +251,7 @@ export function ChurchSupportPage() {
       return submitTicketFn({
         data: {
           tenant_id: tenant.id,
+          branch_id: selectedBranchId || null,
           subject: newSubject.trim(),
           description: newDescription.trim(),
           priority: newPriority,
@@ -245,6 +265,7 @@ export function ChurchSupportPage() {
       setNewSubject("");
       setNewDescription("");
       setNewPriority("normal");
+      setSelectedBranchId("");
       qc.invalidateQueries({ queryKey: ["church-support-tickets"] });
       if (res?.ticketId) {
         setSelectedTicketId(res.ticketId);
@@ -375,10 +396,18 @@ export function ChurchSupportPage() {
             Open tickets, get operational guidance, and communicate directly with the Mene:Log team.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsSmsDialogOpen(true)}
+            className="flex items-center gap-2 rounded-xl border-dashed"
+          >
+            <Bell className="size-4 text-primary" />
+            <span>SMS Notifications</span>
+          </Button>
           <Button
             onClick={() => setIsNewDialogOpen(true)}
-            className="flex items-center gap-2 shadow-sm"
+            className="flex items-center gap-2 shadow-sm rounded-xl"
           >
             <Plus className="size-4" />
             <span>New Support Ticket</span>
@@ -739,6 +768,29 @@ export function ChurchSupportPage() {
               </select>
             </div>
 
+            {branchList.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="ticket-branch">Originating Branch (Optional)</Label>
+                <select
+                  id="ticket-branch"
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Main Church (All Branches)</option>
+                  {branchList.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} {b.city ? `(${b.city})` : ""} {b.is_default ? "— Default" : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  If selected, SMS notifications route directly to this branch's customized
+                  recipient numbers.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="ticket-desc">Detailed Description</Label>
               <Textarea
@@ -769,6 +821,19 @@ export function ChurchSupportPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* SMS Configuration Modal Dialog */}
+      <Dialog open={isSmsDialogOpen} onOpenChange={setIsSmsDialogOpen}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden border bg-background/95 backdrop-blur-xl">
+          {tenant?.id && (
+            <SupportSmsConfigPanel
+              tenantId={tenant.id}
+              className="border-none shadow-none"
+              onSaved={() => setIsSmsDialogOpen(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </main>

@@ -1,6 +1,6 @@
 {
-  "summary": "Comprehensive implementation plan for:\n1. Real-time field-level validation with instant feedback in `src/routes/c.$subdomain.tsx` (phone number formatting, date of birth range, and input validation).\n2. Updating trial period from 14 days to 30 days across database functions, onboarding flows, billing screens, and legal/help pages.\n3. Automated email alert suite for:\n   - 30-day trial expiry notices (7 days before, 3 days before, and on expiry day) with upgrade call-to-action.\n   - Payment success and failure notifications sent to both church administrator and primehaven26@gmail.com.\n   - Every new church registration alert sent to primehaven26@gmail.com.\n   - Every branch registration alert sent to the head church administrator.\n4. Instant SMS alerts for all support tickets sent to +233550160237 and church phone numbers using the 'Mene Log' sender ID.",
-  "updatedAt": "2026-09-29T14:51:46.363630710Z",
+  "summary": "Revised plan specifying the full database schema migration for Support Ticket SMS settings:\n1. Database Schema script (`schema-update-support-sms.sql`) adding `support_sms_enabled` and `support_sms_recipients` to both `tenants` and `branches`, plus linking `support_tickets.branch_id`.\n2. Dedicated SupportSmsConfigPanel component with live toggle, multiple comma-separated recipient numbers, and 'Mene Log' verified sender ID.\n3. Access points in both Settings (`/_app/settings`) and Support (`/_app/support`) pages.\n4. Updated SMS dispatcher sending notifications to +233550160237 and all branch custom recipients with sender ID 'Mene Log'.",
+  "updatedAt": "2026-09-29T15:26:55.306005059Z",
   "requestFeedback": true,
   "userFacing": true
 }

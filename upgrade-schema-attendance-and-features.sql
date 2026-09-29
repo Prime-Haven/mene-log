@@ -227,7 +227,26 @@ ALTER TABLE public.members ADD COLUMN IF NOT EXISTS whatsapp_opt_out boolean NOT
 -- ------------------------------------------------------------------------------
 -- 6. 30-Day Trial Provisioning Stored Procedure
 -- ------------------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.provision_tenant(text, text, public.tenant_tier, text, text);
+DO $$ 
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN (
+    SELECT p.oid::regprocedure AS proc_name 
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname IN ('provision_tenant', 'complete_verified_onboarding', 'platform_create_tenant')
+      AND n.nspname = 'public'
+  ) LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proc_name || ' CASCADE;';
+  END LOOP;
+END $$;
+
+DROP FUNCTION IF EXISTS public.provision_tenant(text, text, public.tenant_tier, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.provision_tenant(text, text, tenant_tier, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.complete_verified_onboarding() CASCADE;
+DROP FUNCTION IF EXISTS public.platform_create_tenant(text, text, public.tenant_tier, text, text) CASCADE;
+DROP FUNCTION IF EXISTS public.platform_create_tenant(text, text, tenant_tier, text, text) CASCADE;
 
 CREATE OR REPLACE FUNCTION public.provision_tenant(
   p_name text,

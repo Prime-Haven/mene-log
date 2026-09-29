@@ -179,6 +179,8 @@ export async function sendSupportTicketSmsAlert(options: {
   ticketId: string;
   churchName: string;
   churchPhone?: string | null;
+  tenantId?: string;
+  branchId?: string | null;
   subject: string;
   priority: string;
 }) {
@@ -196,25 +198,131 @@ export async function sendSupportTicketSmsAlert(options: {
         : "";
     const hotlineMsg = `[Mene:Log Support] ${priorityTag}New ticket from ${options.churchName}: "${options.subject.slice(0, 50)}". ID: ${options.ticketId.slice(0, 8)}`;
 
-    // 1. Send SMS to prime support hotline (+233550160237)
+    // 1. Send SMS to prime support hotline (+233550160237) with "Mene Log" sender ID
     await sendSms({
       to: hotline,
       body: hotlineMsg,
       sender: "Mene Log",
     }).catch((e) => console.error("[support-sms] Hotline SMS dispatch failed:", e));
 
-    // 2. Send SMS to church contact phone if provided
-    if (options.churchPhone && options.churchPhone.replace(/[^\d+]/g, "").length >= 9) {
+    // 2. Resolve church & branch recipient phone numbers and enabled status
+    let smsEnabled = true;
+    const recipientNumbers = new Set<string>();
+
+    if (options.tenantId) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      // Check branch-level overrides first if ticket is associated with a branch
+      if (options.branchId) {
+        const { data: branch } = await supabaseAdmin
+          .from("branches")
+          .select("support_sms_enabled, support_sms_recipients")
+          .eq("id", options.branchId)
+          .maybeSingle();
+
+        if (branch) {
+          if (branch.support_sms_enabled === false) {
+            smsEnabled = false;
+          } else if (branch.support_sms_recipients) {
+            branch.support_sms_recipients
+              .split(",")
+              .map((p: string) => p.trim())
+              .filter(Boolean)
+              .forEach((num: string) => recipientNumbers.add(num));
+          }
+        }
+      }
+
+      // If branch has no custom numbers, check tenant level
+      if (smsEnabled && recipientNumbers.size === 0) {
+        const { data: tenant } = await supabaseAdmin
+          .from("tenants")
+          .select("support_sms_enabled, support_sms_recipients, settings")
+          .eq("id", options.tenantId)
+          .maybeSingle();
+
+        if (tenant) {
+          if (tenant.support_sms_enabled === false) {
+            smsEnabled = false;
+          } else if (tenant.support_sms_recipients) {
+            tenant.support_sms_recipients
+              .split(",")
+              .map((p: string) => p.trim())
+              .filter(Boolean)
+              .forEach((num: string) => recipientNumbers.add(num));
+          } else {
+            // Also check jsonb settings if present
+            const s = tenant.settings as Record<string, unknown> | null;
+            if (s?.support_sms_enabled === false) {
+              smsEnabled = false;
+            } else if (typeof s?.support_sms_recipients === "string" && s.support_sms_recipients) {
+              s.support_sms_recipients
+                .split(",")
+                .map((p: string) => p.trim())
+                .filter(Boolean)
+                .forEach((num: string) => recipientNumbers.add(num));
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback to default church contact phone if no custom recipient list is defined
+    if (smsEnabled && recipientNumbers.size === 0 && options.churchPhone) {
+      recipientNumbers.add(options.churchPhone);
+    }
+
+    if (smsEnabled && recipientNumbers.size > 0) {
       const churchMsg = `[Mene:Log Support] We received your ticket "${options.subject.slice(0, 45)}". Our team is reviewing it. Reply at menelog.site/support`;
-      await sendSms({
-        to: options.churchPhone,
-        body: churchMsg,
-        sender: "Mene Log",
-      }).catch((e) => console.error("[support-sms] Church SMS dispatch failed:", e));
+      
+      for (const phone of recipientNumbers) {
+        const clean = phone.replace(/[^\d+]/g, "");
+        // Avoid sending duplicate notice to hotline
+        if (clean.length >= 9 && clean !== "+233550160237" && clean !== "233550160237") {
+          await sendSms({
+            to: clean,
+            body: churchMsg,
+            sender: "Mene Log",
+          }).catch((e) => console.error(`[support-sms] Dispatch to ${clean} failed:`, e));
+        }
+      }
     }
   } catch (err) {
     console.error("[support-sms] Error dispatching support ticket SMS:", err);
   }
+}
+
+/**
+ * Dispatches test SMS messages using the 'Mene Log' sender ID to verify delivery.
+ */
+export async function sendTestSupportSmsAlert(options: {
+  churchName: string;
+  recipients: string[];
+}) {
+  const { sendSms, smsConfigured } = await import("./messaging.server");
+  if (!smsConfigured()) {
+    return { ok: false, error: "SMS service is not configured (missing Arkesel key)" };
+  }
+
+  const results: Array<{ phone: string; ok: boolean; error?: string }> = [];
+  for (const rawPhone of options.recipients) {
+    const cleanPhone = rawPhone.replace(/[^\d+]/g, "");
+    if (cleanPhone.length < 9) {
+      results.push({ phone: rawPhone, ok: false, error: "Phone number too short" });
+      continue;
+    }
+
+    const body = `[Mene:Log Support] Test notification for ${options.churchName}: SMS ticket alerts are active and working properly. (Sender: Mene Log)`;
+    const res = await sendSms({
+      to: cleanPhone,
+      body,
+      sender: "Mene Log",
+    });
+    results.push({ phone: cleanPhone, ok: res.ok, error: res.error });
+  }
+
+  const anySuccess = results.some((r) => r.ok);
+  return { ok: anySuccess, results };
 }
 
 /**

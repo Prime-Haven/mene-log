@@ -19,6 +19,7 @@ import {
   getOperatorSupportRole,
   sendSupportNotificationAlert,
   sendSupportTicketSmsAlert,
+  sendTestSupportSmsAlert,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "./support.server";
@@ -57,6 +58,7 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
     z
       .object({
         tenant_id: z.string().uuid(),
+        branch_id: z.string().uuid().optional().nullable(),
         subject: z.string().trim().min(3).max(200),
         description: z.string().trim().min(10).max(5000),
         priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
@@ -81,6 +83,7 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       .from("support_tickets")
       .insert({
         tenant_id: data.tenant_id,
+        branch_id: data.branch_id ?? null,
         submitted_by_user_id: context.userId,
         subject: data.subject,
         description: data.description,
@@ -140,11 +143,13 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       submittedByEmail: tenant?.contact_email,
     }).catch((err) => console.error("[support alert] email error:", err));
 
-    // Fire SMS alert to +233550160237 and church phone asynchronously with 'Mene Log' sender ID
+    // Fire SMS alert to +233550160237 and branch/church phone recipients with 'Mene Log' sender ID
     sendSupportTicketSmsAlert({
       ticketId: ticket.id,
       churchName,
       churchPhone: tenant?.contact_phone,
+      tenantId: data.tenant_id,
+      branchId: data.branch_id ?? null,
       subject: data.subject,
       priority: data.priority,
     }).catch((err) => console.error("[support alert] sms error:", err));
@@ -329,6 +334,158 @@ export const replyChurchTicket = createServerFn({ method: "POST" })
     }).catch((err) => console.error("[support alert] reply email error:", err));
 
     return { ok: true as const, reply, supportReply: instantReply };
+  });
+
+/** Get church and branch support SMS settings */
+export const getSupportSmsConfig = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    // 1. Fetch tenant level SMS settings
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("name, contact_phone, support_sms_enabled, support_sms_recipients, settings")
+      .eq("id", data.tenant_id)
+      .maybeSingle();
+
+    // 2. Fetch branches for this tenant
+    const { data: branches } = await db
+      .from("branches")
+      .select("id, name, city, is_default, support_sms_enabled, support_sms_recipients")
+      .eq("tenant_id", data.tenant_id)
+      .order("is_default", { ascending: false });
+
+    const tenantSettings = (tenant?.settings as Record<string, unknown> | null) ?? {};
+    const tenantEnabled =
+      tenant?.support_sms_enabled ??
+      (typeof tenantSettings.support_sms_enabled === "boolean"
+        ? tenantSettings.support_sms_enabled
+        : true);
+    const tenantRecipients =
+      tenant?.support_sms_recipients ??
+      (typeof tenantSettings.support_sms_recipients === "string"
+        ? tenantSettings.support_sms_recipients
+        : "");
+
+    return {
+      churchName: tenant?.name ?? "",
+      defaultPhone: tenant?.contact_phone ?? "",
+      tenant: {
+        enabled: tenantEnabled,
+        recipients: tenantRecipients,
+      },
+      branches: (branches ?? []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        city: b.city,
+        isDefault: b.is_default,
+        enabled: b.support_sms_enabled ?? true,
+        recipients: b.support_sms_recipients ?? "",
+      })),
+    };
+  });
+
+/** Save church or branch support SMS settings */
+export const saveSupportSmsConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+        branch_id: z.string().uuid().optional().nullable(),
+        enabled: z.boolean(),
+        recipients: z.string().trim().max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    if (data.branch_id) {
+      const { error } = await db
+        .from("branches")
+        .update({
+          support_sms_enabled: data.enabled,
+          support_sms_recipients: data.recipients || null,
+        })
+        .eq("id", data.branch_id)
+        .eq("tenant_id", data.tenant_id);
+
+      if (error) {
+        console.error("[support-sms] Update branch error:", error);
+        throw new Error("Could not save branch SMS configuration.");
+      }
+    } else {
+      // Update columns as well as settings jsonb for complete resilience
+      const { data: currentTenant } = await db
+        .from("tenants")
+        .select("settings")
+        .eq("id", data.tenant_id)
+        .maybeSingle();
+
+      const existingSettings = (currentTenant?.settings as Record<string, unknown> | null) ?? {};
+      const updatedSettings = {
+        ...existingSettings,
+        support_sms_enabled: data.enabled,
+        support_sms_recipients: data.recipients,
+      };
+
+      const { error } = await db
+        .from("tenants")
+        .update({
+          support_sms_enabled: data.enabled,
+          support_sms_recipients: data.recipients || null,
+          settings: updatedSettings,
+        })
+        .eq("id", data.tenant_id);
+
+      if (error) {
+        console.error("[support-sms] Update tenant error:", error);
+        throw new Error("Could not save church SMS configuration.");
+      }
+    }
+
+    return { ok: true as const };
+  });
+
+/** Send a test SMS to configured phone numbers */
+export const testSupportSmsConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+        recipients: z.array(z.string().trim()).min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const db = await admin();
+    await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
+
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("name")
+      .eq("id", data.tenant_id)
+      .maybeSingle();
+
+    const churchName = tenant?.name || "Church Partner";
+    const res = await sendTestSupportSmsAlert({
+      churchName,
+      recipients: data.recipients,
+    });
+
+    return res;
   });
 
 /* =========================================================================

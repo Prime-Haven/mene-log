@@ -54,6 +54,7 @@ import {
   type ChurchSettingsData,
 } from "@/lib/church-settings.functions";
 import { planLabel } from "@/lib/pricing";
+import { SupportSmsConfigPanel } from "@/components/SupportSmsConfigPanel";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({
@@ -1043,6 +1044,8 @@ export function ChurchSettingsPage() {
               </div>
             </div>
           </div>
+
+          {tenant?.id && <SupportSmsConfigPanel tenantId={tenant.id} />}
         </div>
       )}
 

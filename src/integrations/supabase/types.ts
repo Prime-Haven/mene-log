@@ -220,6 +220,8 @@ export type Database = {
           id: string
           is_default: boolean
           name: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tenant_id: string
         }
         Insert: {
@@ -228,6 +230,8 @@ export type Database = {
           id?: string
           is_default?: boolean
           name: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tenant_id: string
         }
         Update: {
@@ -236,6 +240,8 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -1357,6 +1363,7 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          branch_id: string | null
           created_at: string
           description: string
           id: string
@@ -1369,6 +1376,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -1381,6 +1389,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -1586,6 +1595,8 @@ export type Database = {
           status: Database["public"]["Enums"]["tenant_status"]
           subdomain: string
           submit_button_text: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tier: Database["public"]["Enums"]["tenant_tier"]
           trial_ends_at: string | null
           welcome_message: string | null
@@ -1621,6 +1632,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["tenant_status"]
           subdomain: string
           submit_button_text?: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tier?: Database["public"]["Enums"]["tenant_tier"]
           trial_ends_at?: string | null
           welcome_message?: string | null
@@ -1656,6 +1669,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["tenant_status"]
           subdomain?: string
           submit_button_text?: string
+          support_sms_enabled?: boolean
+          support_sms_recipients?: string | null
           tier?: Database["public"]["Enums"]["tenant_tier"]
           trial_ends_at?: string | null
           welcome_message?: string | null

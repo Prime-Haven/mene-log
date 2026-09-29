@@ -1,7 +1,7 @@
 -- ==============================================================================
--- Mene:Log Database Schema Update: 30-Day Trial Period & Automated Alert System
+-- Mene:Log Comprehensive Database Upgrade (30-Day Trial, Support SMS & Features)
 -- Run this script in your Supabase SQL Editor (Dashboard -> SQL Editor).
--- This script is safe and idempotent.
+-- This script is completely safe, idempotent, and prevents Postgres Error 42P13.
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
@@ -11,17 +11,41 @@ DO $$
 DECLARE
   r RECORD;
 BEGIN
+  -- Dynamically drop all existing overloads/signatures of provision_tenant
   FOR r IN (
     SELECT p.oid::regprocedure AS proc_name 
     FROM pg_proc p
     JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE p.proname IN ('provision_tenant', 'complete_verified_onboarding', 'platform_create_tenant')
+    WHERE p.proname = 'provision_tenant'
+      AND n.nspname = 'public'
+  ) LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proc_name || ' CASCADE;';
+  END LOOP;
+
+  -- Drop all existing overloads of complete_verified_onboarding
+  FOR r IN (
+    SELECT p.oid::regprocedure AS proc_name 
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'complete_verified_onboarding'
+      AND n.nspname = 'public'
+  ) LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proc_name || ' CASCADE;';
+  END LOOP;
+
+  -- Drop all existing overloads of platform_create_tenant
+  FOR r IN (
+    SELECT p.oid::regprocedure AS proc_name 
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'platform_create_tenant'
       AND n.nspname = 'public'
   ) LOOP
     EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proc_name || ' CASCADE;';
   END LOOP;
 END $$;
 
+-- Explicit drops as an additional safeguard
 DROP FUNCTION IF EXISTS public.provision_tenant(text, text, public.tenant_tier, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.provision_tenant(text, text, tenant_tier, text, text) CASCADE;
 DROP FUNCTION IF EXISTS public.complete_verified_onboarding() CASCADE;
@@ -30,7 +54,34 @@ DROP FUNCTION IF EXISTS public.platform_create_tenant(text, text, tenant_tier, t
 
 
 -- ------------------------------------------------------------------------------
--- 2. Update Church Provisioning to 30-Day Trial
+-- 2. Support Ticket SMS Notification Preferences & Branch Customization
+-- ------------------------------------------------------------------------------
+-- Tenant-level SMS notification controls
+ALTER TABLE public.tenants 
+  ADD COLUMN IF NOT EXISTS support_sms_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS support_sms_recipients text;
+
+-- Branch-level custom SMS notification controls
+ALTER TABLE public.branches 
+  ADD COLUMN IF NOT EXISTS support_sms_enabled boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS support_sms_recipients text;
+
+-- Link support tickets to branches for branch-specific routing
+ALTER TABLE public.support_tickets 
+  ADD COLUMN IF NOT EXISTS branch_id uuid REFERENCES public.branches(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS support_tickets_branch_idx ON public.support_tickets (branch_id);
+
+-- Enable staff to read and update branch notification configurations
+DROP POLICY IF EXISTS "Church staff can manage their branches" ON public.branches;
+CREATE POLICY "Church staff can manage their branches" ON public.branches
+  FOR ALL TO authenticated
+  USING (public.is_tenant_member(tenant_id))
+  WITH CHECK (public.is_tenant_member(tenant_id));
+
+
+-- ------------------------------------------------------------------------------
+-- 3. Update Church Provisioning to 30-Day Trial
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.provision_tenant(
   p_name text,
@@ -74,7 +125,19 @@ BEGIN
   END IF;
 
   BEGIN
-    INSERT INTO public.tenants (name, subdomain, tier, contact_email, contact_phone, approval_status, status, trial_ends_at)
+    -- Provision with 30-day trial for paid tiers (Free tier has indefinite free access)
+    INSERT INTO public.tenants (
+      name, 
+      subdomain, 
+      tier, 
+      contact_email, 
+      contact_phone, 
+      approval_status, 
+      status, 
+      trial_ends_at,
+      support_sms_enabled,
+      support_sms_recipients
+    )
     VALUES (
       trim(p_name), 
       v_sub, 
@@ -83,27 +146,25 @@ BEGIN
       public.normalize_phone_gh(p_contact_phone), 
       'pending_approval', 
       'active',
-      CASE WHEN v_free THEN NULL ELSE now() + interval '30 days' END
+      CASE WHEN v_free THEN NULL ELSE now() + interval '30 days' END,
+      true,
+      public.normalize_phone_gh(p_contact_phone)
     )
     RETURNING id INTO v_tenant;
   EXCEPTION WHEN unique_violation THEN
     RAISE EXCEPTION 'That check-in address is already taken';
   END;
 
-  INSERT INTO public.branches (tenant_id, name, is_default) 
-  VALUES (v_tenant, 'Main', true) 
+  INSERT INTO public.branches (tenant_id, name, is_default, support_sms_enabled) 
+  VALUES (v_tenant, 'Main', true, true) 
   RETURNING id INTO v_branch;
 
   INSERT INTO public.tenant_users (tenant_id, user_id, role, branch_id) 
   VALUES (v_tenant, auth.uid(), 'owner', v_branch);
 
+  -- Set initial 30-day billing cycle for trials
   INSERT INTO public.subscriptions (tenant_id, tier, period_start, period_end)
-  VALUES (
-    v_tenant, 
-    p_tier, 
-    v_start, 
-    CASE WHEN v_free THEN DATE '9999-12-31' ELSE v_start + 30 END
-  );
+  VALUES (v_tenant, p_tier, v_start, CASE WHEN v_free THEN DATE '9999-12-31' ELSE v_start + 30 END);
 
   IF p_tier IN ('standard','premium') THEN
     INSERT INTO public.structure_levels (tenant_id, name, rank) 
@@ -126,7 +187,7 @@ GRANT EXECUTE ON FUNCTION public.provision_tenant(text,text,public.tenant_tier,t
 
 
 -- ------------------------------------------------------------------------------
--- 3. Update Verified Onboarding Completion Handler
+-- 4. Update Verified Onboarding Completion Handler to 30 Days
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.complete_verified_onboarding()
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -175,7 +236,7 @@ GRANT EXECUTE ON FUNCTION public.complete_verified_onboarding() TO authenticated
 
 
 -- ------------------------------------------------------------------------------
--- 4. Update Platform Operator Church Creation to 30 Days Trial
+-- 5. Update Platform Operator Church Creation to 30 Days Trial
 -- ------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.platform_create_tenant(
   p_name text,
@@ -215,7 +276,17 @@ BEGIN
     RAISE EXCEPTION 'That subdomain is reserved'; 
   END IF;
 
-  INSERT INTO public.tenants(name, subdomain, tier, status, contact_email, contact_phone, trial_ends_at)
+  INSERT INTO public.tenants(
+    name, 
+    subdomain, 
+    tier, 
+    status, 
+    contact_email, 
+    contact_phone, 
+    trial_ends_at,
+    support_sms_enabled,
+    support_sms_recipients
+  )
   VALUES (
     btrim(p_name),
     v_sub,
@@ -223,12 +294,14 @@ BEGIN
     'active',
     nullif(btrim(coalesce(p_contact_email,'')),''),
     public.normalize_phone_gh(p_contact_phone),
-    CASE WHEN v_free THEN NULL ELSE now() + interval '30 days' END
+    CASE WHEN v_free THEN NULL ELSE now() + interval '30 days' END,
+    true,
+    public.normalize_phone_gh(p_contact_phone)
   ) 
   RETURNING id INTO v_id;
 
-  INSERT INTO public.branches(tenant_id, name, is_default) 
-  VALUES(v_id, 'Main', true);
+  INSERT INTO public.branches(tenant_id, name, is_default, support_sms_enabled) 
+  VALUES(v_id, 'Main', true, true);
 
   INSERT INTO public.subscriptions(tenant_id, tier, period_start, period_end) 
   VALUES(
@@ -260,7 +333,7 @@ GRANT EXECUTE ON FUNCTION public.platform_create_tenant(text,text,public.tenant_
 
 
 -- ------------------------------------------------------------------------------
--- 5. Extend Active Trials from 14 Days to 30 Days (Upgrade Existing Trials)
+-- 6. Extend Active Trials from 14 Days to 30 Days (Upgrade Existing Trials)
 -- ------------------------------------------------------------------------------
 UPDATE public.tenants
 SET trial_ends_at = trial_ends_at + interval '16 days'
@@ -279,7 +352,7 @@ WHERE s.tenant_id = t.id
 
 
 -- ------------------------------------------------------------------------------
--- 6. Optimized Indexes for Trial Expiration Alerts & Notification Crons
+-- 7. Optimized Indexes for Trial Expiration Alerts & Notification Crons
 -- ------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS audit_events_tenant_action_idx 
   ON public.audit_events (tenant_id, action);
@@ -287,3 +360,7 @@ CREATE INDEX IF NOT EXISTS audit_events_tenant_action_idx
 CREATE INDEX IF NOT EXISTS tenants_active_trial_idx 
   ON public.tenants (trial_ends_at, status, tier) 
   WHERE trial_ends_at IS NOT NULL;
+
+-- ==============================================================================
+-- End of Script
+-- ==============================================================================
