@@ -57,6 +57,34 @@ export const settingsSchema = z.object({
     show_stats: z.boolean(),
     banner: z.string().max(200),
   }),
+  global_banner: z
+    .object({
+      enabled: z.boolean().default(false),
+      message: z.string().max(500).default(""),
+      level: z.enum(["info", "warning", "critical"]).default("info"),
+      show_on_checkin: z.boolean().default(true),
+      show_on_admin: z.boolean().default(true),
+    })
+    .default({
+      enabled: false,
+      message: "",
+      level: "info",
+      show_on_checkin: true,
+      show_on_admin: true,
+    }),
+  autonomy: z
+    .object({
+      emergency_lockdown: z.boolean().default(false),
+      operator_display_name: z.string().max(80).default("Prime Haven Super Admin"),
+      operator_support_phone: z.string().max(40).default("+233550160237"),
+      operator_custom_username: z.string().max(40).default(""),
+    })
+    .default({
+      emergency_lockdown: false,
+      operator_display_name: "Prime Haven Super Admin",
+      operator_support_phone: "+233550160237",
+      operator_custom_username: "",
+    }),
   coupons: z.array(couponSchema).max(200),
 });
 export type PlatformSettings = z.infer<typeof settingsSchema>;
@@ -66,7 +94,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     platform_name: "Mene:Log",
     tagline: "Every person counted, every person cared for.",
     support_email: "support@menelog.site",
-    support_phone: "",
+    support_phone: "+233550160237",
     primary_color: "#3b82f6",
   },
   pricing: {
@@ -78,13 +106,26 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   messaging: { quiet_start: 21, quiet_end: 7, default_absence_threshold: 3 },
   legal: { terms_extra: "", privacy_extra: "" },
   homepage: { show_stats: true, banner: "" },
+  global_banner: {
+    enabled: false,
+    message: "",
+    level: "info",
+    show_on_checkin: true,
+    show_on_admin: true,
+  },
+  autonomy: {
+    emergency_lockdown: false,
+    operator_display_name: "Prime Haven Super Admin",
+    operator_support_phone: "+233550160237",
+    operator_custom_username: "",
+  },
   coupons: [],
 };
 
 /** Safe-for-public subset (never coupons or blocked domains). */
 export type PublicSettings = Pick<
   PlatformSettings,
-  "branding" | "pricing" | "homepage" | "legal"
+  "branding" | "pricing" | "homepage" | "legal" | "global_banner"
 > & {
   maintenance: boolean;
   maintenance_message: string;

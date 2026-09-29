@@ -524,6 +524,17 @@ const action = z.discriminatedUnion("type", [
     tenant_id: z.string().uuid(),
     reason: z.string().min(5),
   }),
+  z.object({
+    type: z.literal("delete_church_permanent"),
+    tenant_id: z.string().uuid(),
+    confirmation_name: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("update_profile"),
+    username: z.string().regex(/^[a-z0-9._-]{3,40}$/i),
+    display_name: z.string().max(80).optional(),
+    phone: z.string().max(40).optional(),
+  }),
 ]);
 
 export type OperatorActionInput = z.infer<typeof action>;
@@ -849,7 +860,118 @@ export const operatorAction = createServerFn({ method: "POST" })
         if (error) throw new Error(error.message);
         return { ok: true, message: "Church flagged for review" };
       }
+      case "delete_church_permanent": {
+        const { data: tenant } = await db
+          .from("tenants")
+          .select("name, subdomain, tier")
+          .eq("id", data.tenant_id)
+          .single();
+        if (!tenant) throw new Error("Church not found.");
+
+        if (data.confirmation_name.trim().toLowerCase() !== tenant.name.trim().toLowerCase()) {
+          throw new Error(`Confirmation church name does not match "${tenant.name}".`);
+        }
+
+        // Try the stored procedure platform_purge_tenant first
+        const { error: rpcErr } = await db.rpc("platform_purge_tenant", {
+          p_tenant_id: data.tenant_id,
+          p_confirm_name: data.confirmation_name.trim(),
+        });
+
+        if (rpcErr) {
+          // Direct cascading purge via admin database client
+          await db.from("watch_sessions").delete().eq("tenant_id", data.tenant_id);
+          await db.from("attendance_records").delete().eq("tenant_id", data.tenant_id);
+          await db.from("messages").delete().eq("tenant_id", data.tenant_id);
+          await db.from("members").delete().eq("tenant_id", data.tenant_id);
+          await db.from("services").delete().eq("tenant_id", data.tenant_id);
+          await db.from("support_tickets").delete().eq("tenant_id", data.tenant_id);
+          await db.from("structure_levels").delete().eq("tenant_id", data.tenant_id);
+          await db.from("backups").delete().eq("tenant_id", data.tenant_id);
+          await db.from("subscriptions").delete().eq("tenant_id", data.tenant_id);
+          await db.from("tenant_users").delete().eq("tenant_id", data.tenant_id);
+          await db.from("tenants").update({ parent_tenant_id: null }).eq("parent_tenant_id", data.tenant_id);
+          await db.from("branches").delete().eq("tenant_id", data.tenant_id);
+          await db.from("audit_events").delete().eq("tenant_id", data.tenant_id);
+          const { error: delErr } = await db.from("tenants").delete().eq("id", data.tenant_id);
+          if (delErr) throw new Error(delErr.message);
+        }
+
+        await audit(me, "tenant.permanently_purged", { name: tenant.name, subdomain: tenant.subdomain });
+        return { ok: true, message: `Church "${tenant.name}" and all records have been permanently deleted from the database.` };
+      }
+      case "update_profile": {
+        const cleanUsername = normaliseUsername(data.username);
+        const { error: rpcErr } = await db.rpc("platform_update_my_profile", {
+          p_username: cleanUsername,
+          p_display_name: data.display_name?.trim() || null,
+          p_phone: data.phone?.trim() || null,
+        });
+
+        if (rpcErr) {
+          // Direct auth metadata fallback
+          await db.auth.admin.updateUserById(me, {
+            user_metadata: {
+              operator_username: cleanUsername,
+              display_name: data.display_name?.trim() || null,
+              phone: data.phone?.trim() || null,
+            },
+            app_metadata: {
+              operator_username: cleanUsername,
+            },
+          });
+        }
+        await audit(me, "operator.profile_updated", { username: cleanUsername });
+        return { ok: true, message: `Profile updated. Operator username is now "${cleanUsername}".` };
+      }
     }
+  });
+
+/* ---------------- One-Click Isolated Church Database Export ---------------- */
+export const exportChurchDatabaseDump = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ tenant_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOperator(context);
+    const db = await admin();
+    const [
+      { data: tenant },
+      { data: branches },
+      { data: services },
+      { data: members },
+      { data: attendance },
+      { data: tickets },
+      { data: subscriptions },
+      { data: users },
+      { data: watchSessions },
+    ] = await Promise.all([
+      db.from("tenants").select("*").eq("id", data.tenant_id).single(),
+      db.from("branches").select("*").eq("tenant_id", data.tenant_id),
+      db.from("services").select("*").eq("tenant_id", data.tenant_id),
+      db.from("members").select("*").eq("tenant_id", data.tenant_id),
+      db.from("attendance_records").select("*").eq("tenant_id", data.tenant_id).limit(10000),
+      db.from("support_tickets").select("*").eq("tenant_id", data.tenant_id),
+      db.from("subscriptions").select("*").eq("tenant_id", data.tenant_id),
+      db.from("tenant_users").select("id, role, branch_id, created_at").eq("tenant_id", data.tenant_id),
+      db.from("watch_sessions").select("*").eq("tenant_id", data.tenant_id).limit(5000),
+    ]);
+
+    await audit(context.userId, "tenant.database_dump_exported", { tenant_id: data.tenant_id });
+
+    return {
+      exported_at: new Date().toISOString(),
+      platform: "Mene:Log Prime Haven Console",
+      church: tenant?.name || "Church",
+      tenant,
+      branches: branches ?? [],
+      services: services ?? [],
+      members: members ?? [],
+      attendance_records: attendance ?? [],
+      support_tickets: tickets ?? [],
+      subscriptions: subscriptions ?? [],
+      tenant_users: users ?? [],
+      watch_sessions: watchSessions ?? [],
+    };
   });
 
 /* ---------------- Live service checks ---------------- */

@@ -21,7 +21,9 @@ import {
   Phone,
   Building2,
   AlertCircle,
+  Radio,
 } from "lucide-react";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +101,8 @@ function CheckIn() {
   const loadLeaderTypes = useServerFn(getPublicLeaderTypes);
   const reduceMotion = useReducedMotion();
   const [tab, setTab] = useState<"member" | "leader" | "branch">("member");
+  const platformSettings = usePlatformSettings();
+  const globalBanner = platformSettings?.global_banner;
 
   const { data: church } = useQuery({
     queryKey: ["branding", subdomain],
@@ -458,6 +462,27 @@ function CheckIn() {
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 mx-auto max-w-md"
       >
+        {/* Global Platform Broadcast Banner */}
+        {globalBanner?.enabled && globalBanner?.show_on_checkin && globalBanner?.message && (
+          <div
+            className={`mb-6 p-3.5 rounded-2xl border text-xs font-medium flex items-center gap-2.5 backdrop-blur-md shadow-lg ${
+              globalBanner.level === "critical"
+                ? "bg-rose-950/85 border-rose-500/50 text-rose-200"
+                : globalBanner.level === "warning"
+                  ? "bg-amber-950/85 border-amber-500/50 text-amber-200"
+                  : "bg-blue-950/85 border-blue-500/50 text-blue-200"
+            }`}
+          >
+            <Radio className="size-4 shrink-0 animate-pulse text-primary" />
+            <div className="flex-1">
+              <span className="font-bold uppercase tracking-wider text-[10px] opacity-80 mr-1.5">
+                Notice:
+              </span>
+              <span>{globalBanner.message}</span>
+            </div>
+          </div>
+        )}
+
         <div className="text-center">
           {logoUrl && (
             <img

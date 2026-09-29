@@ -19,6 +19,7 @@ export const getPublicSettings = createServerFn({ method: "GET" }).handler(
       pricing: s.pricing,
       homepage: s.homepage,
       legal: s.legal,
+      global_banner: s.global_banner,
       maintenance: s.signups.maintenance,
       maintenance_message: s.signups.maintenance_message,
     };

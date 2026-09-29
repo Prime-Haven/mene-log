@@ -22,6 +22,7 @@ import {
   ListChecks,
   PhoneCall,
   LifeBuoy,
+  Radio,
 } from "lucide-react";
 import { MfaGate } from "@/components/TwoStep";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -30,6 +31,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/hooks/useTenant";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { InstallMene } from "@/components/InstallMene";
@@ -243,6 +245,8 @@ function AppLayout() {
 
   const tenant = ctx.membership.tenant;
   const suspended = tenant.status === "suspended" || tenant.status === "closed";
+  const platformSettings = usePlatformSettings();
+  const globalBanner = platformSettings?.global_banner;
 
   const current = nav.find((item) => pathname.startsWith(item.to));
   const Navigation = ({ mobile = false }: { mobile?: boolean }) => (
@@ -281,8 +285,10 @@ function AppLayout() {
                 {items.map(({ to, search, label, icon: Icon, feature }) => {
                   const isOnlineTab = search?.tab === "online";
                   const active = isOnlineTab
-                    ? pathname.startsWith(to) && (routerState.location.search as Record<string, unknown>)?.tab === "online"
-                    : pathname.startsWith(to) && (routerState.location.search as Record<string, unknown>)?.tab !== "online";
+                    ? pathname.startsWith(to) &&
+                      (routerState.location.search as Record<string, unknown>)?.tab === "online"
+                    : pathname.startsWith(to) &&
+                      (routerState.location.search as Record<string, unknown>)?.tab !== "online";
                   const locked = !!feature && !ctx.can(feature);
                   return (
                     <Link
@@ -421,6 +427,27 @@ function AppLayout() {
             </Button>
           </div>
         </header>
+
+        {/* Global Platform Broadcast Banner */}
+        {globalBanner?.enabled && globalBanner?.show_on_admin && globalBanner?.message && (
+          <div
+            className={`border-b px-5 py-2.5 text-xs font-medium flex items-center justify-between gap-3 ${
+              globalBanner.level === "critical"
+                ? "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
+                : globalBanner.level === "warning"
+                  ? "bg-amber-500/15 border-amber-500/30 text-amber-800 dark:text-amber-200"
+                  : "bg-blue-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Radio className="size-3.5 shrink-0 animate-pulse" />
+              <span className="font-semibold uppercase tracking-wider text-[10px] opacity-80">
+                Platform Alert:
+              </span>
+              <span>{globalBanner.message}</span>
+            </div>
+          </div>
+        )}
 
         {tenant.approval_status === "correction_requested" ? (
           <div className="border-b border-amber-500/40 bg-amber-500/10 px-5 py-3 text-sm text-foreground flex flex-wrap items-center justify-between gap-3">

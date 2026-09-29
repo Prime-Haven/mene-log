@@ -9,6 +9,7 @@ const DEFAULT_PUBLIC_SETTINGS: PublicSettings = {
   pricing: DEFAULT_SETTINGS.pricing,
   homepage: DEFAULT_SETTINGS.homepage,
   legal: DEFAULT_SETTINGS.legal,
+  global_banner: DEFAULT_SETTINGS.global_banner,
   maintenance: DEFAULT_SETTINGS.signups.maintenance,
   maintenance_message: DEFAULT_SETTINGS.signups.maintenance_message,
 };
@@ -34,5 +35,6 @@ export function usePlatformSettings(): PublicSettings {
     pricing: { ...DEFAULT_PUBLIC_SETTINGS.pricing, ...(raw.pricing ?? {}) },
     homepage: { ...DEFAULT_PUBLIC_SETTINGS.homepage, ...(raw.homepage ?? {}) },
     legal: { ...DEFAULT_PUBLIC_SETTINGS.legal, ...(raw.legal ?? {}) },
+    global_banner: { ...DEFAULT_PUBLIC_SETTINGS.global_banner, ...(raw.global_banner ?? {}) },
   };
 }

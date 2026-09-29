@@ -14,9 +14,13 @@ import {
   AlertTriangle,
   FolderArchive,
   ArrowRight,
-  Database,
   Users,
+  Trash2,
+  FileDown,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { exportChurchDatabaseDump } from "@/lib/operator.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -483,6 +487,30 @@ function ChurchWorkspace({
   const [spaceSlots, setSpaceSlots] = useState(c.extra_member_slots ?? 0);
   const [statusConfirm, setStatusConfirm] = useState<{ next: Status; verb: string } | null>(null);
   const [detachConfirm, setDetachConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const exportDumpFn = useServerFn(exportChurchDatabaseDump);
+
+  const handleExportDatabaseDump = async () => {
+    setIsExporting(true);
+    try {
+      const dump = await exportDumpFn({ data: { tenant_id: c.id } });
+      const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `menelog-${c.subdomain}-database-archive-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Full database archive downloaded for ${c.name}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to export church data.";
+      toast.error(msg);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const payments = d.payments.filter((p) => p.tenant_id === c.id);
   const auditEntries = d.audit.filter((a) => a.tenant_id === c.id);
@@ -625,6 +653,26 @@ function ChurchWorkspace({
               onClick={() => setStatusConfirm({ next: "closed", verb: "Close" })}
             >
               Close Account
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportDatabaseDump}
+              disabled={isExporting}
+              className="h-9 gap-1.5"
+            >
+              <FileDown className="size-3.5 text-primary" />
+              <span>{isExporting ? "Exporting..." : "Export Full Database (JSON)"}</span>
+            </Button>
+            <Button
+              variant="destructive"
+              className="h-9 gap-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
+              onClick={() => {
+                setDeleteInput("");
+                setDeleteConfirm(true);
+              }}
+            >
+              <Trash2 className="size-3.5" />
+              <span>Permanently Purge Church</span>
             </Button>
           </div>
         </TabsContent>
@@ -1125,6 +1173,82 @@ function ChurchWorkspace({
               }
             >
               Confirm detach
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permanent Church Deletion (Cascading Purge) Modal */}
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent className="border-destructive/40 bg-card">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-destructive font-bold text-lg">
+              <AlertTriangle className="size-5 shrink-0" />
+              <span>Permanently Delete Church</span>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              This action is immediate and completely irreversible. All records belonging to{" "}
+              <strong className="text-foreground">{c.name}</strong>—including members, attendance
+              logs, services, branches, tickets, messaging logs, and subscriptions—will be wiped
+              from the database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+              <p className="font-semibold">Irreversible Hard Purge</p>
+              <p className="text-[11px] mt-0.5 opacity-90">
+                To prevent accidental loss, type the church name and DELETE in uppercase exactly as
+                shown below:
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">
+                Verification phrase:{" "}
+                <span className="font-mono font-bold text-foreground">{c.name} DELETE</span>
+              </Label>
+              <Input
+                value={deleteInput}
+                onChange={(e) => setDeleteInput(e.target.value)}
+                placeholder={`${c.name} DELETE`}
+                className="font-mono text-xs h-10"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirm(false);
+                setDeleteInput("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteInput.trim() !== `${c.name} DELETE` || act.isPending}
+              onClick={() => {
+                act.mutate(
+                  {
+                    type: "delete_church_permanent",
+                    tenant_id: c.id,
+                    confirmation_name: c.name,
+                  },
+                  {
+                    onSuccess: () => {
+                      setDeleteConfirm(false);
+                      setDeleteInput("");
+                    },
+                  },
+                );
+              }}
+              className="gap-2"
+            >
+              <Trash2 className="size-4" />
+              <span>
+                {act.isPending ? "Purging from database..." : "Wipe Completely from Database"}
+              </span>
             </Button>
           </DialogFooter>
         </DialogContent>

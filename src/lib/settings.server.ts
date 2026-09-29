@@ -29,6 +29,8 @@ function merge(raw: Partial<PlatformSettings> | null): PlatformSettings {
     messaging: { ...d.messaging, ...(raw.messaging ?? {}) },
     legal: { ...d.legal, ...(raw.legal ?? {}) },
     homepage: { ...d.homepage, ...(raw.homepage ?? {}) },
+    global_banner: { ...d.global_banner, ...(raw.global_banner ?? {}) },
+    autonomy: { ...d.autonomy, ...(raw.autonomy ?? {}) },
     coupons: raw.coupons ?? [],
   };
 }
