@@ -19,6 +19,7 @@ import { Route as OnboardingCompleteRouteImport } from './routes/onboarding-comp
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SuperAdminRouteImport } from './routes/super-admin'
+import { Route as SupportConsoleRouteImport } from './routes/support-console'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppAccountsRouteImport } from './routes/_app/accounts'
 import { Route as AppAskMeneRouteImport } from './routes/_app/ask-mene'
@@ -37,6 +38,7 @@ import { Route as AppScanRouteImport } from './routes/_app/scan'
 import { Route as AppServicesRouteImport } from './routes/_app/services'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppStructureRouteImport } from './routes/_app/structure'
+import { Route as AppSupportRouteImport } from './routes/_app/support'
 import { Route as CSubdomainRouteImport } from './routes/c.$subdomain'
 import { Route as LiveSubdomainRouteImport } from './routes/live.$subdomain'
 import { Route as ApiPublicAskMeneRouteImport } from './routes/api/public/ask-mene'
@@ -92,6 +94,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const SuperAdminRoute = SuperAdminRouteImport.update({
   id: '/super-admin',
   path: '/super-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportConsoleRoute = SupportConsoleRouteImport.update({
+  id: '/support-console',
+  path: '/support-console',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -184,6 +191,11 @@ const AppStructureRoute = AppStructureRouteImport.update({
   path: '/structure',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const CSubdomainRoute = CSubdomainRouteImport.update({
   id: '/c/$subdomain',
   path: '/c/$subdomain',
@@ -226,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/super-admin': typeof SuperAdminRoute
+  '/support-console': typeof SupportConsoleRoute
   '/terms': typeof TermsRoute
   '/accounts': typeof AppAccountsRoute
   '/ask-mene': typeof AppAskMeneRoute
@@ -244,6 +257,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof AppServicesRoute
   '/settings': typeof AppSettingsRoute
   '/structure': typeof AppStructureRoute
+  '/support': typeof AppSupportRoute
   '/c/$subdomain': typeof CSubdomainRoute
   '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
@@ -261,6 +275,7 @@ export interface FileRoutesByTo {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/super-admin': typeof SuperAdminRoute
+  '/support-console': typeof SupportConsoleRoute
   '/terms': typeof TermsRoute
   '/accounts': typeof AppAccountsRoute
   '/ask-mene': typeof AppAskMeneRoute
@@ -279,6 +294,7 @@ export interface FileRoutesByTo {
   '/services': typeof AppServicesRoute
   '/settings': typeof AppSettingsRoute
   '/structure': typeof AppStructureRoute
+  '/support': typeof AppSupportRoute
   '/c/$subdomain': typeof CSubdomainRoute
   '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
@@ -298,6 +314,7 @@ export interface FileRoutesById {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/super-admin': typeof SuperAdminRoute
+  '/support-console': typeof SupportConsoleRoute
   '/terms': typeof TermsRoute
   '/_app/accounts': typeof AppAccountsRoute
   '/_app/ask-mene': typeof AppAskMeneRoute
@@ -316,6 +333,7 @@ export interface FileRoutesById {
   '/_app/services': typeof AppServicesRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/structure': typeof AppStructureRoute
+  '/_app/support': typeof AppSupportRoute
   '/c/$subdomain': typeof CSubdomainRoute
   '/live/$subdomain': typeof LiveSubdomainRoute
   '/api/public/ask-mene': typeof ApiPublicAskMeneRoute
@@ -335,6 +353,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/super-admin'
+    | '/support-console'
     | '/terms'
     | '/accounts'
     | '/ask-mene'
@@ -353,6 +372,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/structure'
+    | '/support'
     | '/c/$subdomain'
     | '/live/$subdomain'
     | '/api/public/ask-mene'
@@ -370,6 +390,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/super-admin'
+    | '/support-console'
     | '/terms'
     | '/accounts'
     | '/ask-mene'
@@ -388,6 +409,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/settings'
     | '/structure'
+    | '/support'
     | '/c/$subdomain'
     | '/live/$subdomain'
     | '/api/public/ask-mene'
@@ -406,6 +428,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/super-admin'
+    | '/support-console'
     | '/terms'
     | '/_app/accounts'
     | '/_app/ask-mene'
@@ -424,6 +447,7 @@ export interface FileRouteTypes {
     | '/_app/services'
     | '/_app/settings'
     | '/_app/structure'
+    | '/_app/support'
     | '/c/$subdomain'
     | '/live/$subdomain'
     | '/api/public/ask-mene'
@@ -443,6 +467,7 @@ export interface RootRouteChildren {
   PlatformRoute: typeof PlatformRoute
   PrivacyRoute: typeof PrivacyRoute
   SuperAdminRoute: typeof SuperAdminRoute
+  SupportConsoleRoute: typeof SupportConsoleRoute
   TermsRoute: typeof TermsRoute
   CSubdomainRoute: typeof CSubdomainRoute
   LiveSubdomainRoute: typeof LiveSubdomainRoute
@@ -522,6 +547,13 @@ declare module '@tanstack/react-router' {
       path: '/super-admin'
       fullPath: '/super-admin'
       preLoaderRoute: typeof SuperAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support-console': {
+      id: '/support-console'
+      path: '/support-console'
+      fullPath: '/support-console'
+      preLoaderRoute: typeof SupportConsoleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -650,6 +682,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStructureRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/c/$subdomain': {
       id: '/c/$subdomain'
       path: '/c/$subdomain'
@@ -713,6 +752,7 @@ interface AppRouteRouteChildren {
   AppServicesRoute: typeof AppServicesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStructureRoute: typeof AppStructureRoute
+  AppSupportRoute: typeof AppSupportRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -733,6 +773,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppServicesRoute: AppServicesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStructureRoute: AppStructureRoute,
+  AppSupportRoute: AppSupportRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
@@ -750,6 +791,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlatformRoute: PlatformRoute,
   PrivacyRoute: PrivacyRoute,
   SuperAdminRoute: SuperAdminRoute,
+  SupportConsoleRoute: SupportConsoleRoute,
   TermsRoute: TermsRoute,
   CSubdomainRoute: CSubdomainRoute,
   LiveSubdomainRoute: LiveSubdomainRoute,
