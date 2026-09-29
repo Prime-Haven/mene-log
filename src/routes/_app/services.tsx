@@ -22,9 +22,11 @@ import {
   Sparkles,
   ShieldCheck,
   CheckCircle2,
+  Radio,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
+import { OnlineAttendancePanel } from "@/components/OnlineAttendancePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +42,9 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/services")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Church Services & Programs — Mene:Log" },
@@ -82,7 +87,12 @@ type ServiceRecord = {
 export function Services() {
   const { tenant, membership, can } = useTenant();
   const qc = useQueryClient();
+  const searchParams = Route.useSearch();
   const liveOn = can("watch_live");
+
+  const [activeTab, setActiveTab] = useState<"services" | "online">(() => {
+    return searchParams.tab === "online" ? "online" : "services";
+  });
 
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "special" | "sunday" | "midweek" | "prayer">(
@@ -438,7 +448,42 @@ export function Services() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Top View Selector: Services vs Online Streaming */}
+      <div className="flex border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("services")}
+          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-colors ${
+            activeTab === "services"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <CalendarDays className="size-4" />
+          <span>Church Services & Programs</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("online")}
+          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-colors ${
+            activeTab === "online"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Radio className="size-4 text-destructive animate-pulse" />
+          <span>Online Streaming & Attendance</span>
+          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
+            Live
+          </Badge>
+        </button>
+      </div>
+
+      {activeTab === "online" ? (
+        <OnlineAttendancePanel />
+      ) : (
+        <>
+          {/* Page Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-eyebrow">Program Operations</p>
@@ -1101,7 +1146,7 @@ export function Services() {
                   Live Stream URL (optional)
                 </Label>
                 {!liveOn && (
-                  <span className="text-[10px] text-muted-foreground">Standard/Premium tier</span>
+                  <span className="text-[10px] text-muted-foreground">Upgrade your account to unlock</span>
                 )}
               </div>
               <Input
@@ -1255,6 +1300,8 @@ export function Services() {
           )}
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

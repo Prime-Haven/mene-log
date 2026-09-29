@@ -70,9 +70,9 @@ function WatchLive() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const clean = code.replace(/\s|-/g, "").toLowerCase();
-    if (!/^[0-9a-f]{32}$/.test(clean)) {
-      setError("Member codes are 32 letters and numbers. Check the code under your QR.");
+    const clean = code.trim();
+    if (clean.length < 2) {
+      setError("Please enter your member code (e.g. ML-1024 or code under your QR).");
       return;
     }
     setBusy(true);
@@ -85,7 +85,7 @@ function WatchLive() {
         setServiceId(res.services[0]?.id ?? null);
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Something went wrong. Please check your member code and try again.");
     } finally {
       setBusy(false);
     }
@@ -125,8 +125,8 @@ function WatchLive() {
                 </div>
                 <h1 className="font-display text-2xl font-bold">Watch the service live</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Enter your member code — the code printed under your check-in QR. Your attendance
-                  is recorded while you watch.
+                  Enter your member code (e.g. ML-1024) printed under your check-in QR. Your
+                  attendance is recorded automatically while you watch.
                 </p>
               </div>
               <div className="space-y-2">
@@ -135,9 +135,9 @@ function WatchLive() {
                   id="code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  placeholder="e.g. 3f9a…"
+                  placeholder="e.g. ML-1024"
                   autoComplete="off"
-                  className="h-11 font-mono"
+                  className="h-11 font-mono uppercase"
                   maxLength={48}
                   required
                 />

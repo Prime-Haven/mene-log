@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordField";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -389,9 +390,8 @@ export function PrimeDatabase({ d, act }: { d: Snapshot; act: Act }) {
 
               <div className="space-y-1.5">
                 <Label className="text-xs">Operator Password (Two-Step Re-authentication):</Label>
-                <Input
+                <PasswordInput
                   required
-                  type="password"
                   value={operatorPassword}
                   onChange={(e) => setOperatorPassword(e.target.value)}
                   placeholder="Enter your operator password"

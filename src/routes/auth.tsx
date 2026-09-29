@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PasswordField } from "@/components/PasswordField";
+import { PasswordField, PasswordInput } from "@/components/PasswordField";
 import { passwordIsStrong } from "@/lib/password";
 import { MeneLogLogo } from "@/components/MeneLogLogo";
 
@@ -247,10 +247,9 @@ function AuthPage() {
                       </Label>
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
-                      <Input
+                      <Lock className="absolute left-3.5 top-3.5 size-4 text-muted-foreground z-10" />
+                      <PasswordInput
                         id="password"
-                        type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete="current-password"

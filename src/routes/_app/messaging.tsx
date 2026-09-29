@@ -198,7 +198,7 @@ function Messaging() {
               variant={channel === "sms" ? "default" : "outline"}
               size="sm"
               disabled={!smsAvailable}
-              title={smsAvailable ? undefined : "Text messages are part of the Premium package"}
+              title={smsAvailable ? undefined : "Upgrade to have access to text messages"}
               onClick={() => setChannel("sms")}
             >
               <MessageSquare className="size-4" /> Text message
@@ -335,7 +335,7 @@ function Messaging() {
             </ul>
             {!ctx.can("automations") && (
               <p className="mt-3 text-xs font-semibold text-muted-foreground">
-                Automatic messages start with the Standard package.
+                Automatic messaging is locked. Upgrade to have access to this feature.
               </p>
             )}
           </div>

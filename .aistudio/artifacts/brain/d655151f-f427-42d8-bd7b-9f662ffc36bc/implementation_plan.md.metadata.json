@@ -1,0 +1,6 @@
+{
+  "summary":  "Comprehensive implementation plan to address all 10 requirements:\n1. Fix member code for online streaming (support ML-XXXXX codes and QR tokens) + add integrated Online Attendance panel in Services & Attendance views\n2. Fix white-on-white text and contrast issues across leader area on check-in pages\n3. Resolve leader registration failures with improved error feedback, auth resilience, and access code handling\n4. Enhance branch portal with admin password on branch request + direct branch admin login on church check-in page\n5. Harmonize tab switcher UI dimensions and eliminate layout jumps\n6. Send real-time email alerts to primehaven26@gmail.com on every new church signup via Resend\n7. Add show/hide password toggle eye icon to all password inputs across the platform\n8. Universalize locked feature upgrade messaging (no specific tier name references)\n9. & 10. Upgrade Super Admin Features matrix with grouped, comprehensive feature suites and live tier toggles",
+  "updatedAt":  "2026-09-29T13:45:44.585525228Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

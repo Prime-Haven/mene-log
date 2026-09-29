@@ -172,6 +172,109 @@ export async function sendSupportNotificationAlert(options: {
 }
 
 /**
+ * Sends a real-time email alert to primehaven26@gmail.com whenever a new church
+ * registers or completes onboarding on Mene:Log.
+ */
+export async function sendNewChurchSignupAlert(options: {
+  churchName: string;
+  subdomain: string;
+  tier: string;
+  contactEmail: string;
+  contactPhone?: string | null;
+  adminName?: string | null;
+}) {
+  const directLink = `${SITE_URL}/super-admin`;
+  const checkinLink = `${SITE_URL}/c/${options.subdomain}`;
+  const emailSubject = `[New Church Signup] ${options.churchName} (${options.subdomain}) - ${options.tier.toUpperCase()}`;
+
+  const safeChurchName = options.churchName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeSubdomain = options.subdomain.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeEmail = options.contactEmail.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safePhone = (options.contactPhone || "None provided").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const safeAdmin = (options.adminName || "Church Administrator").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const html = `<!doctype html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="margin:0;background:#0b0f19;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#f1f5f9">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#111827;border:1px solid #1f2937;border-radius:16px;overflow:hidden">
+          <tr>
+            <td style="background:#030712;padding:20px 24px;border-bottom:1px solid #1f2937">
+              <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.02em">Mene:Log Operations Alert</span>
+              <span style="float:right;display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:9999px;background:#3b82f622;color:#3b82f6;border:1px solid #3b82f666">
+                NEW SIGNUP
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px">
+              <p style="margin:0 0 6px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600">
+                New Church Registered
+              </p>
+              <h2 style="margin:0 0 16px;color:#ffffff;font-size:22px;font-weight:700;line-height:1.3">
+                ${safeChurchName}
+              </h2>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1f2937;border-radius:10px;padding:14px;margin-bottom:20px">
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px;width:120px">Check-in URL:</td>
+                  <td style="padding:6px 0;color:#60a5fa;font-size:13px;font-family:monospace">${checkinLink}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Plan Package:</td>
+                  <td style="padding:6px 0;color:#34d399;font-size:13px;font-weight:700;text-transform:uppercase">${options.tier}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Admin Name:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safeAdmin}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Contact Email:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safeEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;color:#9ca3af;font-size:13px">Phone:</td>
+                  <td style="padding:6px 0;color:#f3f4f6;font-size:13px">${safePhone}</td>
+                </tr>
+              </table>
+
+              <div style="text-align:center">
+                <a href="${directLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">
+                  Open Super Admin Console &rarr;
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#090d16;padding:16px 24px;border-top:1px solid #1f2937;font-size:12px;color:#6b7280;text-align:center">
+              Mene:Log Automated Operations Desk · primehaven26@gmail.com
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const res = await sendEmail({
+      to: SUPPORT_NOTIFICATION_EMAIL,
+      subject: emailSubject,
+      html,
+      fromName: "Mene:Log Sign-up Alert",
+      replyTo: "support@menelog.site",
+    });
+    return res;
+  } catch (err) {
+    console.error("[signup alert] Failed to send new church notification email:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
  * Checks if user is a super admin (platform_admins) or support staff (support_staff)
  */
 export async function getOperatorSupportRole(

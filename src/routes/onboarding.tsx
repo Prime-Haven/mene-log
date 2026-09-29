@@ -21,13 +21,13 @@ import { useTenant, type Tier } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PasswordField } from "@/components/PasswordField";
+import { PasswordField, PasswordInput } from "@/components/PasswordField";
 import { passwordIsStrong } from "@/lib/password";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
-import { checkSignupAllowed } from "@/lib/settings.functions";
+import { checkSignupAllowed, notifyNewChurchSignup } from "@/lib/settings.functions";
 import {
   MONTHLY_USD,
   yearlyUsd,
@@ -282,6 +282,18 @@ function Onboarding() {
 
       if (error) throw error;
       if (!tenantId) throw new Error("Your church account could not be created.");
+
+      // Immediately alert Prime Haven operations desk at primehaven26@gmail.com
+      void notifyNewChurchSignup({
+        data: {
+          churchName: churchName.trim(),
+          subdomain: subdomain.trim().toLowerCase(),
+          tier,
+          contactEmail: churchEmail.trim() || email,
+          contactPhone: churchPhone.trim() || phone.trim() || null,
+          adminName: fullName.trim() || null,
+        },
+      });
 
       await qc.invalidateQueries({ queryKey: ["membership"] });
       setSubmitted("complete");
@@ -633,16 +645,15 @@ function Onboarding() {
                     value={password}
                     onChange={setPassword}
                   />
-                  <div className="space-y-1.5">
+                    <div className="space-y-1.5">
                     <Label htmlFor="confirm">Confirm password</Label>
-                    <Input
+                    <PasswordInput
                       id="confirm"
-                      type="password"
                       autoComplete="new-password"
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
                       required
-                      maxLength={16}
+                      maxLength={64}
                     />
                     {confirm.length > 0 && confirm !== password && (
                       <p className="text-xs text-destructive">Both passwords must match.</p>

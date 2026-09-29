@@ -66,6 +66,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordField";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -1948,9 +1949,8 @@ function Operators({ d, act }: { d: Snapshot; act: Act }) {
           value={u}
           onChange={(e) => setU(e.target.value)}
         />
-        <Input
+        <PasswordInput
           placeholder="Temporary password"
-          type="password"
           required
           minLength={8}
           maxLength={72}
@@ -2025,8 +2025,7 @@ function Operators({ d, act }: { d: Snapshot; act: Act }) {
           >
             <div className="space-y-2">
               <Label>New temporary password</Label>
-              <Input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 maxLength={72}

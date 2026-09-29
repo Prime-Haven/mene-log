@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordField";
 import { Label } from "@/components/ui/label";
 import { MfaChallenge, MfaEnroll } from "@/components/TwoStep";
 import { useServerFn } from "@tanstack/react-start";
@@ -122,9 +123,8 @@ function SuperAdminSignIn() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="operator-password">Password</Label>
-              <Input
+              <PasswordInput
                 id="operator-password"
-                type="password"
                 autoComplete="current-password"
                 required
                 value={password}

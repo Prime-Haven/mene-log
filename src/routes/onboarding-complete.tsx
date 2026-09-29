@@ -46,6 +46,34 @@ function OnboardingComplete() {
         setMessage(error.message);
         return;
       }
+      const rawDraft = window.sessionStorage.getItem("menelog-onboarding-draft");
+      const userMeta = (sessionData.session.user.user_metadata ?? {}) as Record<string, string>;
+      let draft: { email?: string; churchName?: string; subdomain?: string; tier?: string } = {};
+      try {
+        if (rawDraft) draft = JSON.parse(rawDraft);
+      } catch {
+        /* ignore */
+      }
+
+      const churchName = draft.churchName || userMeta.church_name || "New Church";
+      const subdomain = draft.subdomain || userMeta.subdomain || "church";
+      const tier = draft.tier || userMeta.tier || "standard";
+      const contactEmail = draft.email || sessionData.session.user.email || "";
+
+      if (contactEmail) {
+        const { notifyNewChurchSignup } = await import("@/lib/settings.functions");
+        void notifyNewChurchSignup({
+          data: {
+            churchName,
+            subdomain,
+            tier,
+            contactEmail,
+            contactPhone: userMeta.phone || userMeta.church_phone || null,
+            adminName: userMeta.full_name || null,
+          },
+        });
+      }
+
       window.sessionStorage.removeItem("menelog-onboarding-draft");
       setState("complete");
       setMessage("Your email is verified and your 14-day trial has started.");

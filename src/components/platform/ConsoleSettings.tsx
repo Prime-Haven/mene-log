@@ -11,6 +11,7 @@ import type { OperatorActionInput } from "@/lib/operator.functions";
 import { planLabel } from "@/lib/pricing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordField";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -630,11 +631,10 @@ function Security({
       >
         <p className="font-semibold">Change password</p>
         <F label="Current password">
-          <Input type="password" required value={cur} onChange={(e) => setCur(e.target.value)} />
+          <PasswordInput required value={cur} onChange={(e) => setCur(e.target.value)} />
         </F>
         <F label="New password">
-          <Input
-            type="password"
+          <PasswordInput
             required
             minLength={8}
             maxLength={72}
@@ -643,8 +643,7 @@ function Security({
           />
         </F>
         <F label="Repeat new password">
-          <Input
-            type="password"
+          <PasswordInput
             required
             value={again}
             onChange={(e) => setAgain(e.target.value)}

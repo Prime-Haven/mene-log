@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/PasswordField";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -450,9 +451,8 @@ export function SupportConsolePage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="support-password">Password</Label>
-              <Input
+              <PasswordInput
                 id="support-password"
-                type="password"
                 autoComplete="current-password"
                 required
                 maxLength={72}
@@ -1190,9 +1190,8 @@ export function SupportConsolePage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="staff-pass">Temporary Password (8-72 characters)</Label>
-                <Input
+                <PasswordInput
                   id="staff-pass"
-                  type="password"
                   required
                   minLength={8}
                   maxLength={72}

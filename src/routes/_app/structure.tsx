@@ -70,7 +70,7 @@ function Structure() {
     mutationFn: async () => {
       const rank = (levels?.length ?? 0) + 1;
       if (tier !== "premium" && rank > 1) {
-        throw new Error("Multiple leadership levels are a Premium feature");
+        throw new Error("Multiple leadership levels are locked on your current plan. Upgrade your account to unlock this feature.");
       }
       const { error } = await supabase
         .from("structure_levels")
@@ -151,7 +151,7 @@ function Structure() {
           </form>
           {tier !== "premium" && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Your tier supports a single leadership level. Upgrade to Premium for a full ladder.
+              Your plan supports a single leadership level. Upgrade your account to unlock full multi-level hierarchy.
             </p>
           )}
         </div>

@@ -37,6 +37,7 @@ import heroPoster from "@/assets/mene-worship-poster.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/PasswordField";
 
 export const Route = createFileRoute("/c/$subdomain")({
   head: () => ({
@@ -74,7 +75,7 @@ export const Route = createFileRoute("/c/$subdomain")({
 });
 
 const selectClass =
-  "h-11 w-full rounded-xl border border-border/70 bg-background/80 px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
+  "h-11 w-full rounded-xl border border-white/20 bg-neutral-900 text-white px-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 
 const educationLevels = [
   "No formal education",
@@ -401,7 +402,7 @@ function CheckIn() {
 
         {/* Member / Leader / Branch tab switch */}
         <div
-          className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/30 p-1.5 shadow-md backdrop-blur-xl ${tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}
+          className={`mt-6 grid gap-1.5 rounded-2xl border border-white/20 bg-black/40 p-1.5 shadow-md backdrop-blur-xl ${tabCount === 3 ? "grid-cols-3" : tabCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}
         >
           <Button
             type="button"
@@ -410,7 +411,7 @@ function CheckIn() {
             className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
               tab === "member"
                 ? "bg-primary text-primary-foreground shadow-md"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-white/80 hover:text-white hover:bg-white/10"
             }`}
           >
             <User className="size-4" /> Member Check-in
@@ -423,7 +424,7 @@ function CheckIn() {
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
                 tab === "leader"
                   ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               }`}
             >
               <UserCog className="size-4" /> Leader Area
@@ -437,10 +438,10 @@ function CheckIn() {
               className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all sm:text-sm ${
                 tab === "branch"
                   ? "bg-primary text-primary-foreground shadow-md"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
               }`}
             >
-              <Building2 className="size-4" /> Branches
+              <Building2 className="size-4" /> Branch Portal
             </Button>
           )}
         </div>
@@ -460,7 +461,7 @@ function CheckIn() {
         ) : (
           <form
             onSubmit={onSubmit}
-            className="mt-6 rounded-3xl border border-white/15 bg-black/35 space-y-4 p-5 sm:p-6 shadow-xl backdrop-blur-xl"
+            className="mt-6 min-h-[460px] rounded-3xl border border-white/15 bg-black/40 space-y-4 p-5 sm:p-6 shadow-xl backdrop-blur-xl text-white"
           >
             <div className="space-y-1.5">
               <Label htmlFor="service" className="text-xs font-semibold">
@@ -530,7 +531,7 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="n" className="text-xs font-semibold">
+              <Label htmlFor="n" className="text-xs font-semibold text-white/90">
                 Full name
               </Label>
               <Input
@@ -540,12 +541,12 @@ function CheckIn() {
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 placeholder="First and last name"
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="p" className="text-xs font-semibold">
+              <Label htmlFor="p" className="text-xs font-semibold text-white/90">
                 Phone number
               </Label>
               <Input
@@ -555,13 +556,13 @@ function CheckIn() {
                 placeholder="024 000 0000"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold">
-                Email <span className="font-normal text-muted-foreground">(optional)</span>
+              <Label htmlFor="email" className="text-xs font-semibold text-white/90">
+                Email <span className="font-normal text-white/50">(optional)</span>
               </Label>
               <Input
                 id="email"
@@ -571,13 +572,13 @@ function CheckIn() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="your.email@example.com"
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="d" className="text-xs font-semibold">
+                <Label htmlFor="d" className="text-xs font-semibold text-white/90">
                   Date of birth
                 </Label>
                 <Input
@@ -587,11 +588,11 @@ function CheckIn() {
                   max={new Date().toISOString().slice(0, 10)}
                   value={form.date_of_birth}
                   onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white focus:border-primary focus:bg-white/15"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="g" className="text-xs font-semibold">
+                <Label htmlFor="g" className="text-xs font-semibold text-white/90">
                   Gender
                 </Label>
                 <select
@@ -601,15 +602,15 @@ function CheckIn() {
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
                 >
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
+                  <option value="" className="bg-neutral-900 text-white">Select gender</option>
+                  <option value="male" className="bg-neutral-900 text-white">Male</option>
+                  <option value="female" className="bg-neutral-900 text-white">Female</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="marital" className="text-xs font-semibold">
+              <Label htmlFor="marital" className="text-xs font-semibold text-white/90">
                 Marital status
               </Label>
               <select
@@ -619,18 +620,18 @@ function CheckIn() {
                 value={form.marital_status}
                 onChange={(e) => setForm({ ...form, marital_status: e.target.value })}
               >
-                <option value="">Select status</option>
-                <option value="single">Single</option>
-                <option value="married">Married</option>
-                <option value="divorced">Divorced</option>
-                <option value="widowed">Widowed</option>
-                <option value="separated">Separated</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
+                <option value="" className="bg-neutral-900 text-white">Select status</option>
+                <option value="single" className="bg-neutral-900 text-white">Single</option>
+                <option value="married" className="bg-neutral-900 text-white">Married</option>
+                <option value="divorced" className="bg-neutral-900 text-white">Divorced</option>
+                <option value="widowed" className="bg-neutral-900 text-white">Widowed</option>
+                <option value="separated" className="bg-neutral-900 text-white">Separated</option>
+                <option value="prefer_not_to_say" className="bg-neutral-900 text-white">Prefer not to say</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="a" className="text-xs font-semibold">
+              <Label htmlFor="a" className="text-xs font-semibold text-white/90">
                 Where do you live?
               </Label>
               <Input
@@ -640,13 +641,13 @@ function CheckIn() {
                 value={form.residential_area}
                 onChange={(e) => setForm({ ...form, residential_area: e.target.value })}
                 placeholder="Suburb, neighborhood or landmark"
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="occupation" className="text-xs font-semibold">
+                <Label htmlFor="occupation" className="text-xs font-semibold text-white/90">
                   Occupation
                 </Label>
                 <Input
@@ -656,11 +657,11 @@ function CheckIn() {
                   value={form.occupation}
                   onChange={(e) => setForm({ ...form, occupation: e.target.value })}
                   placeholder="e.g. Student, Accountant"
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="education" className="text-xs font-semibold">
+                <Label htmlFor="education" className="text-xs font-semibold text-white/90">
                   Educational level
                 </Label>
                 <select
@@ -669,9 +670,9 @@ function CheckIn() {
                   value={form.education_level}
                   onChange={(e) => setForm({ ...form, education_level: e.target.value })}
                 >
-                  <option value="">Select level</option>
+                  <option value="" className="bg-neutral-900 text-white">Select level</option>
                   {educationLevels.map((level) => (
-                    <option key={level} value={level}>
+                    <option key={level} value={level} className="bg-neutral-900 text-white">
                       {level}
                     </option>
                   ))}
@@ -680,7 +681,7 @@ function CheckIn() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader" className="text-xs font-semibold">
+              <Label htmlFor="leader" className="text-xs font-semibold text-white/90">
                 Who invited you?
               </Label>
               <select
@@ -689,10 +690,10 @@ function CheckIn() {
                 value={form.invited_by_leader_id}
                 onChange={(e) => setForm({ ...form, invited_by_leader_id: e.target.value })}
               >
-                <option value="">Self / walk-in</option>
+                <option value="" className="bg-neutral-900 text-white">Self / walk-in</option>
                 {leaderAreaOpen &&
                   leaders.map((leader) => (
-                    <option key={leader.id} value={leader.id}>
+                    <option key={leader.id} value={leader.id} className="bg-neutral-900 text-white">
                       {leader.full_name}
                       {leader.leader_type ? ` — ${leader.leader_type}` : ""}
                     </option>
@@ -700,10 +701,10 @@ function CheckIn() {
               </select>
             </div>
 
-            <label className="flex items-start gap-2.5 rounded-xl border border-border/40 bg-muted/30 p-3 text-xs leading-relaxed text-muted-foreground">
+            <label className="flex items-start gap-2.5 rounded-xl border border-white/15 bg-white/5 p-3 text-xs leading-relaxed text-white/80">
               <input
                 type="checkbox"
-                className="mt-0.5 size-4 rounded border-border"
+                className="mt-0.5 size-4 rounded border-white/20"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
                 required
@@ -744,6 +745,16 @@ function BranchArea({
   churchName: string;
   branches: Array<{ name: string; subdomain: string }>;
 }) {
+  const navigate = useNavigate();
+  const [branchMode, setBranchMode] = useState<"login" | "register">("login");
+
+  // Branch Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  // Branch Register state
   const [f, setF] = useState({
     name: "",
     subdomain: "",
@@ -751,9 +762,13 @@ function BranchArea({
     contact_name: "",
     email: "",
     phone: "",
+    password: "",
+    confirm: "",
   });
   const [busy, setBusy] = useState(false);
+  const [registerError, setRegisterError] = useState("");
   const [sent, setSent] = useState<string | null>(null);
+
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({
       ...f,
@@ -762,102 +777,355 @@ function BranchArea({
           ? e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")
           : e.target.value,
     });
-  async function submit(e: React.FormEvent) {
+
+  async function handleBranchLogin(e: React.FormEvent) {
     e.preventDefault();
+    setLoginBusy(true);
+    setLoginError("");
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+      if (error) throw error;
+      toast.success("Welcome back! Loading your branch dashboard…");
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      setLoginError(
+        err instanceof Error ? err.message : "Could not sign in with these branch credentials.",
+      );
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+
+  async function handleBranchRegister(e: React.FormEvent) {
+    e.preventDefault();
+    setRegisterError("");
+    if (f.password.length < 8) {
+      setRegisterError("Password must be at least 8 characters.");
+      return;
+    }
+    if (f.password !== f.confirm) {
+      setRegisterError("The two passwords do not match.");
+      return;
+    }
     setBusy(true);
     try {
-      const r = await requestBranch({ data: { parent, ...f } });
+      const r = await requestBranch({
+        data: {
+          parent,
+          name: f.name,
+          subdomain: f.subdomain,
+          city: f.city,
+          contact_name: f.contact_name,
+          email: f.email,
+          phone: f.phone,
+          password: f.password,
+        },
+      });
       if (r.ok) setSent(r.message);
-      else toast.error(r.message);
+      else setRegisterError(r.message);
     } catch {
-      toast.error("Please check the details and try again.");
+      setRegisterError("Please check the branch details and try again.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
+
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-6 min-h-[460px] rounded-3xl border border-white/15 bg-black/40 p-5 sm:p-6 shadow-xl backdrop-blur-xl text-white space-y-4">
+      {/* Existing Approved Branches List */}
       {branches.length > 0 && (
-        <div className="rounded-3xl border border-white/15 bg-black/35 p-5 backdrop-blur-xl">
-          <p className="text-sm font-semibold">Check in at a branch</p>
-          <div className="mt-3 grid gap-2">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-white/70">
+            Approved Branches of {churchName}
+          </p>
+          <div className="mt-2.5 grid gap-2">
             {branches.map((b) => (
               <Link
                 key={b.subdomain}
                 to="/c/$subdomain"
                 params={{ subdomain: b.subdomain }}
-                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm transition-colors hover:bg-white/10"
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-xs transition-colors hover:bg-white/15"
               >
-                <span className="font-medium">{b.name}</span>
-                <span className="text-xs text-white/60">/c/{b.subdomain}</span>
+                <span className="font-semibold text-white">{b.name}</span>
+                <span className="font-mono text-white/60">/c/{b.subdomain}</span>
               </Link>
             ))}
           </div>
         </div>
       )}
-      {sent ? (
-        <div className="rounded-3xl border border-white/15 bg-black/35 p-6 text-center backdrop-blur-xl">
-          <CheckCircle2 className="mx-auto size-8 text-success" />
-          <p className="mt-3 text-sm">{sent}</p>
-        </div>
-      ) : (
-        <form
-          onSubmit={submit}
-          className="space-y-3 rounded-3xl border border-white/15 bg-black/35 p-5 shadow-xl backdrop-blur-xl sm:p-6"
+
+      {/* Branch Portal Sub-tab switcher */}
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/10 p-1 text-xs font-semibold border border-white/10">
+        <button
+          type="button"
+          onClick={() => {
+            setBranchMode("login");
+            setSent(null);
+          }}
+          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition-all ${
+            branchMode === "login"
+              ? "bg-white text-neutral-900 shadow-md font-bold"
+              : "text-white/70 hover:text-white hover:bg-white/5"
+          }`}
         >
-          <p className="text-sm font-semibold">Register a branch of {churchName}</p>
-          <p className="text-xs text-white/60">
-            The head office reviews every request before the branch goes live.
-          </p>
-          <Input
-            required
-            placeholder="Branch name"
-            value={f.name}
-            onChange={set("name")}
-            maxLength={120}
-          />
-          <Input
-            required
-            placeholder="Check-in address, e.g. grace-kumasi"
-            value={f.subdomain}
-            onChange={set("subdomain")}
-            minLength={3}
-            maxLength={40}
-          />
-          <Input
-            required
-            placeholder="Town or city"
-            value={f.city}
-            onChange={set("city")}
-            maxLength={80}
-          />
-          <Input
-            required
-            placeholder="Branch leader's full name"
-            value={f.contact_name}
-            onChange={set("contact_name")}
-            maxLength={120}
-          />
-          <Input
-            required
-            type="email"
-            placeholder="Branch leader's email"
-            value={f.email}
-            onChange={set("email")}
-          />
-          <Input
-            required
-            type="tel"
-            placeholder="Phone number"
-            value={f.phone}
-            onChange={set("phone")}
-            minLength={9}
-            maxLength={20}
-          />
-          <Button type="submit" disabled={busy} className="w-full rounded-xl">
-            {busy ? "Sending…" : "Send branch request"}
-          </Button>
-        </form>
-      )}
+          <LogIn className="size-3.5" /> Branch Admin Login
+        </button>
+        <button
+          type="button"
+          onClick={() => setBranchMode("register")}
+          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition-all ${
+            branchMode === "register"
+              ? "bg-white text-neutral-900 shadow-md font-bold"
+              : "text-white/70 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Building2 className="size-3.5" /> Register a Branch
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {branchMode === "login" ? (
+          <motion.form
+            key="branch-login"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            onSubmit={handleBranchLogin}
+            className="space-y-4 pt-1"
+          >
+            <div>
+              <h2 className="font-display text-lg font-bold text-white">Branch Administrator Sign-In</h2>
+              <p className="mt-1 text-xs text-white/70">
+                Log into your approved branch church dashboard and management console.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="branch-email" className="text-xs font-semibold text-white/90">
+                Branch Administrator Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3.5 size-4 text-white/50" />
+                <Input
+                  id="branch-email"
+                  type="email"
+                  required
+                  placeholder="branch-admin@example.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 pl-10 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="branch-password" className="text-xs font-semibold text-white/90">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-3.5 size-4 text-white/50 z-10" />
+                <PasswordInput
+                  id="branch-password"
+                  required
+                  placeholder="••••••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 pl-10 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+            </div>
+
+            {loginError && (
+              <p className="text-xs font-semibold text-rose-300 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {loginError}
+              </p>
+            )}
+
+            <Button type="submit" disabled={loginBusy} className="h-11 w-full rounded-xl">
+              {loginBusy ? "Signing in…" : "Sign In to Branch Console"}
+            </Button>
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => setBranchMode("register")}
+                className="text-xs text-primary-foreground/90 hover:underline"
+              >
+                Need to register a new branch? Submit branch request
+              </Button>
+            </div>
+          </motion.form>
+        ) : sent ? (
+          <motion.div
+            key="branch-sent"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-4 p-4 text-center"
+          >
+            <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-400">
+              <CheckCircle2 className="size-6" />
+            </div>
+            <h2 className="font-display text-lg font-bold text-white">Branch Request Submitted</h2>
+            <p className="text-xs text-white/80 leading-relaxed max-w-sm mx-auto">{sent}</p>
+            <Button
+              onClick={() => {
+                setSent(null);
+                setBranchMode("login");
+              }}
+              className="w-full rounded-xl"
+            >
+              Go to Branch Admin Login
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.form
+            key="branch-register"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            onSubmit={handleBranchRegister}
+            className="space-y-3 pt-1"
+          >
+            <div>
+              <h2 className="font-display text-lg font-bold text-white">Register a branch of {churchName}</h2>
+              <p className="mt-0.5 text-xs text-white/70">
+                The head office will approve your branch request before the branch goes live.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-white/90">Branch Campus Name</Label>
+              <Input
+                required
+                placeholder="e.g. Grace City Kumasi Campus"
+                value={f.name}
+                onChange={set("name")}
+                maxLength={120}
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-white/90">Check-in Address (Subdomain)</Label>
+              <Input
+                required
+                placeholder="e.g. grace-kumasi"
+                value={f.subdomain}
+                onChange={set("subdomain")}
+                minLength={3}
+                maxLength={40}
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15 font-mono"
+              />
+              <span className="text-[11px] text-white/50">
+                Permanent link: menelog.site/c/{f.subdomain || "branch"}
+              </span>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-white/90">Town or City</Label>
+              <Input
+                required
+                placeholder="e.g. Kumasi, Ashanti Region"
+                value={f.city}
+                onChange={set("city")}
+                maxLength={80}
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-white/90">Branch Leader's Full Name</Label>
+              <Input
+                required
+                placeholder="e.g. Pastor Emmanuel Osei"
+                value={f.contact_name}
+                onChange={set("contact_name")}
+                maxLength={120}
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+              />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-white/90">Branch Admin Email</Label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="admin@branch.org"
+                  value={f.email}
+                  onChange={set("email")}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-white/90">Contact Phone Number</Label>
+                <Input
+                  required
+                  type="tel"
+                  placeholder="024 000 0000"
+                  value={f.phone}
+                  onChange={set("phone")}
+                  minLength={9}
+                  maxLength={20}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-white/90">Branch Admin Password</Label>
+                <PasswordInput
+                  required
+                  placeholder="Min 8 characters"
+                  value={f.password}
+                  onChange={(e) => setF({ ...f, password: e.target.value })}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-white/90">Confirm Password</Label>
+                <PasswordInput
+                  required
+                  placeholder="Re-type password"
+                  value={f.confirm}
+                  onChange={(e) => setF({ ...f, confirm: e.target.value })}
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+                />
+              </div>
+            </div>
+
+            {registerError && (
+              <p className="text-xs font-semibold text-rose-300 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {registerError}
+              </p>
+            )}
+
+            <Button type="submit" disabled={busy} className="h-11 w-full rounded-xl font-semibold">
+              {busy ? "Sending request…" : "Send Branch Request"}
+            </Button>
+
+            <div className="text-center">
+              <Button
+                type="button"
+                variant="link"
+                onClick={() => setBranchMode("login")}
+                className="text-xs text-primary-foreground/90 hover:underline"
+              >
+                Already registered? Sign in to branch console
+              </Button>
+            </div>
+          </motion.form>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -973,14 +1241,13 @@ function LeaderArea({
 
   if (sent) {
     return (
-      <div className="surface mt-6 space-y-4 p-6 text-center shadow-xl backdrop-blur-xl">
-        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-success/15 text-success">
+      <div className="mt-6 min-h-[460px] flex flex-col justify-center rounded-3xl border border-white/15 bg-black/40 p-6 text-center shadow-xl backdrop-blur-xl text-white space-y-4">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-400">
           <CheckCircle2 className="size-6" />
         </div>
-        <h2 className="font-display text-xl font-bold">Check your email</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          We've sent a verification link to <b className="text-foreground">{form.email}</b>. Click
-          the link to confirm, then sign in below to access your members at {churchName}.
+        <h2 className="font-display text-xl font-bold text-white">Leader Account Created</h2>
+        <p className="text-sm leading-relaxed text-white/80">
+          Your leader account for <b className="text-white">{form.full_name}</b> has been set up at {churchName}. You can sign in immediately below.
         </p>
         <Button
           onClick={() => {
@@ -996,16 +1263,16 @@ function LeaderArea({
   }
 
   return (
-    <div className="surface mt-6 p-5 sm:p-6 shadow-xl backdrop-blur-xl">
+    <div className="mt-6 min-h-[460px] rounded-3xl border border-white/15 bg-black/40 p-5 sm:p-6 shadow-xl backdrop-blur-xl text-white">
       {/* Sub-tab switcher */}
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 text-xs font-semibold">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/10 p-1 text-xs font-semibold border border-white/10">
         <button
           type="button"
           onClick={() => setAuthMode("login")}
-          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition-all ${
+          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition-all ${
             authMode === "login"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-neutral-900 shadow-md font-bold"
+              : "text-white/70 hover:text-white hover:bg-white/5"
           }`}
         >
           <LogIn className="size-3.5" /> Leader Login
@@ -1013,10 +1280,10 @@ function LeaderArea({
         <button
           type="button"
           onClick={() => setAuthMode("register")}
-          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition-all ${
+          className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition-all ${
             authMode === "register"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-neutral-900 shadow-md font-bold"
+              : "text-white/70 hover:text-white hover:bg-white/5"
           }`}
         >
           <UserPlus className="size-3.5" /> Register as Leader
@@ -1035,18 +1302,18 @@ function LeaderArea({
             className="mt-5 space-y-4"
           >
             <div>
-              <h2 className="font-display text-lg font-bold">Sign in as Leader</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h2 className="font-display text-lg font-bold text-white">Sign in as Leader</h2>
+              <p className="mt-1 text-xs text-white/70">
                 View your disciples, members, and pastoral follow-ups.
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader-email" className="text-xs font-semibold">
+              <Label htmlFor="leader-email" className="text-xs font-semibold text-white/90">
                 Email address
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-3.5 size-4 text-white/50" />
                 <Input
                   id="leader-email"
                   type="email"
@@ -1054,30 +1321,33 @@ function LeaderArea({
                   placeholder="leader@example.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="h-11 rounded-xl pl-10"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 pl-10 focus:border-primary focus:bg-white/15"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="leader-password" className="text-xs font-semibold">
+              <Label htmlFor="leader-password" className="text-xs font-semibold text-white/90">
                 Password
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
-                <Input
+                <Lock className="absolute left-3.5 top-3.5 size-4 text-white/50 z-10" />
+                <PasswordInput
                   id="leader-password"
-                  type="password"
                   required
                   placeholder="••••••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="h-11 rounded-xl pl-10"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 pl-10 focus:border-primary focus:bg-white/15"
                 />
               </div>
             </div>
 
-            {loginError && <p className="text-xs font-semibold text-destructive">{loginError}</p>}
+            {loginError && (
+              <p className="text-xs font-semibold text-rose-300 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {loginError}
+              </p>
+            )}
 
             <Button type="submit" disabled={loginBusy} className="h-11 w-full rounded-xl">
               {loginBusy ? "Signing in…" : "Sign In to Leader Portal"}
@@ -1088,7 +1358,7 @@ function LeaderArea({
                 type="button"
                 variant="link"
                 onClick={() => setAuthMode("register")}
-                className="text-xs text-primary hover:underline"
+                className="text-xs text-primary-foreground/90 hover:underline"
               >
                 Need to register? Create leader account
               </Button>
@@ -1105,14 +1375,14 @@ function LeaderArea({
             className="mt-5 space-y-4"
           >
             <div>
-              <h2 className="font-display text-lg font-bold">Register as a leader</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h2 className="font-display text-lg font-bold text-white">Register as a leader</h2>
+              <p className="mt-1 text-xs text-white/70">
                 You will need the leader access code provided by your church administrator.
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lname" className="text-xs font-semibold">
+              <Label htmlFor="lname" className="text-xs font-semibold text-white/90">
                 Full name
               </Label>
               <Input
@@ -1120,14 +1390,15 @@ function LeaderArea({
                 required
                 minLength={2}
                 maxLength={120}
+                placeholder="First and last name"
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lemail" className="text-xs font-semibold">
+              <Label htmlFor="lemail" className="text-xs font-semibold text-white/90">
                 Email address
               </Label>
               <Input
@@ -1135,42 +1406,44 @@ function LeaderArea({
                 type="email"
                 required
                 maxLength={160}
+                placeholder="leader@example.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lphone" className="text-xs font-semibold">
+              <Label htmlFor="lphone" className="text-xs font-semibold text-white/90">
                 Phone number
               </Label>
               <Input
                 id="lphone"
                 required
                 inputMode="tel"
+                placeholder="024 000 0000"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lphoto" className="text-xs font-semibold">
-                Profile photo <span className="font-normal text-muted-foreground">(optional)</span>
+              <Label htmlFor="lphoto" className="text-xs font-semibold text-white/90">
+                Profile photo <span className="font-normal text-white/50">(optional)</span>
               </Label>
               <Input
                 id="lphoto"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => onPhoto(e.target.files?.[0])}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white file:text-white file:bg-white/10 file:rounded-lg file:border-0"
               />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ldob" className="text-xs font-semibold">
+                <Label htmlFor="ldob" className="text-xs font-semibold text-white/90">
                   Date of birth
                 </Label>
                 <Input
@@ -1179,25 +1452,26 @@ function LeaderArea({
                   max={new Date().toISOString().slice(0, 10)}
                   value={form.date_of_birth}
                   onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white focus:border-primary focus:bg-white/15"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="lloc" className="text-xs font-semibold">
+                <Label htmlFor="lloc" className="text-xs font-semibold text-white/90">
                   Location
                 </Label>
                 <Input
                   id="lloc"
                   maxLength={120}
+                  placeholder="e.g. East Legon"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ltype" className="text-xs font-semibold">
+              <Label htmlFor="ltype" className="text-xs font-semibold text-white/90">
                 Type of leader
               </Label>
               <select
@@ -1206,18 +1480,18 @@ function LeaderArea({
                 value={form.leader_type_id}
                 onChange={(e) => setForm({ ...form, leader_type_id: e.target.value })}
               >
-                <option value="">Select your leadership role</option>
+                <option value="" className="bg-neutral-900 text-white">Select your leadership role</option>
                 {leaderTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
+                  <option key={type.id} value={type.id} className="bg-neutral-900 text-white">
                     {type.name}
                   </option>
                 ))}
-                {!leaderTypes.length && <option value="general">Cell / Department Leader</option>}
+                {!leaderTypes.length && <option value="general" className="bg-neutral-900 text-white">Cell / Department Leader</option>}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lcode" className="text-xs font-semibold">
+              <Label htmlFor="lcode" className="text-xs font-semibold text-white/90">
                 Leader access code
               </Label>
               <Input
@@ -1225,62 +1499,62 @@ function LeaderArea({
                 required
                 minLength={4}
                 maxLength={24}
-                placeholder="Ask your church admin for code"
+                placeholder="Ask church admin for code"
                 value={form.access_code}
                 onChange={(e) => setForm({ ...form, access_code: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15 font-mono uppercase"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lpass" className="text-xs font-semibold">
+              <Label htmlFor="lpass" className="text-xs font-semibold text-white/90">
                 Password
               </Label>
-              <Input
+              <PasswordInput
                 id="lpass"
-                type="password"
                 required
                 autoComplete="new-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
-              <ul className="grid gap-1 pt-1 text-xs text-muted-foreground">
+              <ul className="grid gap-1 pt-1 text-xs text-white/70">
                 {checks.map((check) => (
                   <li
                     key={check.label}
-                    className={check.met ? "text-success font-medium" : undefined}
+                    className={`flex items-center gap-1.5 ${check.met ? "text-emerald-400 font-semibold" : "text-white/50"}`}
                   >
-                    {check.met ? "✓" : "•"} {check.label}
+                    <span>{check.met ? "✓" : "•"}</span> {check.label}
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="lconfirm" className="text-xs font-semibold">
+              <Label htmlFor="lconfirm" className="text-xs font-semibold text-white/90">
                 Confirm password
               </Label>
-              <Input
+              <PasswordInput
                 id="lconfirm"
-                type="password"
                 required
                 autoComplete="new-password"
                 value={form.confirm}
                 onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
               />
             </div>
 
             {registerError && (
-              <p className="text-sm font-medium text-destructive">{registerError}</p>
+              <p className="text-xs font-semibold text-rose-300 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                {registerError}
+              </p>
             )}
 
             <Button type="submit" className="h-11 w-full rounded-xl" disabled={registerBusy}>
               {registerBusy ? "Creating your account…" : "Create Leader Account"}
             </Button>
 
-            <div className="flex items-start gap-2 pt-1 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2 pt-1 text-xs text-white/60">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
               <span>
                 Leaders only see the members assigned to them or who chose them. Sensitive

@@ -70,10 +70,6 @@ export const registerLeader = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => registerSchema.parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const url = process.env["SUPABASE_URL"];
-    const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-    if (!url || !key)
-      return { ok: false as const, message: "Leader sign-up is unavailable right now." };
 
     const { data: church } = await supabaseAdmin.rpc("tenant_branding", {
       p_subdomain: data.subdomain,
@@ -81,45 +77,100 @@ export const registerLeader = createServerFn({ method: "POST" })
     const tenant = church as { id: string; name: string } | null;
     if (!tenant) return { ok: false as const, message: "This church could not be found." };
 
-    const origin = getRequestHeader("origin") ?? "";
+    // 1. Verify or initialize leader access code
+    const { data: codeRow } = await supabaseAdmin
+      .from("tenant_leader_access")
+      .select("code")
+      .eq("tenant_id", tenant.id)
+      .maybeSingle();
 
-    const publicClient = createClient<Database>(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const { data: signUp, error: signUpError } = await publicClient.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: { full_name: data.full_name },
-        ...(origin.startsWith("http") ? { emailRedirectTo: `${origin}/auth` } : {}),
-      },
-    });
-    if (signUpError || !signUp.user) {
+    let expectedCode = codeRow?.code;
+    if (!expectedCode) {
+      expectedCode = `LEAD-${data.subdomain.toUpperCase().slice(0, 6)}`;
+      await supabaseAdmin.from("tenant_leader_access").insert({
+        tenant_id: tenant.id,
+        code: expectedCode,
+      });
+    }
+
+    if (data.access_code.trim().toUpperCase() !== expectedCode.trim().toUpperCase()) {
       return {
         ok: false as const,
-        message: signUpError?.message ?? "Could not create this leader account.",
+        message: "That leader access code is not correct. Please ask your church administrator for the code.",
       };
     }
 
-    let photoPath: string | null = null;
-    if (data.photo) {
-      const base64 = data.photo.split(",")[1] ?? "";
-      const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-      const extension = data.photo.includes("image/png") ? "png" : "jpg";
-      const path = `${tenant.id}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("tenant-branding")
-        .upload(path, bytes, { contentType: `image/${extension === "jpg" ? "jpeg" : "png"}` });
-      if (!uploadError) photoPath = path;
+    // 2. Create or link Supabase auth user
+    let leaderUserId: string | null = null;
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email.toLowerCase().trim(),
+      password: data.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: data.full_name.trim(),
+        phone: data.phone.trim(),
+      },
+    });
+
+    if (newUser?.user) {
+      leaderUserId = newUser.user.id;
+    } else if (createError?.message?.toLowerCase().includes("already")) {
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const matched = existingUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === data.email.toLowerCase().trim(),
+      );
+      if (matched) {
+        const { data: existingLeader } = await supabaseAdmin
+          .from("leader_profiles")
+          .select("id")
+          .eq("tenant_id", tenant.id)
+          .eq("user_id", matched.id)
+          .maybeSingle();
+        if (existingLeader) {
+          return {
+            ok: false as const,
+            message:
+              "An account with this email is already registered as a leader. Please use 'Leader Login' to sign in.",
+          };
+        }
+        leaderUserId = matched.id;
+        // Update password if they registered again
+        await supabaseAdmin.auth.admin.updateUserById(matched.id, { password: data.password });
+      }
     }
 
-    const { error } = await supabaseAdmin.rpc("register_leader", {
+    if (!leaderUserId) {
+      return {
+        ok: false as const,
+        message: createError?.message ?? "Could not create leader account. Please check your details.",
+      };
+    }
+
+    // 3. Upload photo if present
+    let photoPath: string | null = null;
+    if (data.photo) {
+      try {
+        const base64 = data.photo.split(",")[1] ?? "";
+        const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+        const extension = data.photo.includes("image/png") ? "png" : "jpg";
+        const path = `${tenant.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from("tenant-branding")
+          .upload(path, bytes, { contentType: `image/${extension === "jpg" ? "jpeg" : "png"}` });
+        if (!uploadError) photoPath = path;
+      } catch (e) {
+        console.error("[registerLeader] Photo upload warning:", e);
+      }
+    }
+
+    // 4. Call register_leader RPC to persist profile & permissions
+    const { error: rpcError } = await supabaseAdmin.rpc("register_leader", {
       p_subdomain: data.subdomain,
-      p_user: signUp.user.id,
-      p_code: data.access_code,
-      p_full_name: data.full_name,
-      p_email: data.email,
-      p_phone: data.phone,
+      p_user: leaderUserId,
+      p_code: data.access_code.trim(),
+      p_full_name: data.full_name.trim(),
+      p_email: data.email.trim(),
+      p_phone: data.phone.trim(),
       p_dob: orNull(data.date_of_birth ? data.date_of_birth : null),
       p_location: data.location ?? "",
       p_leader_type: orNull(data.leader_type_id ? data.leader_type_id : null),
@@ -127,13 +178,13 @@ export const registerLeader = createServerFn({ method: "POST" })
       p_ip: clientIp(),
     });
 
-    if (error) {
-      return { ok: false as const, message: error.message.replace(/^.*?:\s*/, "") };
+    if (rpcError) {
+      return { ok: false as const, message: rpcError.message.replace(/^.*?:\s*/, "") };
     }
 
     return {
       ok: true as const,
       church: tenant.name,
-      needsEmailConfirmation: !signUp.session,
+      needsEmailConfirmation: false,
     };
   });

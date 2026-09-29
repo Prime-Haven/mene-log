@@ -150,7 +150,7 @@ function MyMembers() {
   if (!data?.ok)
     return (
       <p className="surface p-8 text-center text-sm text-muted-foreground">
-        This page is for registered leaders on the Standard or Premium package.
+        This page is for registered leaders. Upgrade to have access to this feature.
       </p>
     );
 

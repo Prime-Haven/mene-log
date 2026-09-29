@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 /**
- * Watch Live: members enter their personal member code (the same code inside their
- * check-in QR). Everything runs server-side with the service-role client; the code
+ * Watch Live: members enter their personal member code (e.g. ML-10294 or token).
+ * Everything runs server-side with the service-role client; the code
  * is re-verified on every heartbeat so a session can't be forged from the browser.
  */
 
@@ -16,8 +16,8 @@ const base = z.object({
   code: z
     .string()
     .trim()
-    .toLowerCase()
-    .regex(/^[0-9a-f]{32}$/, "That member code isn't valid"),
+    .min(2, "Please enter your member code")
+    .max(64, "Member code is too long"),
 });
 
 type Admin = Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"];
@@ -46,23 +46,79 @@ async function resolveViewer(admin: Admin, subdomain: string, code: string) {
     typeof cfg["watch_live"] === "boolean" ? cfg["watch_live"] : tenant.tier === "premium";
   if (!enabled) return { error: "Watch Live isn't included in this church's package." } as const;
 
-  const hash = await sha256Hex(code);
-  const { data: token } = await admin
-    .from("qr_tokens")
-    .select("member_id")
-    .eq("tenant_id", tenant.id)
-    .eq("token_hash", `\\x${hash}`)
-    .is("revoked_at", null)
-    .maybeSingle();
-  if (!token)
-    return { error: "We couldn't find that member code. Check it and try again." } as const;
+  const rawCode = code.trim();
+  const normalized = rawCode.toUpperCase().replace(/[\s-]+/g, "");
+  let member: { id: string; full_name: string; status: string; branch_id: string | null } | null =
+    null;
 
-  const { data: member } = await admin
+  // 1. Direct match on member_code (e.g. ML-10294, ML10294, or exact)
+  const { data: memberByCode } = await admin
     .from("members")
-    .select("id, full_name, status, branch_id")
-    .eq("id", token.member_id)
+    .select("id, full_name, status, branch_id, member_code")
+    .eq("tenant_id", tenant.id)
+    .or(`member_code.ilike.${rawCode},member_code.ilike.${normalized}`)
     .maybeSingle();
-  if (!member || member.status === "archived" || member.status === "anonymised") {
+
+  if (memberByCode) {
+    member = memberByCode;
+  } else {
+    // 2. Try prefix variations (stripping ML or adding ML-)
+    const bareCode = normalized.startsWith("ML") ? normalized.slice(2) : normalized;
+
+    const { data: altMember } = await admin
+      .from("members")
+      .select("id, full_name, status, branch_id, member_code")
+      .eq("tenant_id", tenant.id)
+      .or(`member_code.ilike.ML-${bareCode},member_code.ilike.ML${bareCode},member_code.ilike.%${bareCode}`)
+      .maybeSingle();
+
+    if (altMember) {
+      member = altMember;
+    }
+  }
+
+  // 3. Fallback: match by phone number if user entered their phone
+  if (!member && rawCode.length >= 9) {
+    const { data: phoneMember } = await admin
+      .from("members")
+      .select("id, full_name, status, branch_id, member_code")
+      .eq("tenant_id", tenant.id)
+      .eq("phone", rawCode.replace(/[^0-9+]/g, ""))
+      .maybeSingle();
+    if (phoneMember) member = phoneMember;
+  }
+
+  // 4. Fallback: check qr_tokens if hex hash or token was provided
+  if (!member) {
+    const hash = await sha256Hex(rawCode.toLowerCase());
+    const { data: token } = await admin
+      .from("qr_tokens")
+      .select("member_id")
+      .eq("tenant_id", tenant.id)
+      .or(`token_hash.eq.\\x${hash},token_hash.eq.${rawCode}`)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    if (token) {
+      const { data: memberByToken } = await admin
+        .from("members")
+        .select("id, full_name, status, branch_id")
+        .eq("id", token.member_id)
+        .maybeSingle();
+      if (memberByToken) {
+        member = memberByToken;
+      }
+    }
+  }
+
+  if (!member) {
+    return {
+      error:
+        "We couldn't find that member code. Please enter the code printed under your member QR (e.g. ML-1024).",
+    } as const;
+  }
+
+  if (member.status === "archived" || member.status === "anonymised") {
     return { error: "This member code is no longer active." } as const;
   }
   return { tenant, member } as const;
@@ -180,4 +236,110 @@ export const pingWatch = createServerFn({ method: "POST" })
       }
     }
     return { ok: true as const, seconds, recorded, minMinutes: svc.online_min_minutes };
+  });
+
+/** Admin query for online attendance & live streaming stats */
+export const getOnlineAttendanceOverview = createServerFn({ method: "GET" })
+  .inputValidator((d: { tenant_id: string; service_id?: string }) =>
+    z
+      .object({
+        tenant_id: z.string().uuid(),
+        service_id: z.string().uuid().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Get services with streaming configured
+    let serviceQuery = supabaseAdmin
+      .from("services")
+      .select("id, name, service_date, is_open, stream_url, online_min_minutes")
+      .eq("tenant_id", data.tenant_id)
+      .order("service_date", { ascending: false });
+
+    if (data.service_id) {
+      serviceQuery = serviceQuery.eq("id", data.service_id);
+    } else {
+      serviceQuery = serviceQuery.limit(10);
+    }
+
+    const { data: services = [] } = await serviceQuery;
+    const serviceIds = (services ?? []).map((s) => s.id);
+
+    if (serviceIds.length === 0) {
+      return {
+        services: [],
+        activeViewersCount: 0,
+        onlineAttendees: [],
+      };
+    }
+
+    // 2. Active viewers within last 3 minutes
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    const { count: activeCount } = await supabaseAdmin
+      .from("watch_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", data.tenant_id)
+      .in("service_id", serviceIds)
+      .gte("last_ping", threeMinutesAgo);
+
+    // 3. Online attendance records for these services
+    const { data: onlineAtt = [] } = await supabaseAdmin
+      .from("attendance")
+      .select(
+        `
+        id,
+        service_id,
+        recorded_at,
+        method,
+        member:members (
+          id,
+          full_name,
+          member_code,
+          phone,
+          status
+        )
+      `,
+      )
+      .eq("tenant_id", data.tenant_id)
+      .eq("method", "online")
+      .in("service_id", serviceIds)
+      .order("recorded_at", { ascending: false })
+      .limit(100);
+
+    // 4. Watch sessions breakdown
+    const { data: watchSessions = [] } = await supabaseAdmin
+      .from("watch_sessions")
+      .select("service_id, seconds, member_id")
+      .eq("tenant_id", data.tenant_id)
+      .in("service_id", serviceIds);
+
+    const totalSecondsWatched = (watchSessions ?? []).reduce(
+      (sum, item) => sum + (item.seconds || 0),
+      0,
+    );
+
+    return {
+      services: (services ?? []).map((s) => {
+        const svcSessions = (watchSessions ?? []).filter((w) => w.service_id === s.id);
+        const svcAtt = (onlineAtt ?? []).filter((a) => a.service_id === s.id);
+        return {
+          ...s,
+          viewerCount: svcSessions.length,
+          attendeeCount: svcAtt.length,
+          totalMinutes: Math.round(
+            svcSessions.reduce((acc, curr) => acc + (curr.seconds || 0), 0) / 60,
+          ),
+        };
+      }),
+      activeViewersCount: activeCount ?? 0,
+      totalMinutesWatched: Math.round(totalSecondsWatched / 60),
+      onlineAttendees: (onlineAtt ?? []).map((a) => ({
+        id: a.id,
+        service_id: a.service_id,
+        recorded_at: a.recorded_at,
+        member: a.member,
+      })),
+    };
   });

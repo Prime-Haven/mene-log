@@ -237,8 +237,8 @@ export function Accounts() {
       if (isSeatLimitReached) {
         throw new Error(
           tier === "free"
-            ? "Free tier is restricted to 1 account. Upgrade to Standard to invite up to 2 team members."
-            : `You have reached your limit of ${maxSeats} accounts for the ${planLabel(tier)} package.`,
+            ? "Free plan is restricted to 1 account. Upgrade your account to invite team members."
+            : `You have reached your limit of ${maxSeats} accounts. Upgrade your account to add more team members.`,
         );
       }
       const result = await invite({
@@ -495,16 +495,15 @@ export function Accounts() {
                     Free Tier: Single Administrator Account
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    The Free plan includes 1 owner login. Upgrade to Standard to invite up to 2
-                    additional staff members (3 seats total), or Pro for 10 seats with customized
-                    permissions.
+                    The Free plan includes 1 owner login. Upgrade your account to invite
+                    additional team members and assign customized administrative roles.
                   </p>
                 </div>
               </div>
               {isOwner && (
                 <Link to="/billing">
                   <Button size="sm" className="font-semibold text-xs shrink-0">
-                    <Sparkles className="size-3.5 mr-1.5" /> Upgrade Plan
+                    <Sparkles className="size-3.5 mr-1.5" /> Upgrade Account
                   </Button>
                 </Link>
               )}
@@ -512,7 +511,7 @@ export function Accounts() {
           ) : tier === "basic" ? (
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div>
-                <span className="font-bold text-foreground">Standard Tier Account Capacity:</span>{" "}
+                <span className="font-bold text-foreground">Account Capacity:</span>{" "}
                 <span className="text-muted-foreground">
                   Up to 3 separate accounts (1 primary church owner + 2 additional team members).
                   You can customize permissions for each holder.
@@ -521,7 +520,7 @@ export function Accounts() {
               {isSeatLimitReached && isOwner && (
                 <Link to="/billing">
                   <Button size="sm" variant="outline" className="text-xs h-8">
-                    Upgrade to Pro (10 seats)
+                    Upgrade Account
                   </Button>
                 </Link>
               )}
@@ -569,11 +568,11 @@ export function Accounts() {
 
             {tier === "free" ? (
               <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground space-y-2">
-                <p>Additional team accounts are unavailable on the Free package.</p>
+                <p>Additional team accounts are locked on your current plan. Upgrade to have access to this feature.</p>
                 {isOwner && (
                   <Link to="/billing">
                     <Button size="sm" variant="outline" className="font-semibold text-xs">
-                      Upgrade to Standard to invite team members
+                      Upgrade to invite team members
                     </Button>
                   </Link>
                 )}

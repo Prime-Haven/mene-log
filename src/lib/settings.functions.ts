@@ -102,4 +102,22 @@ export const checkCoupon = createServerFn({ method: "POST" })
     return { ok: true as const, code: c.code, percent: c.percent };
   });
 
+export const notifyNewChurchSignup = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        churchName: z.string(),
+        subdomain: z.string(),
+        tier: z.string(),
+        contactEmail: z.string().email(),
+        contactPhone: z.string().optional().nullable(),
+        adminName: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { sendNewChurchSignupAlert } = await import("@/lib/support.server");
+    return await sendNewChurchSignupAlert(data);
+  });
+
 export type CouponInput = z.infer<typeof couponSchema>;

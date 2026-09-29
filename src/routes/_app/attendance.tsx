@@ -15,10 +15,12 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Radio,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
+import { OnlineAttendancePanel } from "@/components/OnlineAttendancePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,6 +43,9 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/attendance")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Attendance Register — Mene:Log" },
@@ -84,6 +89,10 @@ type Register = {
 export function AttendanceRegister() {
   const { tenant, canManageMembers, membership } = useTenant();
   const qc = useQueryClient();
+  const searchParams = Route.useSearch();
+  const [activeView, setActiveView] = useState<"register" | "online">(() => {
+    return searchParams.tab === "online" ? "online" : "register";
+  });
   const [serviceId, setServiceId] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return new URLSearchParams(window.location.search).get("serviceId") || "";
@@ -386,7 +395,36 @@ export function AttendanceRegister() {
         </div>
       </div>
 
-      {services.data?.length === 0 ? (
+      {/* Tabs: Register vs Online Streaming */}
+      <div className="flex border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveView("register")}
+          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-colors ${
+            activeView === "register"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span>Attendance Register</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView("online")}
+          className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-semibold transition-colors ${
+            activeView === "online"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Radio className="size-4 text-destructive animate-pulse" />
+          <span>Online Streaming & Attendance</span>
+        </button>
+      </div>
+
+      {activeView === "online" ? (
+        <OnlineAttendancePanel />
+      ) : services.data?.length === 0 ? (
         <div className="surface border border-dashed p-10 text-center text-sm space-y-3">
           <p className="font-medium">No services found for your church.</p>
           <p className="text-muted-foreground">

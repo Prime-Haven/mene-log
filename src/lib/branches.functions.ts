@@ -267,8 +267,14 @@ export const manageBranch = createServerFn({ method: "POST" })
       if (b.approval_status !== "pending_approval")
         throw new Error("This branch is already approved.");
       let email: string | null = null;
+      let branchUserId: string | null = null;
       try {
-        email = (JSON.parse(b.admin_notes ?? "{}") as { email?: string }).email ?? null;
+        const parsed = JSON.parse(b.admin_notes ?? "{}") as {
+          email?: string;
+          user_id?: string;
+        };
+        email = parsed.email ?? null;
+        branchUserId = parsed.user_id ?? null;
       } catch {
         /* no contact */
       }
@@ -281,8 +287,20 @@ export const manageBranch = createServerFn({ method: "POST" })
           admin_notes: null,
         })
         .eq("id", b.id);
-      if (email) await inviteOwner(b.id, email, b.name, head.name);
-      message = email ? `Branch approved. ${email} has been invited.` : "Branch approved.";
+
+      if (branchUserId) {
+        await db.from("tenant_users").insert({
+          tenant_id: b.id,
+          user_id: branchUserId,
+          role: "owner",
+          status: "active",
+        });
+      } else if (email) {
+        await inviteOwner(b.id, email, b.name, head.name);
+      }
+      message = email
+        ? `Branch approved. ${email} can now sign in with their password.`
+        : "Branch approved.";
     } else if (data.action === "reject") {
       await db
         .from("tenants")
@@ -321,6 +339,7 @@ export const requestBranch = createServerFn({ method: "POST" })
         contact_name: z.string().trim().min(2).max(120),
         email: z.string().trim().email().max(160),
         phone: z.string().trim().min(9).max(20),
+        password: z.string().min(8, "Password must be at least 8 characters").max(64),
       })
       .parse(d),
   )
@@ -335,7 +354,7 @@ export const requestBranch = createServerFn({ method: "POST" })
     const { data: allowed } = await db.rpc("check_rate_limit", {
       _bucket: "branch_request",
       _identifier: ip,
-      _max: 3,
+      _max: 5,
       _window_seconds: 3600,
     });
     if (allowed === false)
@@ -350,9 +369,34 @@ export const requestBranch = createServerFn({ method: "POST" })
     if (!parent || parent.parent_tenant_id || parent.status !== "active")
       return { ok: false as const, message: "This church isn't accepting branch requests." };
     if (!(await featureOn(parent.tier, "branches", parent.tier === "premium")))
-      return { ok: false as const, message: "This church isn't accepting branch requests." };
+      return { ok: false as const, message: "Upgrade your account to have access to branches." };
     if (!(await subdomainFree(data.subdomain)))
       return { ok: false as const, message: "That check-in address is taken. Try another." };
+
+    // Register or resolve branch administrator user account
+    let branchUserId: string | null = null;
+    const { data: createdUser, error: createUserError } = await db.auth.admin.createUser({
+      email: data.email.toLowerCase(),
+      password: data.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: data.contact_name,
+        phone: data.phone,
+      },
+    });
+
+    if (createdUser?.user) {
+      branchUserId = createdUser.user.id;
+    } else if (createUserError?.message?.includes("already been registered")) {
+      // Find existing user id
+      const { data: profile } = await db
+        .from("profiles")
+        .select("id")
+        .eq("email", data.email.toLowerCase())
+        .maybeSingle();
+      branchUserId = profile?.id ?? null;
+    }
+
     await createBranchTenant(
       parent,
       { name: data.name, subdomain: data.subdomain, city: data.city },
@@ -361,6 +405,7 @@ export const requestBranch = createServerFn({ method: "POST" })
         contact_name: data.contact_name,
         email: data.email.toLowerCase(),
         phone: data.phone,
+        user_id: branchUserId,
       }),
     );
     await db.rpc("log_audit", {
@@ -371,7 +416,7 @@ export const requestBranch = createServerFn({ method: "POST" })
     });
     return {
       ok: true as const,
-      message: `Request sent. ${parent.name} will review it and email ${data.email} once approved.`,
+      message: `Request sent. ${parent.name} will review it. Once approved, you can sign in directly with your password.`,
     };
   });
 

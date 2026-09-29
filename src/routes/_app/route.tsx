@@ -47,6 +47,7 @@ export const Route = createFileRoute("/_app")({
 
 type NavItem = {
   to: string;
+  search?: Record<string, unknown>;
   label: string;
   icon: typeof LayoutDashboard;
   group: "Workspace" | "People" | "Growth" | "Administration";
@@ -70,6 +71,15 @@ const nav: NavItem[] = [
     icon: ListChecks,
     group: "Workspace",
     show: (c) => c.canManageMembers,
+  },
+  {
+    to: "/attendance",
+    search: { tab: "online" },
+    label: "Online streaming",
+    icon: Radio,
+    group: "Workspace",
+    show: (c) => c.canManageMembers,
+    feature: "watch_live",
   },
   {
     to: "/services",
@@ -268,13 +278,17 @@ function AppLayout() {
                 </p>
               )}
               <div className="space-y-1">
-                {items.map(({ to, label, icon: Icon, feature }) => {
-                  const active = pathname.startsWith(to);
+                {items.map(({ to, search, label, icon: Icon, feature }) => {
+                  const isOnlineTab = search?.tab === "online";
+                  const active = isOnlineTab
+                    ? pathname.startsWith(to) && (routerState.location.search as Record<string, unknown>)?.tab === "online"
+                    : pathname.startsWith(to) && (routerState.location.search as Record<string, unknown>)?.tab !== "online";
                   const locked = !!feature && !ctx.can(feature);
                   return (
                     <Link
-                      key={to}
+                      key={`${to}-${label}`}
                       to={to}
+                      search={search as never}
                       onClick={() => mobile && setMobileOpen(false)}
                       title={label}
                       className={`group flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-semibold transition-all duration-200 ${active ? "bg-primary text-primary-foreground shadow-[var(--shadow-accent)]" : "text-sidebar-foreground hover:bg-secondary hover:text-foreground"}`}
