@@ -220,8 +220,8 @@ export type Database = {
           id: string
           is_default: boolean
           name: string
-          support_sms_enabled?: boolean
-          support_sms_recipients?: string | null
+          support_sms_enabled: boolean
+          support_sms_recipients: string | null
           tenant_id: string
         }
         Insert: {
@@ -928,6 +928,48 @@ export type Database = {
           },
         ]
       }
+      platform_system_state: {
+        Row: {
+          global_banner_enabled: boolean
+          global_banner_level: string
+          global_banner_message: string | null
+          global_banner_show_on_admin: boolean
+          global_banner_show_on_checkin: boolean
+          id: string
+          maintenance_message: string | null
+          maintenance_mode: boolean
+          pause_signups: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          global_banner_enabled?: boolean
+          global_banner_level?: string
+          global_banner_message?: string | null
+          global_banner_show_on_admin?: boolean
+          global_banner_show_on_checkin?: boolean
+          id?: string
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
+          pause_signups?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          global_banner_enabled?: boolean
+          global_banner_level?: string
+          global_banner_message?: string | null
+          global_banner_show_on_admin?: boolean
+          global_banner_show_on_checkin?: boolean
+          id?: string
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
+          pause_signups?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           branch_id: string | null
@@ -1403,6 +1445,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "support_tickets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "support_tickets_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1595,8 +1644,8 @@ export type Database = {
           status: Database["public"]["Enums"]["tenant_status"]
           subdomain: string
           submit_button_text: string
-          support_sms_enabled?: boolean
-          support_sms_recipients?: string | null
+          support_sms_enabled: boolean
+          support_sms_recipients: string | null
           tier: Database["public"]["Enums"]["tenant_tier"]
           trial_ends_at: string | null
           welcome_message: string | null
@@ -1919,8 +1968,8 @@ export type Database = {
       }
       platform_create_tenant: {
         Args: {
-          p_contact_email: string
-          p_contact_phone: string
+          p_contact_email?: string
+          p_contact_phone?: string
           p_name: string
           p_subdomain: string
           p_tier: Database["public"]["Enums"]["tenant_tier"]
@@ -1936,6 +1985,10 @@ export type Database = {
         Returns: undefined
       }
       platform_overview: { Args: never; Returns: Json }
+      platform_purge_tenant: {
+        Args: { p_confirm_name: string; p_tenant_id: string }
+        Returns: Json
+      }
       platform_reject_church: {
         Args: { p_reason?: string; p_tenant: string }
         Returns: boolean
