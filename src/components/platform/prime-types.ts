@@ -6,6 +6,29 @@ export type Snapshot = Awaited<ReturnType<typeof consoleSnapshot>>;
 export type Tenant = Snapshot["tenants"][number];
 export type Tier = "free" | "basic" | "standard" | "premium";
 export type Status = "active" | "grace" | "suspended" | "closed";
+export type AuditCategory = "tenant" | "system" | "security" | "commercial";
+export type AuditSeverity = "info" | "warning" | "critical";
+
+export type AuditEvent = {
+  id: string;
+  actor_user_id: string;
+  actor: string;
+  action: string;
+  category: AuditCategory;
+  severity: AuditSeverity;
+  tenant_id: string | null;
+  tenant_name?: string | null;
+  detail: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type TrendPoint = {
+  date: string;
+  checkins: number;
+  newChurches: number;
+  activeChurches?: number;
+};
+
 export type Section =
   | "overview"
   | "churches"

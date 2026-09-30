@@ -75,11 +75,81 @@ export async function audit(
   action: string,
   detail: Record<string, unknown> = {},
   tenantId: string | null = null,
+  options?: {
+    category?: "tenant" | "system" | "security" | "commercial";
+    severity?: "info" | "warning" | "critical";
+    actorUsername?: string;
+    tenantName?: string;
+  },
 ) {
   const db = await admin();
-  await db
-    .from("platform_audit_events")
-    .insert({ actor_user_id: actor, action, detail, tenant_id: tenantId });
+
+  // Smart category inference
+  let category = options?.category;
+  if (!category) {
+    if (action.startsWith("tenant.") || action.startsWith("branch.")) category = "tenant";
+    else if (action.startsWith("operator.") || action.includes("password") || action.includes("auth")) category = "security";
+    else if (action.includes("pricing") || action.includes("coupon") || action.includes("payment") || action.includes("billing")) category = "commercial";
+    else category = "system";
+  }
+
+  // Smart severity inference
+  let severity = options?.severity;
+  if (!severity) {
+    if (
+      action.includes("purged") ||
+      action.includes("delete") ||
+      action.includes("removed") ||
+      action.includes("maintenance_enabled")
+    ) {
+      severity = "critical";
+    } else if (
+      action.includes("warning") ||
+      action.includes("reject") ||
+      action.includes("flag") ||
+      action.includes("reset") ||
+      action.includes("lockdown") ||
+      action.includes("broadcast")
+    ) {
+      severity = "warning";
+    } else {
+      severity = "info";
+    }
+  }
+
+  // Operator username resolution
+  let actorUsername = options?.actorUsername;
+  if (!actorUsername) {
+    try {
+      const ops = await listOperatorUsers();
+      const op = ops.find((o) => o.id === actor);
+      actorUsername = op?.app_metadata?.operator_username ?? op?.email?.split("@")[0] ?? "operator";
+    } catch {
+      actorUsername = "operator";
+    }
+  }
+
+  // Tenant name resolution
+  let tenantName = options?.tenantName;
+  if (tenantId && !tenantName) {
+    try {
+      const { data } = await db.from("tenants").select("name").eq("id", tenantId).maybeSingle();
+      if (data?.name) tenantName = data.name;
+    } catch {
+      // best-effort
+    }
+  }
+
+  await db.from("platform_audit_events").insert({
+    actor_user_id: actor,
+    actor_username: actorUsername,
+    action,
+    category,
+    severity,
+    tenant_id: tenantId,
+    tenant_name: tenantName,
+    detail,
+  });
 }
 
 export function validOperatorPassword(value: string) {

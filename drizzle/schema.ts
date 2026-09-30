@@ -351,3 +351,17 @@ export const supportTicketRepliesRelations = relations(supportTicketReplies, ({ 
     references: [supportTickets.id],
   }),
 }));
+
+// Platform Audit Events Table (Prime Haven Super Admin operations log)
+export const platformAuditEvents = pgTable("platform_audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorUserId: uuid("actor_user_id").notNull(),
+  actorUsername: text("actor_username"),
+  action: text("action").notNull(),
+  category: text("category").notNull().default("system"),
+  severity: text("severity").notNull().default("info"),
+  tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "set null" }),
+  tenantName: text("tenant_name"),
+  detail: jsonb("detail").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

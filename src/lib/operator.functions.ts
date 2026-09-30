@@ -145,7 +145,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         .limit(500),
       db
         .from("platform_audit_events")
-        .select("id,actor_user_id,action,tenant_id,detail,created_at")
+        .select("id,actor_user_id,actor_username,action,category,severity,tenant_id,tenant_name,detail,created_at")
         .order("created_at", { ascending: false })
         .limit(1000),
       db
@@ -342,6 +342,70 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lastPaid = ((payments ?? []) as any[]).find((p) => p.status === "success");
 
+    // 90-day daily check-ins and new churches trend
+    const since90 = new Date(Date.now() - 90 * 864e5).toISOString();
+    let dailyTrends: Array<{
+      date: string;
+      checkins: number;
+      newChurches: number;
+      activeChurches: number;
+    }> = [];
+    try {
+      const { data: trendRpc, error: trendErr } = await db.rpc("get_platform_metrics_trend", {
+        p_days: 90,
+      });
+      if (!trendErr && Array.isArray(trendRpc) && trendRpc.length > 0) {
+        dailyTrends = (
+          trendRpc as Array<{
+            day_date: string;
+            checkins?: number | string | null;
+            new_churches?: number | string | null;
+            active_churches?: number | string | null;
+          }>
+        ).map((r) => ({
+          date: String(r.day_date),
+          checkins: Number(r.checkins ?? 0),
+          newChurches: Number(r.new_churches ?? 0),
+          activeChurches: Number(r.active_churches ?? 0),
+        }));
+      }
+    } catch {
+      // fallback below
+    }
+
+    if (!dailyTrends.length) {
+      const { data: attSample } = await db
+        .from("attendance")
+        .select("recorded_at, tenant_id")
+        .gte("recorded_at", since90)
+        .limit(60000);
+
+      const dayMap: Record<string, { checkins: number; newChurches: number; churches: Set<string> }> = {};
+      for (let i = 90; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+        dayMap[d] = { checkins: 0, newChurches: 0, churches: new Set<string>() };
+      }
+      for (const a of attSample ?? []) {
+        const d = a.recorded_at?.slice(0, 10);
+        if (d && dayMap[d]) {
+          dayMap[d].checkins++;
+          if (a.tenant_id) dayMap[d].churches.add(a.tenant_id);
+        }
+      }
+      for (const t of tenantList) {
+        const d = t.created_at?.slice(0, 10);
+        if (d && dayMap[d]) dayMap[d].newChurches++;
+      }
+      dailyTrends = Object.entries(dayMap).map(([date, val]) => ({
+        date,
+        checkins: val.checkins,
+        newChurches: val.newChurches,
+        activeChurches: val.churches.size,
+      }));
+    }
+
+    const churchNameMap = Object.fromEntries(tenantList.map((t) => [t.id, t.name]));
+
     return {
       generated_at: new Date().toISOString(),
       tenants: tenantList.map((t) => ({
@@ -394,12 +458,66 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         (auditRows ?? []) as Array<{
           id: string;
           actor_user_id: string;
+          actor_username?: string | null;
           action: string;
+          category?: string | null;
+          severity?: string | null;
           tenant_id: string | null;
-          detail: Record<string, string | number | boolean | null | string[]> | null;
+          tenant_name?: string | null;
+          detail: Record<string, unknown> | null;
           created_at: string;
         }>
-      ).map((a) => ({ ...a, actor: (opName[a.actor_user_id] ?? "operator") as string })),
+      ).map((a) => {
+        let category: "tenant" | "system" | "security" | "commercial" =
+          (a.category as "tenant" | "system" | "security" | "commercial") || "system";
+        if (!a.category) {
+          if (a.action.startsWith("tenant.") || a.action.startsWith("branch.")) category = "tenant";
+          else if (
+            a.action.startsWith("operator.") ||
+            a.action.includes("password") ||
+            a.action.includes("auth")
+          )
+            category = "security";
+          else if (
+            a.action.includes("pricing") ||
+            a.action.includes("coupon") ||
+            a.action.includes("payment")
+          )
+            category = "commercial";
+        }
+        let severity: "info" | "warning" | "critical" =
+          (a.severity as "info" | "warning" | "critical") || "info";
+        if (!a.severity) {
+          if (
+            a.action.includes("purged") ||
+            a.action.includes("delete") ||
+            a.action.includes("removed") ||
+            a.action.includes("maintenance_enabled")
+          ) {
+            severity = "critical";
+          } else if (
+            a.action.includes("warning") ||
+            a.action.includes("reject") ||
+            a.action.includes("flag") ||
+            a.action.includes("reset") ||
+            a.action.includes("lockdown") ||
+            a.action.includes("broadcast")
+          ) {
+            severity = "warning";
+          }
+        }
+        const actorName = a.actor_username || (opName[a.actor_user_id] ?? "operator");
+        const churchName = a.tenant_name || (a.tenant_id ? (churchNameMap[a.tenant_id] ?? null) : null);
+        return {
+          ...a,
+          category,
+          severity,
+          actor: actorName,
+          actor_username: actorName,
+          tenant_name: churchName,
+        };
+      }),
+      dailyTrends,
       weekly: weekly.reverse(),
       storage,
       backup_jobs: (
@@ -834,6 +952,10 @@ export const operatorAction = createServerFn({ method: "POST" })
           p_notes: data.notes || null,
         });
         if (error) throw new Error(error.message);
+        await audit(me, "tenant.approved", { notes: data.notes || null }, data.tenant_id, {
+          category: "tenant",
+          severity: "info",
+        });
         return { ok: true, message: "Church approved and activated" };
       }
       case "reject_church": {
@@ -842,6 +964,10 @@ export const operatorAction = createServerFn({ method: "POST" })
           p_reason: data.reason,
         });
         if (error) throw new Error(error.message);
+        await audit(me, "tenant.rejected", { reason: data.reason }, data.tenant_id, {
+          category: "tenant",
+          severity: "warning",
+        });
         return { ok: true, message: "Church rejected" };
       }
       case "request_correction": {
@@ -850,6 +976,10 @@ export const operatorAction = createServerFn({ method: "POST" })
           p_reason: data.reason,
         });
         if (error) throw new Error(error.message);
+        await audit(me, "tenant.correction_requested", { reason: data.reason }, data.tenant_id, {
+          category: "tenant",
+          severity: "info",
+        });
         return { ok: true, message: "Correction request sent to church" };
       }
       case "flag_church": {
@@ -858,6 +988,10 @@ export const operatorAction = createServerFn({ method: "POST" })
           p_reason: data.reason,
         });
         if (error) throw new Error(error.message);
+        await audit(me, "tenant.flagged", { reason: data.reason }, data.tenant_id, {
+          category: "tenant",
+          severity: "warning",
+        });
         return { ok: true, message: "Church flagged for review" };
       }
       case "delete_church_permanent": {
@@ -897,7 +1031,13 @@ export const operatorAction = createServerFn({ method: "POST" })
           if (delErr) throw new Error(delErr.message);
         }
 
-        await audit(me, "tenant.permanently_purged", { name: tenant.name, subdomain: tenant.subdomain });
+        await audit(
+          me,
+          "tenant.permanently_purged",
+          { name: tenant.name, subdomain: tenant.subdomain, tier: tenant.tier },
+          data.tenant_id,
+          { category: "tenant", severity: "critical", tenantName: tenant.name },
+        );
         return { ok: true, message: `Church "${tenant.name}" and all records have been permanently deleted from the database.` };
       }
       case "update_profile": {
@@ -921,7 +1061,13 @@ export const operatorAction = createServerFn({ method: "POST" })
             },
           });
         }
-        await audit(me, "operator.profile_updated", { username: cleanUsername });
+        await audit(
+          me,
+          "operator.profile_updated",
+          { username: cleanUsername, display_name: data.display_name?.trim() || null },
+          null,
+          { category: "security", severity: "info", actorUsername: cleanUsername },
+        );
         return { ok: true, message: `Profile updated. Operator username is now "${cleanUsername}".` };
       }
     }

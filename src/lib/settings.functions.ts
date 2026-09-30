@@ -62,15 +62,56 @@ export const saveSettings = createServerFn({ method: "POST" })
   .inputValidator((d) => settingsSchema.parse(d))
   .handler(async ({ data, context }) => {
     await assertOperator(context);
-    const { writeSettings } = await import("./settings.server");
+    const { readSettings, writeSettings } = await import("./settings.server");
     const { audit } = await import("./operator.server");
     const codes = new Set<string>();
     for (const c of data.coupons) {
       if (codes.has(c.code)) throw new Error(`Coupon ${c.code} is listed twice.`);
       codes.add(c.code);
     }
+    const prev = await readSettings(true);
     await writeSettings(data);
-    await audit(context.userId, "platform.settings_saved", { sections: Object.keys(data) });
+
+    // Track critical maintenance mode toggles
+    if (data.signups.maintenance !== prev.signups.maintenance) {
+      await audit(
+        context.userId,
+        data.signups.maintenance ? "system.maintenance_enabled" : "system.maintenance_disabled",
+        {
+          maintenance: data.signups.maintenance,
+          message: data.signups.maintenance_message,
+        },
+        null,
+        { category: "system", severity: "critical" },
+      );
+    }
+
+    // Track broadcast announcements
+    if (
+      data.global_banner?.enabled !== prev.global_banner?.enabled ||
+      data.global_banner?.message !== prev.global_banner?.message
+    ) {
+      await audit(
+        context.userId,
+        "system.broadcast_updated",
+        {
+          enabled: data.global_banner?.enabled,
+          message: data.global_banner?.message,
+          level: data.global_banner?.level,
+        },
+        null,
+        { category: "system", severity: "warning" },
+      );
+    }
+
+    // General settings updated
+    await audit(
+      context.userId,
+      "platform.settings_saved",
+      { sections: Object.keys(data) },
+      null,
+      { category: "commercial", severity: "info" },
+    );
     return { ok: true, message: "Settings saved" };
   });
 
