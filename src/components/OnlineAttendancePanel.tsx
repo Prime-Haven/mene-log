@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Radio,
@@ -13,19 +13,32 @@ import {
   Play,
   Calendar,
   Sparkles,
+  Link2,
+  Tv,
+  Power,
+  Sliders,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { getOnlineAttendanceOverview } from "@/lib/watch.functions";
 import { useTenant } from "@/hooks/useTenant";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function OnlineAttendancePanel() {
   const { tenant, tier, can } = useTenant();
   const getOverview = useServerFn(getOnlineAttendanceOverview);
+  const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>(undefined);
+
+  // Stream broadcast controls
+  const [streamServiceId, setStreamServiceId] = useState<string>("");
+  const [streamUrl, setStreamUrl] = useState<string>("");
+  const [minMinutes, setMinMinutes] = useState<number>(20);
 
   const watchLiveEnabled = can("watch_live") || tier === "premium";
 
@@ -40,6 +53,79 @@ export function OnlineAttendancePanel() {
           service_id: selectedServiceId,
         },
       }),
+  });
+
+  // Query all services to configure streaming
+  const allServicesQuery = useQuery({
+    queryKey: ["church-services-for-stream", tenant?.id],
+    enabled: !!tenant?.id && watchLiveEnabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, service_date, is_live, stream_url, online_min_minutes, is_open")
+        .eq("tenant_id", tenant!.id)
+        .order("is_live", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return (data as Array<{
+        id: string;
+        name: string;
+        service_date: string | null;
+        is_live: boolean;
+        stream_url: string | null;
+        online_min_minutes: number;
+        is_open: boolean;
+      }>) ?? [];
+    },
+  });
+
+  const availableServices = useMemo(() => allServicesQuery.data ?? [], [allServicesQuery.data]);
+
+  // Initialize selected stream service when loaded
+  useEffect(() => {
+    if (!streamServiceId && availableServices.length > 0) {
+      const activeLive = availableServices.find((s) => s.is_live);
+      const chosen = activeLive || availableServices[0];
+      setStreamServiceId(chosen.id);
+      setStreamUrl(chosen.stream_url ?? "");
+      setMinMinutes(chosen.online_min_minutes ?? 20);
+    }
+  }, [availableServices, streamServiceId]);
+
+  const activeStreamService = availableServices.find((s) => s.id === streamServiceId);
+
+  // Toggle Live mutation
+  const toggleLive = useMutation({
+    mutationFn: async ({
+      id,
+      is_live,
+      url,
+      min,
+    }: {
+      id: string;
+      is_live: boolean;
+      url?: string;
+      min?: number;
+    }) => {
+      const updates: Record<string, unknown> = { is_live };
+      if (url !== undefined) updates.stream_url = url.trim() || null;
+      if (min !== undefined) updates.online_min_minutes = min;
+
+      const { error } = await supabase.from("services").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      toast.success(
+        vars.is_live
+          ? "Service is now LIVE ONLINE! Members can stream and log attendance."
+          : "Service has been set OFFLINE."
+      );
+      allServicesQuery.refetch();
+      refetch();
+      qc.invalidateQueries({ queryKey: ["services"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update stream status"),
   });
 
   const publicWatchUrl =
@@ -175,6 +261,171 @@ export function OnlineAttendancePanel() {
                 {isLoading ? "…" : `${totalMinutes} min`}
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stream Link & Online/Offline Broadcast Control Center */}
+      <div className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+          <div>
+            <h3 className="font-display text-base font-bold text-foreground flex items-center gap-2">
+              <Tv className="size-5 text-primary" />
+              <span>Broadcast Stream & Live Controls</span>
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Paste your YouTube, Vimeo, or Facebook Live URL, and toggle the broadcast Online so members can watch and log attendance.
+            </p>
+          </div>
+
+          {activeStreamService && (
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                  activeStreamService.is_live
+                    ? "bg-destructive/15 text-destructive border border-destructive/30 animate-pulse"
+                    : "bg-muted text-muted-foreground border border-border"
+                }`}
+              >
+                <span
+                  className={`size-2 rounded-full ${
+                    activeStreamService.is_live ? "bg-destructive" : "bg-muted-foreground"
+                  }`}
+                />
+                {activeStreamService.is_live ? "LIVE ONLINE NOW" : "STREAM OFFLINE"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          {/* Service Selector */}
+          <div className="md:col-span-4 space-y-1.5">
+            <Label htmlFor="stream-svc-select" className="text-xs font-semibold">
+              Select Service to Stream
+            </Label>
+            <select
+              id="stream-svc-select"
+              value={streamServiceId}
+              onChange={(e) => {
+                const sId = e.target.value;
+                setStreamServiceId(sId);
+                const svc = availableServices.find((s) => s.id === sId);
+                if (svc) {
+                  setStreamUrl(svc.stream_url ?? "");
+                  setMinMinutes(svc.online_min_minutes ?? 20);
+                }
+              }}
+              className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {availableServices.map((svc) => (
+                <option key={svc.id} value={svc.id}>
+                  {svc.name} ({svc.service_date || "Permanent"}) {svc.is_live ? "🔴 [LIVE]" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Stream Link Input */}
+          <div className="md:col-span-5 space-y-1.5">
+            <Label htmlFor="stream-url-input" className="text-xs font-semibold">
+              Stream Link (YouTube Live / Vimeo / Facebook)
+            </Label>
+            <div className="relative">
+              <Link2 className="absolute left-3.5 top-3.5 size-4 text-muted-foreground" />
+              <Input
+                id="stream-url-input"
+                type="url"
+                value={streamUrl}
+                onChange={(e) => setStreamUrl(e.target.value)}
+                placeholder="https://youtube.com/live/your-stream-id or embed link"
+                className="h-11 rounded-xl pl-10 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Min Watch Minutes */}
+          <div className="md:col-span-3 space-y-1.5">
+            <Label htmlFor="stream-min-minutes" className="text-xs font-semibold">
+              Min Minutes to Count Present
+            </Label>
+            <Input
+              id="stream-min-minutes"
+              type="number"
+              min={1}
+              max={240}
+              value={minMinutes}
+              onChange={(e) => setMinMinutes(parseInt(e.target.value, 10) || 20)}
+              className="h-11 rounded-xl text-xs font-mono"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons: Toggle Online / Offline */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <p className="text-[11px] text-muted-foreground">
+            {activeStreamService?.is_live
+              ? "🟢 Members navigating to the Watch Live link can currently enter their member ID and watch."
+              : "⚪ Toggling Online allows members to watch and automatically log their view time."}
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={toggleLive.isPending || !activeStreamService}
+              onClick={() => {
+                if (!streamServiceId) return;
+                toggleLive.mutate({
+                  id: streamServiceId,
+                  is_live: activeStreamService?.is_live ?? false,
+                  url: streamUrl,
+                  min: minMinutes,
+                });
+              }}
+              className="h-10 rounded-xl text-xs font-semibold"
+            >
+              Save Link
+            </Button>
+
+            {activeStreamService?.is_live ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={toggleLive.isPending}
+                onClick={() => {
+                  toggleLive.mutate({
+                    id: streamServiceId,
+                    is_live: false,
+                    url: streamUrl,
+                    min: minMinutes,
+                  });
+                }}
+                className="h-10 rounded-xl gap-2 text-xs font-semibold shadow-md"
+              >
+                <Power className="size-4" /> Take Stream Offline
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={toggleLive.isPending || !streamServiceId}
+                onClick={() => {
+                  if (!streamUrl.trim()) {
+                    toast.error("Please paste your live stream link first.");
+                    return;
+                  }
+                  toggleLive.mutate({
+                    id: streamServiceId,
+                    is_live: true,
+                    url: streamUrl,
+                    min: minMinutes,
+                  });
+                }}
+                className="h-10 rounded-xl gap-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+              >
+                <Radio className="size-4 animate-pulse" /> Go Live Online
+              </Button>
+            )}
           </div>
         </div>
       </div>

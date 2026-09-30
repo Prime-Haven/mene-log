@@ -75,15 +75,6 @@ const nav: NavItem[] = [
     show: (c) => c.canManageMembers,
   },
   {
-    to: "/attendance",
-    search: { tab: "online" },
-    label: "Online streaming",
-    icon: Radio,
-    group: "Workspace",
-    show: (c) => c.canManageMembers,
-    feature: "watch_live",
-  },
-  {
     to: "/services",
     label: "Services",
     icon: CalendarDays,

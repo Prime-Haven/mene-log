@@ -10,6 +10,7 @@ import {
   Mail,
   Lock,
   User,
+  KeyRound,
 } from "lucide-react";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +23,14 @@ import { Label } from "@/components/ui/label";
 import { PasswordField, PasswordInput } from "@/components/PasswordField";
 import { passwordIsStrong } from "@/lib/password";
 import { MeneLogLogo } from "@/components/MeneLogLogo";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: z.object({ mode: z.enum(["signin", "signup"]).optional() }),
@@ -46,12 +55,37 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
   const { session, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/dashboard" });
   }, [loading, session, navigate]);
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    setForgotBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent! Check your inbox.");
+      setForgotOpen(false);
+      setForgotEmail("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send reset link");
+    } finally {
+      setForgotBusy(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -245,6 +279,16 @@ function AuthPage() {
                       <Label htmlFor="password" className="text-xs font-semibold">
                         Password
                       </Label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotEmail(email);
+                          setForgotOpen(true);
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
                     </div>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-3.5 size-4 text-muted-foreground z-10" />
@@ -287,6 +331,60 @@ function AuthPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <KeyRound className="size-6" />
+            </div>
+            <DialogTitle className="text-center font-display text-xl">Reset your password</DialogTitle>
+            <DialogDescription className="text-center text-xs sm:text-sm">
+              Enter your church email address and we'll send you a secure link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleForgotPassword} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="forgot-email" className="text-xs font-semibold">
+                Your email address
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-3 size-4 text-muted-foreground" />
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="pastor@yourchurch.org"
+                  className="h-11 rounded-xl pl-10"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setForgotOpen(false)}
+                className="rounded-xl h-11"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={forgotBusy}
+                className="rounded-xl h-11 gap-2 font-semibold"
+              >
+                {forgotBusy ? "Sending link…" : "Send Reset Link"}
+                {!forgotBusy && <ArrowRight className="size-4" />}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

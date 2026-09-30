@@ -131,11 +131,13 @@ export const startWatch = createServerFn({ method: "POST" })
     const v = await resolveViewer(supabaseAdmin, data.subdomain, data.code);
     if ("error" in v) return { ok: false as const, message: v.error };
 
+    // Only stream services that are explicitly toggled online (is_live = true)
     const { data: services } = await supabaseAdmin
       .from("services")
-      .select("id, name, service_date, stream_url, online_min_minutes")
+      .select("id, name, service_date, stream_url, online_min_minutes, is_live")
       .eq("tenant_id", v.tenant.id)
       .eq("is_open", true)
+      .eq("is_live", true)
       .not("stream_url", "is", null)
       .order("service_date", { ascending: false })
       .limit(5);

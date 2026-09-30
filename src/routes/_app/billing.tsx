@@ -375,7 +375,7 @@ export function Billing() {
             return (
               <article
                 key={tier.id}
-                className={`relative flex flex-col rounded-lg border p-6 transition-all ${
+                className={`relative flex flex-col rounded-2xl border p-6 transition-all ${
                   isFeatured
                     ? "border-primary bg-primary text-primary-foreground shadow-xl"
                     : isCurrent
@@ -383,25 +383,17 @@ export function Billing() {
                       : "border-border bg-card"
                 }`}
               >
-                {/* Header badges */}
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 min-h-6">
-                  {isCurrent && (
-                    <span
-                      className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                        isFeatured
-                          ? "bg-primary-foreground text-primary font-black"
-                          : "bg-primary text-primary-foreground"
-                      }`}
-                    >
-                      Active plan
-                    </span>
-                  )}
-                  {isFeatured && !isCurrent && (
-                    <span className="rounded-md bg-primary-foreground px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-                      Most popular
-                    </span>
-                  )}
-                </div>
+                {/* Centered Most Popular Badge at top of Pro card */}
+                {isFeatured && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary-foreground px-3.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary shadow-md z-10">
+                    Most popular
+                  </span>
+                )}
+                {isCurrent && !isFeatured && (
+                  <span className="absolute -top-3 right-4 whitespace-nowrap rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm z-10">
+                    Active
+                  </span>
+                )}
 
                 <h3
                   className={`text-sm font-bold uppercase tracking-[0.16em] ${

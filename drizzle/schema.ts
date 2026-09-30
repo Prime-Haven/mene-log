@@ -122,6 +122,41 @@ export const positions = pgTable("positions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Leader Types (Roles & Hierarchy)
+export const leaderTypes = pgTable("leader_types", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  reportsToTypeId: uuid("reports_to_type_id"),
+  levelRank: integer("level_rank").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Leader Profiles
+export const leaderProfiles = pgTable("leader_profiles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull(),
+  fullName: text("full_name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  photoPath: text("photo_path"),
+  dateOfBirth: date("date_of_birth"),
+  location: text("location"),
+  leaderTypeId: uuid("leader_type_id").references(() => leaderTypes.id, { onDelete: "set null" }),
+  reportsToLeaderId: uuid("reports_to_leader_id"),
+  groupName: text("group_name"),
+  meetingDay: text("meeting_day"),
+  meetingTime: text("meeting_time"),
+  meetingVenue: text("meeting_venue"),
+  status: accountStatusEnum("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Members Table (with member_code)
 export const members = pgTable("members", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -162,6 +197,7 @@ export const services = pgTable("services", {
   serviceType: text("service_type").notNull().default("regular"), // "regular" | "special_program"
   serviceDate: date("service_date").defaultNow(),
   isOpen: boolean("is_open").notNull().default(true),
+  isLive: boolean("is_live").notNull().default(false),
   streamUrl: text("stream_url"),
   onlineMinMinutes: integer("online_min_minutes").notNull().default(20),
   description: text("description"),

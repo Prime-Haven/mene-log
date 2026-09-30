@@ -32,8 +32,6 @@ import {
   type PlanTier,
 } from "@/lib/pricing";
 
-import heroVideo from "@/assets/mene-worship-hero.webm";
-import heroPoster from "@/assets/mene-worship-poster.jpg";
 import { Button } from "@/components/ui/button";
 import { VerseTyper } from "@/components/VerseTyper";
 import { ReviewCarousel } from "@/components/ReviewCarousel";
@@ -41,6 +39,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { HomepageStats } from "@/components/HomepageStats";
 import { PublicAskMene } from "@/components/PublicAskMene";
 import { MeneLogLogo } from "@/components/MeneLogLogo";
+import { ThinkingOrb } from "@/components/ThinkingOrb";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -259,33 +258,40 @@ function LandingPage() {
         </AnimatePresence>
       </header>
 
-      <section ref={heroRef} className="relative h-[145svh] bg-deep">
+      <section ref={heroRef} className="relative h-[145svh] bg-deep overflow-hidden">
         <div className="sticky top-0 h-svh overflow-hidden">
-          <motion.video
-            style={{ scale: videoScale, opacity: videoOpacity }}
-            className="absolute inset-0 size-full object-cover grayscale"
-            src={heroVideo}
-            poster={heroPoster}
-            autoPlay
-            muted
-            loop
-            playsInline
-            aria-hidden="true"
+          {/* Blurred world glow backdrop */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_40%,rgba(14,165,233,0.18)_0%,rgba(99,102,241,0.12)_45%,rgba(5,10,24,0.92)_85%)]"
           />
-          <div className="absolute inset-0 bg-deep/65" />
-          <div aria-hidden className="motion-blur motion-blur-large" />
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--deep)_0%,transparent_55%)] opacity-70" />
+          <div
+            aria-hidden
+            className="absolute -top-32 -left-32 size-[42rem] rounded-full bg-primary/20 blur-[140px] pointer-events-none"
+          />
+          <div
+            aria-hidden
+            className="absolute -bottom-32 -right-32 size-[38rem] rounded-full bg-indigo-500/20 blur-[130px] pointer-events-none"
+          />
+
+          {/* Huge interactive 3D Thinking Orb that fills the hero section */}
+          <ThinkingOrb className="absolute inset-0 size-full z-0 opacity-85" />
+
+          {/* Atmospheric gradient overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--deep)_0%,transparent_50%,rgba(5,10,24,0.3)_100%)] pointer-events-none z-[1]" />
+
+          {/* Foreground Hero Content with Frosted Glassmorphic Backdrop */}
           <motion.div
             style={{ y: contentY, opacity: contentOpacity }}
-            className="relative mx-auto flex h-full max-w-7xl items-end justify-center px-5 pb-24 text-center sm:pb-20"
+            className="relative z-10 mx-auto flex h-full max-w-7xl items-end justify-center px-4 pb-20 sm:pb-16 text-center"
           >
-            <div className="max-w-3xl text-deep-foreground">
-              <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/70">
-                Made for churches. Built for people.
+            <div className="max-w-3xl rounded-3xl border border-white/15 bg-deep/55 p-7 sm:p-10 shadow-2xl backdrop-blur-xl text-deep-foreground">
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
+                Made for churches · Built for people
               </p>
               <h1 className="sr-only">Mene:Log — Church Attendance and membership, made simple</h1>
               <VerseTyper />
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-deep-foreground/80 sm:text-lg">
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-deep-foreground/85 sm:text-lg">
                 Mene:Log brings attendance, membership, leadership and communication together so
                 your church can care with clarity.
               </p>
@@ -293,26 +299,26 @@ function LandingPage() {
                 <Button
                   asChild
                   size="lg"
-                  className="h-12 bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+                  className="h-12 bg-primary px-7 text-primary-foreground shadow-lg hover:bg-primary/90 rounded-xl font-semibold"
                 >
                   <Link to="/onboarding">
-                    Create your church <ArrowRight />
+                    Create your church <ArrowRight className="ml-1 size-4" />
                   </Link>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   size="lg"
-                  className="h-12 border-deep-foreground/40 bg-deep-foreground/10 px-6 text-deep-foreground backdrop-blur hover:bg-deep-foreground/20 hover:text-deep-foreground"
+                  className="h-12 border-white/25 bg-white/10 px-7 text-deep-foreground backdrop-blur hover:bg-white/20 hover:text-white rounded-xl font-semibold"
                 >
                   <a href="#why">
-                    <Play className="fill-current" /> See how it works
+                    <Play className="fill-current mr-1 size-4" /> See how it works
                   </a>
                 </Button>
               </div>
             </div>
           </motion.div>
-          <div className="absolute bottom-7 right-5 hidden items-center gap-3 text-xs font-semibold text-deep-foreground/70 sm:flex">
+          <div className="absolute bottom-6 right-5 hidden items-center gap-3 text-xs font-semibold text-deep-foreground/70 sm:flex z-10">
             <span className="h-px w-14 bg-deep-foreground/40" /> Scroll to explore
           </div>
         </div>
@@ -414,59 +420,67 @@ function LandingPage() {
             <div className="mt-10">
               <BillingToggle value={interval} onChange={setBillingInterval} />
             </div>
-            <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-8 pt-4 grid gap-5 sm:grid-cols-2 xl:grid-cols-4 items-stretch">
               {tiers.map((tier) => (
                 <article
                   key={tier.name}
-                  className={`relative flex flex-col rounded-lg border p-7 ${tier.featured ? "border-primary bg-primary text-primary-foreground shadow-xl" : "border-border bg-card"}`}
+                  className={`relative flex flex-col rounded-2xl border p-7 ${tier.featured ? "border-primary bg-primary text-primary-foreground shadow-2xl ring-2 ring-primary/30" : "border-border/70 bg-card/80 backdrop-blur-md shadow-sm"}`}
                 >
+                  {/* Centered Most Popular rounded rectangle above the top of the card */}
                   {tier.featured && (
-                    <span className="mb-5 self-start rounded-md bg-primary-foreground px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                    <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary-foreground px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-primary shadow-md z-10">
                       Most popular
                     </span>
                   )}
                   <h3
-                    className={`text-sm font-bold uppercase tracking-[0.16em] ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}
+                    className={`text-sm font-bold uppercase tracking-[0.16em] ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}
                   >
                     {tier.name}
                   </h3>
-                  {tier.id === "free" ? (
-                    <div className="mt-4">
-                      <span className="font-display text-5xl font-bold text-foreground">Free</span>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Free forever · no card needed
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="mt-4 flex flex-wrap items-end">
-                        <span
-                          className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}
-                        >
-                          {formatUsd(
-                            interval === "yearly"
-                              ? yearlyUsd(tier.id as PlanTier)
-                              : MONTHLY_USD[tier.id as PlanTier],
-                            currency,
-                          )}
-                        </span>
-                        <span
-                          className={`mb-1.5 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}
-                        >
-                          {interval === "yearly" ? "/year" : "/month"}
-                        </span>
-                      </div>
-                      {interval === "yearly" && (
-                        <p
-                          className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                        >
-                          <b>Save {Math.round(YEARLY_DISCOUNT[tier.id as PlanTier] * 100)}%</b> ·{" "}
-                          {formatUsd(yearlyPerMonthUsd(tier.id as PlanTier), currency)}/month billed
-                          yearly · was {formatUsd(MONTHLY_USD[tier.id as PlanTier], currency)}/month
+                  <div className="mt-4 min-h-[4.5rem] flex flex-col justify-start">
+                    {tier.id === "free" ? (
+                      <div>
+                        <span className="font-display text-4xl font-bold text-foreground">Free</span>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Free forever · no card needed
                         </p>
-                      )}
-                    </>
-                  )}
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex flex-wrap items-end">
+                          <span
+                            className={`font-display text-4xl font-bold ${tier.featured ? "text-primary-foreground" : "text-foreground"}`}
+                          >
+                            {formatUsd(
+                              interval === "yearly"
+                                ? yearlyUsd(tier.id as PlanTier)
+                                : MONTHLY_USD[tier.id as PlanTier],
+                              currency,
+                            )}
+                          </span>
+                          <span
+                            className={`mb-1 ml-1 text-sm ${tier.featured ? "text-primary-foreground/65" : "text-muted-foreground"}`}
+                          >
+                            {interval === "yearly" ? "/year" : "/month"}
+                          </span>
+                        </div>
+                        {interval === "yearly" ? (
+                          <p
+                            className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                          >
+                            <b>Save {Math.round(YEARLY_DISCOUNT[tier.id as PlanTier] * 100)}%</b> ·{" "}
+                            {formatUsd(yearlyPerMonthUsd(tier.id as PlanTier), currency)}/mo billed yearly
+                          </p>
+                        ) : (
+                          <p
+                            className={`mt-1 text-xs ${tier.featured ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                          >
+                            Billed monthly
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <p
                     className={`mt-4 min-h-12 text-sm ${tier.featured ? "text-primary-foreground/75" : "text-muted-foreground"}`}
                   >

@@ -582,6 +582,7 @@ function CheckIn() {
             subdomain={subdomain}
             churchName={church?.name ?? "this church"}
             leaderTypes={leaderTypes}
+            leaders={leaders}
           />
         ) : (
           <form
@@ -1435,10 +1436,23 @@ function LeaderArea({
   subdomain,
   churchName,
   leaderTypes,
+  leaders = [],
 }: {
   subdomain: string;
   churchName: string;
-  leaderTypes: Array<{ id: string; name: string }>;
+  leaderTypes: Array<{
+    id: string;
+    name: string;
+    reports_to_type_id?: string | null;
+    reports_to_name?: string | null;
+  }>;
+  leaders?: Array<{
+    id: string;
+    full_name: string;
+    leader_type?: string | null;
+    leader_type_id?: string | null;
+    group_name?: string | null;
+  }>;
 }) {
   const navigate = useNavigate();
   const register = useServerFn(registerLeader);
@@ -1458,6 +1472,8 @@ function LeaderArea({
     date_of_birth: "",
     location: "",
     leader_type_id: "",
+    reports_to_leader_id: "",
+    group_name: "",
     access_code: "",
     password: "",
     confirm: "",
@@ -1467,6 +1483,17 @@ function LeaderArea({
   const [registerError, setRegisterError] = useState("");
   const [sent, setSent] = useState(false);
   const checks = passwordChecks(form.password);
+
+  // Active leader type definition and superior leader type
+  const selectedLeaderType = leaderTypes.find((lt) => lt.id === form.leader_type_id);
+
+  // Filter possible supervisors matching the configured reports_to_type_id, or fallback to all leaders
+  const supervisorCandidates = leaders.filter((l) => {
+    if (selectedLeaderType?.reports_to_type_id) {
+      return l.leader_type_id === selectedLeaderType.reports_to_type_id;
+    }
+    return true;
+  });
 
   async function handleLeaderLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -1525,6 +1552,8 @@ function LeaderArea({
           date_of_birth: form.date_of_birth,
           location: form.location,
           leader_type_id: form.leader_type_id,
+          reports_to_leader_id: form.reports_to_leader_id,
+          group_name: form.group_name,
           photo: form.photo,
         },
       });
@@ -1533,8 +1562,12 @@ function LeaderArea({
         return;
       }
       setSent(true);
-    } catch {
-      setRegisterError("Could not complete leader registration. Please try again.");
+    } catch (err) {
+      setRegisterError(
+        err instanceof Error
+          ? err.message
+          : "Could not complete leader registration. Please verify your details or ask church admin.",
+      );
     } finally {
       setRegisterBusy(false);
     }
@@ -1779,16 +1812,80 @@ function LeaderArea({
                 id="ltype"
                 className={selectClass}
                 value={form.leader_type_id}
-                onChange={(e) => setForm({ ...form, leader_type_id: e.target.value })}
+                onChange={(e) => {
+                  const newTypeId = e.target.value;
+                  setForm({ ...form, leader_type_id: newTypeId, reports_to_leader_id: "" });
+                }}
               >
                 <option value="" className="bg-neutral-900 text-white">Select your leadership role</option>
                 {leaderTypes.map((type) => (
                   <option key={type.id} value={type.id} className="bg-neutral-900 text-white">
                     {type.name}
+                    {type.reports_to_name ? ` (Reports to: ${type.reports_to_name})` : ""}
                   </option>
                 ))}
                 {!leaderTypes.length && <option value="general" className="bg-neutral-900 text-white">Cell / Department Leader</option>}
               </select>
+            </div>
+
+            {/* Hierarchy Reports To: Automatically shows who they report to based on church configuration */}
+            {form.leader_type_id && (
+              <div className="space-y-1.5 rounded-xl border border-white/15 bg-white/5 p-3.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lreports" className="text-xs font-semibold text-white/90">
+                    {selectedLeaderType?.reports_to_name
+                      ? `Your ${selectedLeaderType.reports_to_name} (Leader you report to)`
+                      : "Leader you report to (Supervisor)"}
+                  </Label>
+                  {selectedLeaderType?.reports_to_name && (
+                    <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      Hierarchy: {selectedLeaderType.reports_to_name}
+                    </span>
+                  )}
+                </div>
+                <select
+                  id="lreports"
+                  className={selectClass}
+                  value={form.reports_to_leader_id}
+                  onChange={(e) => setForm({ ...form, reports_to_leader_id: e.target.value })}
+                >
+                  <option value="" className="bg-neutral-900 text-white">
+                    {selectedLeaderType?.reports_to_name
+                      ? `Choose your ${selectedLeaderType.reports_to_name}`
+                      : "Choose leader you report to (or None / Top Level)"}
+                  </option>
+                  {supervisorCandidates.map((sup) => (
+                    <option key={sup.id} value={sup.id} className="bg-neutral-900 text-white">
+                      {sup.full_name} {sup.leader_type ? `(${sup.leader_type})` : ""} {sup.group_name ? `· ${sup.group_name}` : ""}
+                    </option>
+                  ))}
+                  {supervisorCandidates.length === 0 && (
+                    <option value="" disabled className="bg-neutral-900 text-white">
+                      No registered superior leaders yet
+                    </option>
+                  )}
+                </select>
+                <p className="text-[11px] text-white/60">
+                  {selectedLeaderType?.reports_to_name
+                    ? `Your church leadership hierarchy specifies that ${selectedLeaderType.name}s report to a ${selectedLeaderType.reports_to_name}.`
+                    : "Select the leader you report to in your church's structure."}
+                </p>
+              </div>
+            )}
+
+            {/* Group / Cell Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="lgroup" className="text-xs font-semibold text-white/90">
+                Name of your group / cell / fellowship <span className="font-normal text-white/60">(optional)</span>
+              </Label>
+              <Input
+                id="lgroup"
+                maxLength={100}
+                placeholder="e.g. Grace Cell, PCF 2, Youth Ministry"
+                value={form.group_name}
+                onChange={(e) => setForm({ ...form, group_name: e.target.value })}
+                className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-primary focus:bg-white/15"
+              />
             </div>
 
             <div className="space-y-1.5">

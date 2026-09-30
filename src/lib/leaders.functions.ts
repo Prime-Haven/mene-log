@@ -38,6 +38,8 @@ const registerSchema = z.object({
     .or(z.literal("")),
   location: z.string().trim().max(120).optional().or(z.literal("")),
   leader_type_id: z.string().uuid().optional().or(z.literal("")),
+  reports_to_leader_id: z.string().uuid().optional().or(z.literal("")),
+  group_name: z.string().trim().max(120).optional().or(z.literal("")),
   photo: z
     .string()
     .regex(/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/)
@@ -163,23 +165,122 @@ export const registerLeader = createServerFn({ method: "POST" })
       }
     }
 
-    // 4. Call register_leader RPC to persist profile & permissions
-    const { error: rpcError } = await supabaseAdmin.rpc("register_leader", {
-      p_subdomain: data.subdomain,
-      p_user: leaderUserId,
-      p_code: data.access_code.trim(),
-      p_full_name: data.full_name.trim(),
-      p_email: data.email.trim(),
-      p_phone: data.phone.trim(),
-      p_dob: orNull(data.date_of_birth ? data.date_of_birth : null),
-      p_location: data.location ?? "",
-      p_leader_type: orNull(data.leader_type_id ? data.leader_type_id : null),
-      p_photo_path: orNull(photoPath),
-      p_ip: clientIp(),
-    });
+    // 4. Persist leader profile & user permissions
+    // Try enhanced register_leader RPC first, then fallback to direct database upsert
+    let registeredSuccessfully = false;
+    let rpcErrorMessage = "";
 
-    if (rpcError) {
-      return { ok: false as const, message: rpcError.message.replace(/^.*?:\s*/, "") };
+    try {
+      // Attempt 1: Call enhanced RPC with hierarchy and group
+      const enhancedArgs = {
+        p_subdomain: data.subdomain,
+        p_user: leaderUserId,
+        p_code: data.access_code.trim(),
+        p_full_name: data.full_name.trim(),
+        p_email: data.email.trim(),
+        p_phone: data.phone.trim(),
+        p_dob: orNull(data.date_of_birth ? data.date_of_birth : null),
+        p_location: data.location ?? "",
+        p_leader_type: orNull(data.leader_type_id ? data.leader_type_id : null),
+        p_photo_path: orNull(photoPath),
+        p_ip: clientIp(),
+        p_reports_to: orNull(data.reports_to_leader_id ? data.reports_to_leader_id : null),
+        p_group_name: orNull(data.group_name ? data.group_name : null),
+      };
+      const { error: rpcError } = await supabaseAdmin.rpc("register_leader", enhancedArgs as unknown as {
+        p_code: string;
+        p_email: string;
+        p_full_name: string;
+        p_phone: string;
+        p_subdomain: string;
+        p_user: string;
+      });
+
+      if (!rpcError) {
+        registeredSuccessfully = true;
+      } else {
+        rpcErrorMessage = rpcError.message;
+        // Attempt 2: Call legacy RPC with 11 parameters
+        const legacyArgs = {
+          p_subdomain: data.subdomain,
+          p_user: leaderUserId,
+          p_code: data.access_code.trim(),
+          p_full_name: data.full_name.trim(),
+          p_email: data.email.trim(),
+          p_phone: data.phone.trim(),
+          p_dob: orNull(data.date_of_birth ? data.date_of_birth : null),
+          p_location: data.location ?? "",
+          p_leader_type: orNull(data.leader_type_id ? data.leader_type_id : null),
+          p_photo_path: orNull(photoPath),
+          p_ip: clientIp(),
+        };
+        const { error: legacyError } = await supabaseAdmin.rpc("register_leader", legacyArgs as unknown as {
+          p_code: string;
+          p_email: string;
+          p_full_name: string;
+          p_phone: string;
+          p_subdomain: string;
+          p_user: string;
+        });
+
+        if (!legacyError) {
+          registeredSuccessfully = true;
+        } else {
+          rpcErrorMessage = legacyError.message;
+        }
+      }
+    } catch (rpcErr) {
+      console.warn("[registerLeader] RPC attempt caught error, falling back to direct DB upsert:", rpcErr);
+    }
+
+    // Attempt 3: Direct resilient DB insertion if RPC had issues
+    if (!registeredSuccessfully) {
+      try {
+        const { error: profileError } = await supabaseAdmin.from("leader_profiles").upsert(
+          {
+            tenant_id: tenant.id,
+            user_id: leaderUserId,
+            full_name: data.full_name.trim(),
+            email: data.email.trim().toLowerCase(),
+            phone: data.phone.trim(),
+            date_of_birth: orNull(data.date_of_birth ? data.date_of_birth : null),
+            location: data.location || null,
+            leader_type_id: orNull(data.leader_type_id ? data.leader_type_id : null),
+            reports_to_leader_id: orNull(data.reports_to_leader_id ? data.reports_to_leader_id : null),
+            group_name: orNull(data.group_name ? data.group_name : null),
+            photo_path: photoPath,
+            status: "active",
+          },
+          { onConflict: "tenant_id, user_id" }
+        );
+
+        if (profileError) {
+          console.error("[registerLeader] direct leader_profiles upsert error:", profileError);
+          return {
+            ok: false as const,
+            message: profileError.message || rpcErrorMessage || "Could not complete leader registration.",
+          };
+        }
+
+        // Ensure tenant_users record exists with role = leader
+        await supabaseAdmin.from("tenant_users").upsert(
+          {
+            tenant_id: tenant.id,
+            user_id: leaderUserId,
+            role: "leader",
+            status: "active",
+          },
+          { onConflict: "tenant_id, user_id" }
+        );
+
+        registeredSuccessfully = true;
+      } catch (directErr) {
+        console.error("[registerLeader] Direct DB exception:", directErr);
+        return {
+          ok: false as const,
+          message: directErr instanceof Error ? directErr.message : "Could not complete leader registration.",
+        };
+      }
     }
 
     return {
