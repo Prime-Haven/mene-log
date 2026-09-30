@@ -1,4 +1,4 @@
-import { sendEmail } from "./messaging.server";
+import { renderEmail, sendEmail } from "./messaging.server";
 import { SITE_URL } from "./site";
 
 const OPERATOR_ALERT_EMAIL = "primehaven26@gmail.com";
@@ -109,67 +109,16 @@ export async function checkAndSendTrialExpiryAlerts(
       messageBody = `Your 30-day free trial has come to an end. All your church records and attendance logs remain completely safe and preserved. Choose a package to immediately re-enable all premium capabilities.`;
     }
 
-    const html = `<!doctype html>
-<html>
-<head><meta charset="utf-8"/></head>
-<body style="margin:0;background:#0b0f19;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#f1f5f9">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#111827;border:1px solid #1f2937;border-radius:16px;overflow:hidden">
-          <tr>
-            <td style="background:#030712;padding:20px 24px;border-bottom:1px solid #1f2937">
-              <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.02em">Mene:Log Church Management</span>
-              <span style="float:right;display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:9999px;background:${badgeColor}22;color:${badgeColor};border:1px solid ${badgeColor}66">
-                ${badgeText}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px 24px">
-              <p style="margin:0 0 8px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600">
-                Subscription Status Notice
-              </p>
-              <h2 style="margin:0 0 16px;color:#ffffff;font-size:24px;font-weight:700;line-height:1.3">
-                ${headline}
-              </h2>
-              <p style="margin:0 0 20px;color:#d1d5db;font-size:15px;line-height:1.6">
-                Hello <strong>${safeChurchName}</strong> team,
-              </p>
-              <p style="margin:0 0 24px;color:#d1d5db;font-size:15px;line-height:1.6">
-                ${messageBody}
-              </p>
-
-              <div style="background:#1f2937;border-radius:12px;padding:16px 20px;margin-bottom:28px;border:1px solid #374151">
-                <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f3f4f6">What stays intact?</p>
-                <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5">
-                  ✓ Full member registry and phone contacts<br/>
-                  ✓ Historic service attendances and dates<br/>
-                  ✓ Custom check-in URL: menelog.site/c/${escapeHtml(t.subdomain)}
-                </p>
-              </div>
-
-              <div style="text-align:center;margin:32px 0 16px">
-                <a href="${billingLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px">
-                  Choose Plan & Continue Using Mene:Log &rarr;
-                </a>
-              </div>
-              <p style="text-align:center;margin:0;font-size:12px;color:#6b7280">
-                Supports Mobile Money (MTN, Telecel, AT) and Visa/Mastercard.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background:#090d16;padding:16px 24px;border-top:1px solid #1f2937;font-size:12px;color:#6b7280;text-align:center">
-              Mene:Log Platform Services · Need assistance? Reply to support@menelog.site
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+    void safeChurchName;
+    const html = renderEmail({
+      churchName: t.name,
+      brandPrimary: badgeColor,
+      logoUrl: null,
+      subject: headline,
+      body: `Hello ${t.name} team,\n\n${messageBody.replace(safeChurchName, t.name)}\n\nWhat stays intact:\n✓ Full member registry and phone contacts\n✓ Historic service attendances and dates\n✓ Your check-in address: menelog.site/c/${t.subdomain}\n\nPay with Mobile Money (MTN, Telecel, AT) or Visa/Mastercard.`,
+      ctaLabel: "Choose a plan",
+      ctaUrl: billingLink,
+    });
 
     // Send to church contact email
     const emailResult = await sendEmail({

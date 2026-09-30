@@ -82,78 +82,15 @@ export async function sendSupportNotificationAlert(options: {
 
   const emailSubject = `[Support Alert] ${isNew ? "New Ticket" : "Church Reply"} - ${options.churchName}: ${options.subject}`;
 
-  const safeChurchName = options.churchName.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safeSubject = options.subject.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const safeSnippet = options.messageSnippet
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>");
-
-  const html = `<!doctype html>
-<html>
-<head><meta charset="utf-8"/></head>
-<body style="margin:0;background:#0b0f19;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;color:#f1f5f9">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#111827;border:1px solid #1f2937;border-radius:16px;overflow:hidden">
-          <tr>
-            <td style="background:#030712;padding:20px 24px;border-bottom:1px solid #1f2937">
-              <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:-0.02em">Mene:Log Support System</span>
-              <span style="float:right;display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:9999px;background:${priorityColor}22;color:${priorityColor};border:1px solid ${priorityColor}66">
-                ${options.priority}
-              </span>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 24px">
-              <p style="margin:0 0 6px;color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600">
-                ${isNew ? "New Support Ticket Submitted" : "Church Sent a Reply"}
-              </p>
-              <h2 style="margin:0 0 16px;color:#ffffff;font-size:20px;font-weight:700;line-height:1.3">
-                ${safeSubject}
-              </h2>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1f2937;border-radius:10px;padding:14px;margin-bottom:20px">
-                <tr>
-                  <td style="padding:4px 0;color:#9ca3af;font-size:13px;width:110px">Church:</td>
-                  <td style="padding:4px 0;color:#f3f4f6;font-size:14px;font-weight:600">${safeChurchName}</td>
-                </tr>
-                <tr>
-                  <td style="padding:4px 0;color:#9ca3af;font-size:13px">Ticket ID:</td>
-                  <td style="padding:4px 0;color:#60a5fa;font-size:12px;font-family:monospace">${options.ticketId}</td>
-                </tr>
-                ${
-                  options.submittedByEmail
-                    ? `<tr>
-                  <td style="padding:4px 0;color:#9ca3af;font-size:13px">Submitter:</td>
-                  <td style="padding:4px 0;color:#f3f4f6;font-size:13px">${options.submittedByEmail}</td>
-                </tr>`
-                    : ""
-                }
-              </table>
-
-              <div style="background:#0f172a;border-left:3px solid #3b82f6;padding:16px;border-radius:0 8px 8px 0;color:#e2e8f0;font-size:14px;line-height:1.6;margin-bottom:24px">
-                ${safeSnippet}
-              </div>
-
-              <div style="text-align:center">
-                <a href="${directLink}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px">
-                  Open Ticket in Support Console &rarr;
-                </a>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="background:#090d16;padding:16px 24px;border-top:1px solid #1f2937;font-size:12px;color:#6b7280;text-align:center">
-              Alert routed directly to support operations · General outgoing reply-to remains support@menelog.site
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const html = renderEmail({
+    churchName: `Support · ${options.priority} priority`,
+    brandPrimary: priorityColor,
+    logoUrl: null,
+    subject: `${isNew ? "New support ticket" : "Church sent a reply"}: ${options.subject}`,
+    body: `Church: ${options.churchName}\nTicket ID: ${options.ticketId}${options.submittedByEmail ? `\nSubmitter: ${options.submittedByEmail}` : ""}\n\n${options.messageSnippet}`,
+    ctaLabel: "Open ticket in Support Console",
+    ctaUrl: directLink,
+  });
 
   try {
     const res = await sendEmail({

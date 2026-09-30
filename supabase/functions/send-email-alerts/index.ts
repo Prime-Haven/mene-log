@@ -40,7 +40,7 @@ function buildEmailHtml(options: {
   const badgeColor = options.badgeColor || "#3b82f6";
   const appUrl = Deno.env.get("APP_URL") || "https://menelog.site";
 
-  return `<!DOCTYPE html>
+  const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -111,6 +111,33 @@ function buildEmailHtml(options: {
   </table>
 </body>
 </html>`;
+  return toMeneLightStyle(html);
+}
+
+// Converts the alert layout to the Mene:Log light email style: white page,
+// black brand header, blue accents and slate text.
+function toMeneLightStyle(html: string): string {
+  const header = html.indexOf("<!-- Main Body -->");
+  const top = html
+    .slice(0, header)
+    .replace(/background-color:#090d16/g, "background-color:#ffffff")
+    .replace("background:#111827;border:1px solid #1f2937", "background:#ffffff;border:1px solid #e8ecf1")
+    .replace("box-shadow:0 20px 40px rgba(0,0,0,0.5)", "box-shadow:0 8px 24px rgba(15,23,42,0.08)")
+    .replace("color:#f3f4f6", "color:#0f172a")
+    .replace("background:#030712", "background:#0b0f19");
+  const rest = html
+    .slice(header)
+    .replace(/color:#ffffff;font-size:22px/g, "color:#0f172a;font-size:22px")
+    .replace(/color:#ffffff;(font-weight|font-size:1[3-8])/g, "color:#0f172a;$1")
+    .replace(/background:#090d16/g, "background:#f8fafc")
+    .replace(/background:#111827/g, "background:#f8fafc")
+    .replace(/#1f2937/g, "#e8ecf1")
+    .replace(/#2d3748/g, "#e8ecf1")
+    .replace(/#374151/g, "#e2e8f0")
+    .replace(/#9ca3af/g, "#64748b")
+    .replace(/#6b7280/g, "#94a3b8")
+    .replace(/#d1d5db|#e5e7eb|#f3f4f6|#e2e8f0(?=;?"?[^>]*color)/g, "#334155");
+  return top + rest;
 }
 
 // Dispatch via Resend API
@@ -122,7 +149,8 @@ async function sendResendEmail(options: {
   replyTo?: string;
   apiKey: string;
 }) {
-  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "Mene:Log Alerts <alerts@menelog.site>";
+  const fromEmail =
+    Deno.env.get("MENELOG_EMAIL_FROM") || Deno.env.get("RESEND_FROM_EMAIL") || "Mene:Log <support@menelog.site>";
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
 
   const payload = {
@@ -162,7 +190,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const apiKey = Deno.env.get("RESEND_API_KEY");
+    const apiKey = Deno.env.get("MENELOG_RESEND_API_KEY") || Deno.env.get("RESEND_API_KEY");
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Missing RESEND_API_KEY secret in Supabase Edge Function environment." }),
