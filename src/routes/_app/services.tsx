@@ -42,8 +42,9 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/services")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { tab?: string; serviceId?: string } => ({
     tab: typeof search.tab === "string" ? search.tab : undefined,
+    serviceId: typeof search.serviceId === "string" ? search.serviceId : undefined,
   }),
   head: () => ({
     meta: [
@@ -593,7 +594,7 @@ export function Services() {
                     <Button asChild size="sm" variant="outline" className="h-8 text-xs font-medium">
                       <Link
                         to="/attendance"
-                        search={{ serviceId: defaultServices.sunday.id } as Record<string, unknown>}
+                        search={{ serviceId: defaultServices.sunday.id }}
                       >
                         Register <ArrowUpRight className="size-3 ml-1" />
                       </Link>
@@ -755,7 +756,7 @@ export function Services() {
                     <Button asChild size="sm" variant="outline" className="h-8 text-xs font-medium">
                       <Link
                         to="/attendance"
-                        search={{ serviceId: defaultServices.prayer.id } as Record<string, unknown>}
+                        search={{ serviceId: defaultServices.prayer.id }}
                       >
                         Register <ArrowUpRight className="size-3 ml-1" />
                       </Link>
@@ -924,7 +925,7 @@ export function Services() {
                           >
                             <Link
                               to="/attendance"
-                              search={{ serviceId: s.id } as Record<string, unknown>}
+                              search={{ serviceId: s.id }}
                             >
                               Register <ArrowUpRight className="size-3 ml-1" />
                             </Link>
