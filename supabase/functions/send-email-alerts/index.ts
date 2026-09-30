@@ -149,7 +149,8 @@ async function sendResendEmail(options: {
   replyTo?: string;
   apiKey: string;
 }) {
-  const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "Mene:Log Alerts <alerts@menelog.site>";
+  const fromEmail =
+    Deno.env.get("MENELOG_EMAIL_FROM") || Deno.env.get("RESEND_FROM_EMAIL") || "Mene:Log <support@menelog.site>";
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
 
   const payload = {
