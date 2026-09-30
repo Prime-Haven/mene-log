@@ -3,7 +3,7 @@
  * The database mirrors this exactly in public.tier_entitlements(), so the
  * browser and the server can never disagree. Change both together.
  */
-export type Tier = "free" | "basic" | "standard" | "premium";
+export type Tier = "free" | "standard" | "pro" | "premium";
 
 export type Feature =
   | "members"
@@ -67,7 +67,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     member_limit: 150,
     daily_messages: 0,
   },
-  basic: {
+  standard: {
     members: true,
     services: true,
     checkin: true,
@@ -97,7 +97,7 @@ export const ENTITLEMENTS: Record<Tier, Entitlement> = {
     member_limit: 500,
     daily_messages: 200,
   },
-  standard: {
+  pro: {
     members: true,
     services: true,
     checkin: true,
@@ -201,8 +201,8 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 /** The cheapest package that unlocks a capability. */
 export function requiredTier(feature: Feature): Tier {
   if (ENTITLEMENTS.free[feature]) return "free";
-  if (ENTITLEMENTS.basic[feature]) return "basic";
   if (ENTITLEMENTS.standard[feature]) return "standard";
+  if (ENTITLEMENTS.pro[feature]) return "pro";
   return "premium";
 }
 

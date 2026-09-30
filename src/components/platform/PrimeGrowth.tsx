@@ -87,8 +87,8 @@ export function PrimeGrowth({ d }: { d: Snapshot }) {
           <SelectContent>
             <SelectItem value="all">All packages</SelectItem>
             <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="basic">Standard</SelectItem>
-            <SelectItem value="standard">Pro</SelectItem>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="pro">Pro</SelectItem>
             <SelectItem value="premium">Premium</SelectItem>
           </SelectContent>
         </Select>

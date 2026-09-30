@@ -76,13 +76,13 @@ const tierCopy: Array<{
     features: ["Branded church check-in", "QR attendance", "Membership registry", "Excel export"],
   },
   {
-    id: "basic",
+    id: "standard" as Tier,
     name: "Standard",
     get price() {
-      return `$${MONTHLY_USD.basic}`;
+      return `$${MONTHLY_USD.standard}`;
     },
     get priceNum() {
-      return MONTHLY_USD.basic;
+      return MONTHLY_USD.standard;
     },
     blurb: "Single-site congregation ready for digital attendance.",
     features: [
@@ -93,13 +93,13 @@ const tierCopy: Array<{
     ],
   },
   {
-    id: "standard",
+    id: "pro" as Tier,
     name: "Pro",
     get price() {
-      return `$${MONTHLY_USD.standard}`;
+      return `$${MONTHLY_USD.pro}`;
     },
     get priceNum() {
-      return MONTHLY_USD.standard;
+      return MONTHLY_USD.pro;
     },
     blurb: "Structured churches with departments and cell leaders.",
     features: [

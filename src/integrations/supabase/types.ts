@@ -2329,7 +2329,7 @@ export type Database = {
       support_ticket_priority: "low" | "normal" | "high" | "urgent"
       support_ticket_status: "open" | "in_progress" | "resolved" | "closed"
       tenant_status: "active" | "grace" | "suspended" | "closed"
-      tenant_tier: "free" | "basic" | "standard" | "premium"
+      tenant_tier: "free" | "standard" | "pro" | "premium"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2480,7 +2480,7 @@ export const Constants = {
       support_ticket_priority: ["low", "normal", "high", "urgent"],
       support_ticket_status: ["open", "in_progress", "resolved", "closed"],
       tenant_status: ["active", "grace", "suspended", "closed"],
-      tenant_tier: ["free", "basic", "standard", "premium"],
+      tenant_tier: ["free", "standard", "pro", "premium"],
     },
   },
 } as const

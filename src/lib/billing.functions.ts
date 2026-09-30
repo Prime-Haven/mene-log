@@ -11,8 +11,8 @@ import { MONTHLY_USD, priceUsdCents, referencePrefix } from "./pricing";
  */
 
 export const TIER_PRICES_PESEWAS: Record<string, number> = {
-  basic: MONTHLY_USD.basic * 100,
   standard: MONTHLY_USD.standard * 100,
+  pro: MONTHLY_USD.pro * 100,
   premium: MONTHLY_USD.premium * 100,
 };
 
@@ -25,7 +25,7 @@ export const EXTRA_SPACE_BUNDLES = [
 
 const schema = z.object({
   tenant_id: z.string().uuid(),
-  tier: z.enum(["basic", "standard", "premium"]),
+  tier: z.enum(["standard", "pro", "premium"]),
   interval: z.enum(["monthly", "yearly"]).default("monthly"),
   coupon: z.string().trim().toUpperCase().max(24).optional(),
 });
@@ -216,7 +216,7 @@ export const startSpacePurchase = createServerFn({ method: "POST" })
     if (!tenant) {
       return { ok: false as const, reason: "forbidden" as const, message: "Church not found." };
     }
-    if (tenant.tier !== "standard" && tenant.tier !== "premium") {
+    if (tenant.tier !== "pro" && tenant.tier !== "premium") {
       return {
         ok: false as const,
         reason: "forbidden" as const,

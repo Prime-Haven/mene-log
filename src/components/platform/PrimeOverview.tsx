@@ -49,8 +49,8 @@ import {
 
 const TIER_COLORS: Record<string, string> = {
   free: "#71717a",
-  basic: "#0ea5e9",
-  standard: "#6366f1",
+  standard: "#0ea5e9",
+  pro: "#6366f1",
   premium: "#a855f7",
 };
 
@@ -156,7 +156,7 @@ export function PrimeOverview({ d, go }: { d: Snapshot; go: (s: Section) => void
 
   // 2. Subscription Tiers Donut Chart Data
   const tierChartData = useMemo(() => {
-    return (["free", "basic", "standard", "premium"] as const).map((k) => {
+    return (["free", "standard", "pro", "premium"] as const).map((k) => {
       const count = t.filter((x) => x.tier === k).length;
       const pct = t.length > 0 ? Math.round((count / t.length) * 100) : 0;
       const rev = successfulPayments

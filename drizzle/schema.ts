@@ -22,7 +22,12 @@ export const appRoleEnum = pgEnum("app_role", [
   "platform_admin",
 ]);
 
-export const tenantTierEnum = pgEnum("tenant_tier", ["basic", "standard", "premium"]);
+export const tenantTierEnum = pgEnum("tenant_tier", [
+  "free",
+  "standard",
+  "pro",
+  "premium",
+]);
 export const tenantStatusEnum = pgEnum("tenant_status", ["active", "grace", "suspended", "closed"]);
 export const memberStatusEnum = pgEnum("member_status", [
   "first_timer",
@@ -51,7 +56,7 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   subdomain: text("subdomain").notNull().unique(),
-  tier: tenantTierEnum("tier").notNull().default("basic"),
+  tier: tenantTierEnum("tier").notNull().default("standard"),
   status: tenantStatusEnum("status").notNull().default("active"),
   logoPath: text("logo_path"),
   backgroundPath: text("background_path"),
@@ -208,7 +213,7 @@ export const subscriptions = pgTable("subscriptions", {
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" })
     .unique(),
-  tier: tenantTierEnum("tier").notNull().default("basic"),
+  tier: tenantTierEnum("tier").notNull().default("standard"),
   pendingTier: tenantTierEnum("pending_tier"),
   periodStart: timestamp("period_start", { withTimezone: true }).notNull().defaultNow(),
   periodEnd: timestamp("period_end", { withTimezone: true }),

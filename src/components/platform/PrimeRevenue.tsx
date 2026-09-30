@@ -402,8 +402,8 @@ export function PrimeRevenue({ d }: { d: Snapshot }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All plans</SelectItem>
-              <SelectItem value="basic">Standard</SelectItem>
-              <SelectItem value="standard">Pro</SelectItem>
+              <SelectItem value="standard">Standard</SelectItem>
+              <SelectItem value="pro">Pro</SelectItem>
               <SelectItem value="premium">Premium</SelectItem>
             </SelectContent>
           </Select>

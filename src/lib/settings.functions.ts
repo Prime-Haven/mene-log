@@ -122,7 +122,7 @@ export const checkCoupon = createServerFn({ method: "POST" })
     z
       .object({
         code: z.string().trim().toUpperCase().max(24),
-        tier: z.enum(["basic", "standard", "premium"]),
+        tier: z.enum(["standard", "pro", "premium"]),
       })
       .parse(d),
   )

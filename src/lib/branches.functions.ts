@@ -104,7 +104,7 @@ async function createBranchTenant(
     .insert({
       name: v.name,
       subdomain: v.subdomain,
-      tier: "standard",
+      tier: "pro",
       status: active ? "active" : "suspended",
       approval_status: active ? "approved" : "pending_approval",
       approved_at: active ? new Date().toISOString() : null,
@@ -124,7 +124,7 @@ async function createBranchTenant(
     );
   await db.from("subscriptions").upsert({
     tenant_id: t.id,
-    tier: "standard",
+    tier: "pro",
     period_start: new Date().toISOString().slice(0, 10),
     period_end: sub?.period_end ?? "9999-12-31",
     payment_method: "card",
@@ -459,7 +459,7 @@ export const getCheckinContext = createServerFn({ method: "GET" })
     const inTrial = !!t.trial_ends_at && new Date(t.trial_ends_at).getTime() > Date.now();
     const [qr, leaders, watchLive, branchesOn] = await Promise.all([
       featureOn(t.tier, "qr", t.tier !== "free").then((v) => v || inTrial),
-      featureOn(t.tier, "leaders", t.tier === "standard" || t.tier === "premium"),
+      featureOn(t.tier, "leaders", t.tier === "pro" || t.tier === "premium"),
       featureOn(t.tier, "watch_live", t.tier === "premium"),
       featureOn(t.tier, "branches", t.tier === "premium"),
     ]);

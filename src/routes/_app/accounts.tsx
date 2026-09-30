@@ -134,7 +134,7 @@ const roleOptions: Array<{ value: AppRole; label: string; desc: string; tiers: s
     value: "church_admin",
     label: "Church Admin",
     desc: "Full administrative access with customizable feature controls",
-    tiers: ["basic", "standard", "premium"],
+    tiers: ["standard", "pro", "premium"],
   },
   {
     value: "branch_admin",
@@ -146,13 +146,13 @@ const roleOptions: Array<{ value: AppRole; label: string; desc: string; tiers: s
     value: "leader",
     label: "Cell / Group Leader",
     desc: "Assigned to pastoral groups, care follow-ups, and members",
-    tiers: ["standard", "premium"],
+    tiers: ["pro", "premium"],
   },
   {
     value: "usher",
     label: "Usher / Scanner",
     desc: "At-the-door QR scanning and manual check-in access",
-    tiers: ["basic", "standard", "premium"],
+    tiers: ["standard", "pro", "premium"],
   },
 ];
 
@@ -224,7 +224,7 @@ export function Accounts() {
   });
 
   // Allowed roles for current tier
-  const allowedRoles = roleOptions.filter((r) => r.tiers.includes(tier ?? "basic"));
+  const allowedRoles = roleOptions.filter((r) => r.tiers.includes(tier ?? "standard"));
 
   // Seat calculations
   const maxSeats = tier === "free" ? 1 : limit("staff_seats");
@@ -427,7 +427,7 @@ export function Accounts() {
             variant="outline"
             className="border-primary/30 bg-primary/10 text-primary font-display font-semibold px-3 py-1 text-xs"
           >
-            <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "basic")} Package
+            <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "standard")} Package
           </Badge>
 
           <Badge
@@ -508,7 +508,7 @@ export function Accounts() {
                 </Link>
               )}
             </div>
-          ) : tier === "basic" ? (
+          ) : tier === "standard" ? (
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div>
                 <span className="font-bold text-foreground">Account Capacity:</span>{" "}
@@ -746,7 +746,7 @@ export function Accounts() {
           {/* Role Explanations */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {roleOptions.map((ro) => {
-              const isEligible = ro.tiers.includes(tier ?? "basic");
+              const isEligible = ro.tiers.includes(tier ?? "standard");
               return (
                 <div
                   key={ro.value}

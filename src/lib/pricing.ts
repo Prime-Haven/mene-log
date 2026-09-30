@@ -1,15 +1,15 @@
 /** Single source of truth for paid package prices (USD dollars per month). */
-export type PlanTier = "basic" | "standard" | "premium";
+export type PlanTier = "standard" | "pro" | "premium";
 /** Defaults; Prime Haven can change these in console Settings (applied via applyPricing). */
-export const MONTHLY_USD: Record<PlanTier, number> = { basic: 10, standard: 25, premium: 50 };
+export const MONTHLY_USD: Record<PlanTier, number> = { standard: 10, pro: 25, premium: 50 };
 export type AnyTier = PlanTier | "free";
 export type BillingInterval = "monthly" | "yearly";
 
-/** Customer-facing plan names. Internal ids never change so stored data stays valid. */
+/** Customer-facing plan names. Internal ids and display names now genuinely match. */
 export const PLAN_LABELS: Record<AnyTier, string> = {
   free: "Free",
-  basic: "Standard",
-  standard: "Pro",
+  standard: "Standard",
+  pro: "Pro",
   premium: "Premium",
 };
 
@@ -19,8 +19,8 @@ export function planLabel(tier: string | null | undefined) {
 
 /** Yearly discount per plan. */
 export const YEARLY_DISCOUNT: Record<PlanTier, number> = {
-  basic: 0.08,
-  standard: 0.1,
+  standard: 0.08,
+  pro: 0.1,
   premium: 0.15,
 };
 export function maxYearlyDiscount() {
@@ -35,7 +35,7 @@ export function applyPricing(
     | undefined,
 ) {
   if (!p) return;
-  for (const t of ["basic", "standard", "premium"] as const) {
+  for (const t of ["standard", "pro", "premium"] as const) {
     if (Number.isFinite(p.monthly[t]) && p.monthly[t] > 0) MONTHLY_USD[t] = p.monthly[t];
     if (Number.isFinite(p.yearly_discount[t])) YEARLY_DISCOUNT[t] = p.yearly_discount[t];
   }

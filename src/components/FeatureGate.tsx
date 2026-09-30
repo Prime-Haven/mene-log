@@ -5,8 +5,8 @@ import { FEATURE_LABELS, requiredTier, type Feature, type Tier } from "@/lib/ent
 
 const TIER_NAME: Record<Tier, string> = {
   free: "Free",
-  basic: "Standard",
-  standard: "Pro",
+  standard: "Standard",
+  pro: "Pro",
   premium: "Premium",
 };
 

@@ -49,13 +49,13 @@ export const inviteAccount = createServerFn({ method: "POST" })
     if (!tenant) return { ok: false as const, message: "Church not found." };
 
     // Free tier = 1 account (owner only)
-    // Standard tier (basic) = up to 3 accounts (owner + 2 additional admins/ushers)
-    // Pro tier (standard) = up to 10 accounts (admins, leaders, ushers)
+    // Standard tier = up to 3 accounts (owner + 2 additional admins/ushers)
+    // Pro tier = up to 10 accounts (admins, leaders, ushers)
     // Premium tier = up to 40 accounts (all roles including branch admins)
     const tierAllows: Record<string, string[]> = {
       free: [],
-      basic: ["usher", "church_admin"],
-      standard: ["usher", "church_admin", "leader"],
+      standard: ["usher", "church_admin"],
+      pro: ["usher", "church_admin", "leader"],
       premium: ["usher", "church_admin", "leader", "branch_admin"],
     };
     if (!tierAllows[tenant.tier]?.includes(data.role)) {

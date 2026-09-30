@@ -138,7 +138,7 @@ SELECT t, (
       'automations', false, 'watch_live', false, 'audit', false,
       'staff_seats', 1, 'member_limit', 150, 'daily_messages', 0
     )
-    WHEN t::text = 'basic' THEN jsonb_build_object(
+    WHEN t::text = 'standard' THEN jsonb_build_object(
       'members', true, 'services', true, 'checkin', true, 'qr', true,
       'branding', true, 'reports_basic', true, 'reports_advanced', false,
       'ask_mene', true, 'ask_mene_pro', false, 'structure', false,
@@ -148,7 +148,7 @@ SELECT t, (
       'automations', false, 'watch_live', false, 'audit', true,
       'staff_seats', 3, 'member_limit', 500, 'daily_messages', 200
     )
-    WHEN t::text = 'standard' THEN jsonb_build_object(
+    WHEN t::text = 'pro' THEN jsonb_build_object(
       'members', true, 'services', true, 'checkin', true, 'qr', true,
       'branding', true, 'reports_basic', true, 'reports_advanced', true,
       'ask_mene', true, 'ask_mene_pro', false, 'structure', true,
@@ -289,7 +289,7 @@ BEGIN
   INSERT INTO public.tenant_users (tenant_id, user_id, role, branch_id) VALUES (v_tenant, auth.uid(), 'owner', v_branch);
   INSERT INTO public.subscriptions (tenant_id, tier, period_start, period_end)
   VALUES (v_tenant, p_tier, v_start, CASE WHEN v_free THEN DATE '9999-12-31' ELSE v_start + 30 END);
-  IF p_tier IN ('standard','premium') THEN
+  IF p_tier IN ('pro','premium') THEN
     INSERT INTO public.structure_levels (tenant_id, name, rank) VALUES (v_tenant, 'Leader', 1);
   END IF;
   PERFORM public.log_audit(v_tenant, 'tenant.provisioned', v_sub, jsonb_build_object('tier', p_tier, 'trial_days', CASE WHEN v_free THEN 0 ELSE 30 END));

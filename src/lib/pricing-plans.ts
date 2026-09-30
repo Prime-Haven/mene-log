@@ -33,7 +33,7 @@ export const PRICING_TIERS: PricingTierItem[] = [
     ],
   },
   {
-    id: "basic",
+    id: "standard",
     name: "Standard",
     blurb: "For a single-site church ready to move beyond paper.",
     features: [
@@ -46,7 +46,7 @@ export const PRICING_TIERS: PricingTierItem[] = [
     missing: ["Leadership structure", "Multiple branches"],
   },
   {
-    id: "standard",
+    id: "pro",
     name: "Pro",
     blurb: "For churches led through ministries, units or departments.",
     features: [

@@ -7,7 +7,7 @@ export const couponSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z0-9-]{3,24}$/, "Codes use 3–24 letters, numbers or dashes"),
   percent: z.number().int().min(1).max(100),
-  tiers: z.array(z.enum(["basic", "standard", "premium"])).min(1),
+  tiers: z.array(z.enum(["standard", "pro", "premium"])).min(1),
   expires_on: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -28,13 +28,13 @@ export const settingsSchema = z.object({
   }),
   pricing: z.object({
     monthly: z.object({
-      basic: z.number().min(1).max(10000),
       standard: z.number().min(1).max(10000),
+      pro: z.number().min(1).max(10000),
       premium: z.number().min(1).max(10000),
     }),
     yearly_discount: z.object({
-      basic: z.number().min(0).max(0.9),
       standard: z.number().min(0).max(0.9),
+      pro: z.number().min(0).max(0.9),
       premium: z.number().min(0).max(0.9),
     }),
   }),
@@ -98,8 +98,8 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     primary_color: "#3b82f6",
   },
   pricing: {
-    monthly: { basic: 10, standard: 25, premium: 50 },
-    yearly_discount: { basic: 0.08, standard: 0.1, premium: 0.15 },
+    monthly: { standard: 10, pro: 25, premium: 50 },
+    yearly_discount: { standard: 0.08, pro: 0.1, premium: 0.15 },
   },
   signups: { blocked_domains: [], maintenance: false, maintenance_message: "" },
   email: { sender_name: "Mene:Log", reply_to: "support@menelog.site" },

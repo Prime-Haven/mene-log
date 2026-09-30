@@ -166,7 +166,7 @@ BEGIN
   INSERT INTO public.subscriptions (tenant_id, tier, period_start, period_end)
   VALUES (v_tenant, p_tier, v_start, CASE WHEN v_free THEN DATE '9999-12-31' ELSE v_start + 30 END);
 
-  IF p_tier IN ('standard','premium') THEN
+  IF p_tier IN ('pro','premium') THEN
     INSERT INTO public.structure_levels (tenant_id, name, rank) 
     VALUES (v_tenant, 'Leader', 1);
   END IF;
@@ -216,7 +216,7 @@ EXCEPTION WHEN no_data_found THEN
     RAISE EXCEPTION 'Onboarding details are missing. Please restart registration.'; 
   END IF;
 
-  IF coalesce(v_meta->>'tier','') NOT IN ('free', 'basic', 'standard', 'premium') THEN 
+  IF coalesce(v_meta->>'tier','') NOT IN ('free', 'standard', 'pro', 'premium') THEN 
     RAISE EXCEPTION 'Invalid package selection'; 
   END IF;
 
@@ -311,7 +311,7 @@ BEGIN
     CASE WHEN v_free THEN DATE '9999-12-31' ELSE v_start + 30 END
   );
 
-  IF p_tier IN ('standard','premium') THEN 
+  IF p_tier IN ('pro','premium') THEN 
     INSERT INTO public.structure_levels(tenant_id, name, rank) 
     VALUES(v_id, 'Leader', 1); 
   END IF;

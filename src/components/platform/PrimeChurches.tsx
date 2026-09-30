@@ -200,8 +200,8 @@ export function PrimeChurches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc
           <SelectContent>
             <SelectItem value="all">All packages</SelectItem>
             <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="basic">Standard</SelectItem>
-            <SelectItem value="standard">Pro</SelectItem>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="pro">Pro</SelectItem>
             <SelectItem value="premium">Premium</SelectItem>
           </SelectContent>
         </Select>
@@ -404,8 +404,8 @@ export function PrimeChurches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="basic">Standard</SelectItem>
-                      <SelectItem value="standard">Pro</SelectItem>
+                      <SelectItem value="standard">Standard</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
                       <SelectItem value="premium">Premium</SelectItem>
                     </SelectContent>
                   </Select>

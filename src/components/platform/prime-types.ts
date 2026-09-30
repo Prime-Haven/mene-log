@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 export type Snapshot = Awaited<ReturnType<typeof consoleSnapshot>>;
 export type Tenant = Snapshot["tenants"][number];
-export type Tier = "free" | "basic" | "standard" | "premium";
+export type Tier = "free" | "standard" | "pro" | "premium";
 export type Status = "active" | "grace" | "suspended" | "closed";
 export type AuditCategory = "tenant" | "system" | "security" | "commercial";
 export type AuditSeverity = "info" | "warning" | "critical";

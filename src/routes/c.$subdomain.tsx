@@ -143,7 +143,7 @@ function CheckIn() {
   });
   const leaderAreaOpen = ctx
     ? ctx.leaders
-    : church?.tier === "standard" || church?.tier === "premium";
+    : church?.tier === "pro" || church?.tier === "premium";
   const showQr = ctx ? ctx.qr : church?.tier !== "free";
   const tabCount = 1 + (leaderAreaOpen ? 1 : 0) + (ctx?.acceptsBranches ? 1 : 0);
 

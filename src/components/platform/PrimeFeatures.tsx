@@ -81,7 +81,7 @@ const FEATURE_GROUPS: Array<{
   },
 ];
 
-const TIERS: Tier[] = ["free", "basic", "standard", "premium"];
+const TIERS: Tier[] = ["free", "standard", "pro", "premium"];
 
 export function PrimeFeatures() {
   const qc = useQueryClient();
@@ -160,7 +160,7 @@ export function PrimeFeatures() {
                 <th key={t} className="p-3 text-center min-w-32">
                   <div className="font-bold text-foreground text-xs">{planLabel(t)}</div>
                   <div className="text-[10px] text-muted-foreground font-normal">
-                    {t === "standard" ? "Most popular" : t}
+                    {t === "pro" ? "Most popular" : t}
                   </div>
                 </th>
               ))}

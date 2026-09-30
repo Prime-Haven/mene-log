@@ -123,7 +123,7 @@ export const Route = createFileRoute("/platform")({
 
 type Snapshot = Awaited<ReturnType<typeof consoleSnapshot>>;
 type Tenant = Snapshot["tenants"][number];
-type Tier = "free" | "basic" | "standard" | "premium";
+type Tier = "free" | "standard" | "pro" | "premium";
 type Status = "active" | "grace" | "suspended" | "closed";
 type Review = {
   id: string;
@@ -656,7 +656,7 @@ function Overview({ d, go }: { d: Snapshot; go: (s: Section) => void }) {
   const endingSoon = trial.filter(
     (x) => new Date(x.trial_ends_at!) < new Date(Date.now() + 7 * 864e5),
   );
-  const byTier = (["free", "basic", "standard", "premium"] as const).map((k) => ({
+  const byTier = (["free", "standard", "pro", "premium"] as const).map((k) => ({
     k,
     n: t.filter((x) => x.tier === k).length,
     rev: r.ok.filter((p) => p.tier === k).reduce((s, p) => s + paymentUsd(p), 0),
@@ -829,7 +829,7 @@ function Churches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All plans</SelectItem>
-            {(["free", "basic", "standard", "premium"] as const).map((k) => (
+            {(["free", "standard", "pro", "premium"] as const).map((k) => (
               <SelectItem key={k} value={k}>
                 {planLabel(k)}
               </SelectItem>
@@ -979,7 +979,7 @@ function Churches({ d, act, rpc }: { d: Snapshot; act: Act; rpc: Rpc }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(["free", "basic", "standard", "premium"] as const).map((k) => (
+                      {(["free", "standard", "pro", "premium"] as const).map((k) => (
                         <SelectItem key={k} value={k}>
                           {planLabel(k)}
                         </SelectItem>
@@ -1774,7 +1774,7 @@ function Reviews({ reviews, rpc }: { reviews: Review[]; rpc: Rpc }) {
 function Announce({ d, act }: { d: Snapshot; act: Act }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [tiers, setTiers] = useState<Tier[]>(["free", "basic", "standard", "premium"]);
+  const [tiers, setTiers] = useState<Tier[]>(["free", "standard", "pro", "premium"]);
   const [statuses, setStatuses] = useState<Status[]>(["active", "grace"]);
   const [confirmSend, setConfirmSend] = useState(false);
   const history = d.audit.filter((a) => a.action === "announcement.sent");
@@ -1815,7 +1815,7 @@ function Announce({ d, act }: { d: Snapshot; act: Act }) {
           <div>
             <Label>Plans</Label>
             <div className="mt-2 flex flex-wrap gap-3">
-              {(["free", "basic", "standard", "premium"] as const).map((k) => (
+              {(["free", "standard", "pro", "premium"] as const).map((k) => (
                 <label key={k} className="flex items-center gap-1.5 text-sm">
                   <Checkbox
                     checked={tiers.includes(k)}
@@ -2159,7 +2159,7 @@ function Health({ d }: { d: Snapshot }) {
   );
 }
 
-const TIERS: Tier[] = ["free", "basic", "standard", "premium"];
+const TIERS: Tier[] = ["free", "standard", "pro", "premium"];
 
 function Features() {
   const qc = useQueryClient();

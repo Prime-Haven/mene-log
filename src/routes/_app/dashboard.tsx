@@ -199,7 +199,7 @@ export function Dashboard() {
                 className="border-primary/40 bg-primary/20 text-white font-display text-xs uppercase tracking-wider font-semibold px-2.5 py-0.5"
               >
                 <Sparkles className="size-3 mr-1 text-primary-foreground" />
-                {planLabel(tier ?? "basic")} Plan
+                {planLabel(tier ?? "standard")} Plan
               </Badge>
               <span className="text-xs text-deep-foreground/60">·</span>
               <span className="text-xs font-mono text-deep-foreground/75">

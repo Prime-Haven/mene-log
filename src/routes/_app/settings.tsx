@@ -368,7 +368,7 @@ export function ChurchSettingsPage() {
             variant="outline"
             className="border-primary/30 bg-primary/10 text-primary font-display font-semibold px-3 py-1 text-xs"
           >
-            <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "basic")} Package
+            <Sparkles className="size-3 mr-1 text-primary" /> {planLabel(tier ?? "standard")} Package
           </Badge>
 
           <Button

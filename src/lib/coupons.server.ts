@@ -3,7 +3,7 @@ import type { Coupon } from "./settings.shared";
 export function findUsableCoupon(
   coupons: Coupon[],
   code: string,
-  tier: "basic" | "standard" | "premium",
+  tier: "standard" | "pro" | "premium",
 ) {
   const c = coupons.find((x) => x.code === code.trim().toUpperCase());
   if (!c || !c.active || !c.tiers.includes(tier)) return null;

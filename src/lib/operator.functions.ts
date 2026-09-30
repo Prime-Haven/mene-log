@@ -600,7 +600,7 @@ const action = z.discriminatedUnion("type", [
     type: z.literal("announce"),
     subject: z.string().min(3).max(150),
     body: z.string().min(5).max(5000),
-    tiers: z.array(z.enum(["free", "basic", "standard", "premium"])).min(1),
+    tiers: z.array(z.enum(["free", "standard", "pro", "premium"])).min(1),
     statuses: z.array(z.enum(["active", "grace", "suspended", "closed"])).min(1),
   }),
   z.object({

@@ -619,7 +619,7 @@ export function ConsoleSettings({
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    {(["basic", "standard", "premium"] as const).map((t) => (
+                    {(["standard", "pro", "premium"] as const).map((t) => (
                       <div key={t} className="rounded-xl border p-4">
                         <p className="font-bold text-sm">{planLabel(t)}</p>
                         <F label="Monthly ($)">
@@ -850,7 +850,7 @@ function Coupons({ list, onChange }: { list: Coupon[]; onChange: (c: Coupon[]) =
   const blank: Coupon = {
     code: "",
     percent: 10,
-    tiers: ["basic", "standard", "premium"],
+    tiers: ["standard", "pro", "premium"],
     expires_on: null,
     max_uses: null,
     uses: 0,
