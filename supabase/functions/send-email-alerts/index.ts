@@ -189,7 +189,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const apiKey = Deno.env.get("RESEND_API_KEY");
+    const apiKey = Deno.env.get("MENELOG_RESEND_API_KEY") || Deno.env.get("RESEND_API_KEY");
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "Missing RESEND_API_KEY secret in Supabase Edge Function environment." }),
