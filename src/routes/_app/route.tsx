@@ -206,6 +206,7 @@ function AppLayout() {
   const { session, loading } = useAuth();
   const ctx = useTenant();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerSearch = useRouterState({ select: (s) => s.location.search });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -286,9 +287,9 @@ function AppLayout() {
                   const isOnlineTab = search?.tab === "online";
                   const active = isOnlineTab
                     ? pathname.startsWith(to) &&
-                      (routerState.location.search as Record<string, unknown>)?.tab === "online"
+                      (routerSearch as Record<string, unknown>)?.tab === "online"
                     : pathname.startsWith(to) &&
-                      (routerState.location.search as Record<string, unknown>)?.tab !== "online";
+                      (routerSearch as Record<string, unknown>)?.tab !== "online";
                   const locked = !!feature && !ctx.can(feature);
                   return (
                     <Link

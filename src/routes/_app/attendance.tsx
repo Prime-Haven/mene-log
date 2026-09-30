@@ -43,8 +43,9 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_app/attendance")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { tab?: string; serviceId?: string } => ({
     tab: typeof search.tab === "string" ? search.tab : undefined,
+    serviceId: typeof search.serviceId === "string" ? search.serviceId : undefined,
   }),
   head: () => ({
     meta: [
