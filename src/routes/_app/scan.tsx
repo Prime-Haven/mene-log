@@ -212,7 +212,7 @@ export function Scan() {
       }
 
       // If RPC failed or wasn't decisive, execute resilient client fallback
-      if (!res || (!(res as any).ok && (res as any).reason !== "out_of_scope")) {
+      if (!res || (!res.ok && res.reason !== "out_of_scope")) {
         res = await clientFallbackCheckin(cleanToken, serviceId);
       }
 

@@ -236,6 +236,9 @@ function AppLayout() {
     }
   }, [ctx.role, pathname, navigate]);
 
+  const platformSettings = usePlatformSettings();
+  const globalBanner = platformSettings?.global_banner;
+
   if (loading || ctx.isLoading || !ctx.membership) {
     return (
       <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">
@@ -246,8 +249,6 @@ function AppLayout() {
 
   const tenant = ctx.membership.tenant;
   const suspended = tenant.status === "suspended" || tenant.status === "closed";
-  const platformSettings = usePlatformSettings();
-  const globalBanner = platformSettings?.global_banner;
 
   const current = nav.find((item) => pathname.startsWith(item.to));
   const Navigation = ({ mobile = false }: { mobile?: boolean }) => (
