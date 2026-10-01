@@ -13,4 +13,6 @@
 - [x] Official Mene:Log logo, favicon and installable app icons
 - [x] Search pages for church membership and church check-in software
 - [x] Structured product identity and privacy-safe AI discovery
+- [x] Restore the changing homepage scripture and primary actions
+- [x] Add animated attendance callouts to selected thinking-orb dots
 - Blocked: daily schedule (no scheduler in database); SMS/WhatsApp (Twilio skipped)

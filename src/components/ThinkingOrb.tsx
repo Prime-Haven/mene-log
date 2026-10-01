@@ -8,6 +8,22 @@ interface Point3D {
   alpha: number;
 }
 
+interface OrbCallout {
+  pointIndex: number;
+  label: string;
+  baseValue: number;
+  range: number;
+  suffix?: string;
+}
+
+const callouts: OrbCallout[] = [
+  { pointIndex: 118, label: "Checked in", baseValue: 412, range: 27 },
+  { pointIndex: 286, label: "First-timers", baseValue: 18, range: 9, suffix: "+" },
+  { pointIndex: 453, label: "Attendance", baseValue: 86, range: 8, suffix: "%" },
+  { pointIndex: 647, label: "Services", baseValue: 12, range: 5 },
+  { pointIndex: 826, label: "Branches", baseValue: 6, range: 4 },
+];
+
 export function ThinkingOrb({ className = "" }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -20,6 +36,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
     let animationFrameId: number;
     let width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth);
     let height = (canvas.height = canvas.parentElement?.clientHeight || window.innerHeight);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Responsive resize listener
     const onResize = () => {
@@ -75,7 +92,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
       // Smooth inertia rotation interpolation
       rotationX += (targetRotationX - rotationX) * 0.05;
       rotationY += (targetRotationY - rotationY) * 0.05;
-      angle += 0.0035;
+      if (!reducedMotion) angle += 0.0035;
 
       const sphereRadius = Math.min(width, height) * 0.52;
       const centerX = width / 2;
@@ -92,6 +109,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
 
       // Sort points from back to front for proper depth rendering
       const projectedPoints: Array<{
+        index: number;
         px: number;
         py: number;
         size: number;
@@ -121,7 +139,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
         const size = pt.baseRadius * (0.5 + depthNorm * 0.85);
         const opacity = Math.max(0.1, Math.min(1, pt.alpha * (0.15 + depthNorm * 0.85)));
 
-        projectedPoints.push({ px, py, size, opacity, z: z2 });
+        projectedPoints.push({ index: i, px, py, size, opacity, z: z2 });
       }
 
       // Sort back to front
@@ -167,7 +185,69 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
         ctx.fill();
       }
 
-      // Draw subtle orbital latitude rings made of dots
+      // A handful of individual dots carry live, counting attendance signals.
+      // Keeping these in the canvas makes every connector travel with its dot.
+      const elapsedStep = reducedMotion ? 0 : Math.floor(performance.now() / 1100);
+      const compact = width < 640;
+      const labelWidth = compact ? 112 : 138;
+      const labelHeight = compact ? 38 : 42;
+
+      callouts.forEach((callout, calloutIndex) => {
+        const point = projectedPoints.find((candidate) => candidate.index === callout.pointIndex);
+        if (!point) return;
+
+        const depthOpacity = Math.max(0.22, Math.min(0.92, (point.z + 1.1) / 1.8));
+        const placeRight = point.px < centerX;
+        const horizontalReach = compact ? 26 : 42;
+        const labelX = Math.max(
+          8,
+          Math.min(
+            width - labelWidth - 8,
+            placeRight ? point.px + horizontalReach : point.px - horizontalReach - labelWidth,
+          ),
+        );
+        const verticalOffset = calloutIndex % 2 === 0 ? -labelHeight - 12 : 12;
+        const labelY = Math.max(82, Math.min(height - labelHeight - 24, point.py + verticalOffset));
+        const lineEndX = placeRight ? labelX : labelX + labelWidth;
+        const lineEndY = labelY + labelHeight / 2;
+        const value = callout.baseValue + ((elapsedStep + calloutIndex * 2) % callout.range);
+        const renderedValue = `${callout.suffix === "+" ? "+" : ""}${value}${callout.suffix === "%" ? "%" : ""}`;
+
+        ctx.save();
+        ctx.globalAlpha = depthOpacity;
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.72)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(point.px, point.py);
+        ctx.lineTo(lineEndX, lineEndY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(point.px, point.py, compact ? 4 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(240, 249, 255, 0.98)";
+        ctx.shadowColor = "rgba(56, 189, 248, 0.9)";
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "rgba(5, 10, 24, 0.82)";
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.48)";
+        ctx.beginPath();
+        ctx.roundRect(labelX, labelY, labelWidth, labelHeight, 7);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(186, 230, 253, 0.78)";
+        ctx.font = `${compact ? 8 : 9}px Manrope, sans-serif`;
+        ctx.textBaseline = "top";
+        ctx.fillText(callout.label.toUpperCase(), labelX + 10, labelY + 7);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
+        ctx.font = `700 ${compact ? 13 : 15}px Sora, sans-serif`;
+        ctx.fillText(renderedValue, labelX + 10, labelY + (compact ? 19 : 20));
+        ctx.restore();
+      });
+
       ctx.shadowBlur = 0;
       animationFrameId = requestAnimationFrame(render);
     };

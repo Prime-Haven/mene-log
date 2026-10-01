@@ -280,7 +280,7 @@ function LandingPage() {
           {/* Atmospheric gradient overlay */}
           <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--deep)_0%,transparent_50%,rgba(5,10,24,0.3)_100%)] pointer-events-none z-[1]" />
 
-          {/* Foreground Hero Content with Frosted Glassmorphic Backdrop */}
+          {/* Foreground scripture and actions */}
           <motion.div
             style={{ y: contentY, opacity: contentOpacity }}
             className="relative z-10 mx-auto flex h-full max-w-7xl items-end justify-center px-4 pb-20 sm:pb-16 text-center"
@@ -302,7 +302,7 @@ function LandingPage() {
                   className="h-12 bg-primary px-7 text-primary-foreground shadow-lg hover:bg-primary/90 rounded-xl font-semibold"
                 >
                   <Link to="/onboarding">
-                    Create your church <ArrowRight className="ml-1 size-4" />
+                    Get started <ArrowRight className="ml-1 size-4" />
                   </Link>
                 </Button>
                 <Button
