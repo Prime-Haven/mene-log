@@ -38,6 +38,13 @@ function serializable(value: unknown): SerializableValue {
   return String(value ?? "");
 }
 
+function serializableRecord(value: unknown): Record<string, SerializableValue> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, serializable(item)]),
+  );
+}
+
 /* ---------------- Sign in with username + password ---------------- */
 export const operatorSignIn = createServerFn({ method: "POST" })
   .inputValidator((d) =>
@@ -530,7 +537,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         const churchName = a.tenant_name || (a.tenant_id ? (churchNameMap[a.tenant_id] ?? null) : null);
         return {
           ...a,
-          detail: serializable(a.detail),
+          detail: serializableRecord(a.detail),
           category,
           severity,
           actor: actorName,
