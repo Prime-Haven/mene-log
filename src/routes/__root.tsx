@@ -103,6 +103,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "robots", content: "index, follow" },
       { name: "referrer", content: "strict-origin-when-cross-origin" },
       { name: "google-site-verification", content: "F2LMTdLfHwoQAHdDFUS38TlOIGU9vMoP4qt1bA3HuLk" },
+      { httpEquiv: "Cache-Control", content: "no-cache, no-store, must-revalidate" },
+      { httpEquiv: "Pragma", content: "no-cache" },
+      { httpEquiv: "Expires", content: "0" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -185,6 +188,17 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    // Purge any lingering service workers from previous PWA setups to prevent stale UI caching
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().catch(() => {});
+        }
+      });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
