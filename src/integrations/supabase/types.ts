@@ -444,14 +444,19 @@ export type Database = {
           date_of_birth: string | null
           email: string | null
           full_name: string
+          group_name: string | null
           id: string
           leader_type_id: string | null
           level_id: string | null
           location: string | null
+          meeting_day: string | null
+          meeting_time: string | null
+          meeting_venue: string | null
           member_id: string | null
           parent_leader_id: string | null
           phone: string | null
           photo_path: string | null
+          reports_to_leader_id: string | null
           status: Database["public"]["Enums"]["account_status"]
           tenant_id: string
           user_id: string
@@ -461,14 +466,19 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name: string
+          group_name?: string | null
           id?: string
           leader_type_id?: string | null
           level_id?: string | null
           location?: string | null
+          meeting_day?: string | null
+          meeting_time?: string | null
+          meeting_venue?: string | null
           member_id?: string | null
           parent_leader_id?: string | null
           phone?: string | null
           photo_path?: string | null
+          reports_to_leader_id?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id: string
           user_id: string
@@ -478,14 +488,19 @@ export type Database = {
           date_of_birth?: string | null
           email?: string | null
           full_name?: string
+          group_name?: string | null
           id?: string
           leader_type_id?: string | null
           level_id?: string | null
           location?: string | null
+          meeting_day?: string | null
+          meeting_time?: string | null
+          meeting_venue?: string | null
           member_id?: string | null
           parent_leader_id?: string | null
           phone?: string | null
           photo_path?: string | null
+          reports_to_leader_id?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id?: string
           user_id?: string
@@ -520,6 +535,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "leader_profiles_reports_to_leader_id_fkey"
+            columns: ["reports_to_leader_id"]
+            isOneToOne: false
+            referencedRelation: "leader_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leader_profiles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -532,22 +554,35 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          level_rank: number
           name: string
+          reports_to_type_id: string | null
           tenant_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          level_rank?: number
           name: string
+          reports_to_type_id?: string | null
           tenant_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          level_rank?: number
           name?: string
+          reports_to_type_id?: string | null
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "leader_types_reports_to_type_id_fkey"
+            columns: ["reports_to_type_id"]
+            isOneToOne: false
+            referencedRelation: "leader_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "leader_types_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -897,26 +932,38 @@ export type Database = {
         Row: {
           action: string
           actor_user_id: string
+          actor_username: string | null
+          category: string
           created_at: string
           detail: Json
           id: string
+          severity: string
           tenant_id: string | null
+          tenant_name: string | null
         }
         Insert: {
           action: string
           actor_user_id: string
+          actor_username?: string | null
+          category?: string
           created_at?: string
           detail?: Json
           id?: string
+          severity?: string
           tenant_id?: string | null
+          tenant_name?: string | null
         }
         Update: {
           action?: string
           actor_user_id?: string
+          actor_username?: string | null
+          category?: string
           created_at?: string
           detail?: Json
           id?: string
+          severity?: string
           tenant_id?: string | null
+          tenant_name?: string | null
         }
         Relationships: [
           {
@@ -1129,6 +1176,7 @@ export type Database = {
           description: string | null
           id: string
           is_default: boolean
+          is_live: boolean
           is_open: boolean
           name: string
           online_min_minutes: number
@@ -1146,6 +1194,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_live?: boolean
           is_open?: boolean
           name: string
           online_min_minutes?: number
@@ -1163,6 +1212,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_live?: boolean
           is_open?: boolean
           name?: string
           online_min_minutes?: number
@@ -1900,6 +1950,15 @@ export type Database = {
       generate_member_code: { Args: { p_tenant: string }; Returns: string }
       get_all_member_qrs: { Args: { p_tenant: string }; Returns: Json }
       get_member_qr: { Args: { p_member: string }; Returns: Json }
+      get_platform_metrics_trend: {
+        Args: { p_days?: number }
+        Returns: {
+          active_churches: number
+          checkins: number
+          day_date: string
+          new_churches: number
+        }[]
+      }
       has_tenant_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
@@ -1923,6 +1982,7 @@ export type Database = {
       is_tenant_member: { Args: { _tenant: string }; Returns: boolean }
       issue_qr_token: { Args: { p_member: string }; Returns: string }
       leader_dashboard: { Args: never; Returns: Json }
+      leader_hierarchy_overview: { Args: never; Returns: Json }
       leader_log_contact: {
         Args: { p_member: string; p_note: string; p_outcome: string }
         Returns: undefined
@@ -1945,6 +2005,19 @@ export type Database = {
       log_member_export: {
         Args: { p_count: number; p_tenant: string }
         Returns: undefined
+      }
+      log_platform_audit: {
+        Args: {
+          p_action: string
+          p_actor_user_id?: string
+          p_actor_username?: string
+          p_category?: string
+          p_detail?: Json
+          p_severity?: string
+          p_tenant_id?: string
+          p_tenant_name?: string
+        }
+        Returns: string
       }
       manual_attendance: {
         Args: { p_member: string; p_service: string }
@@ -2031,8 +2104,8 @@ export type Database = {
       }
       platform_update_tenant: {
         Args: {
-          p_contact_email: string
-          p_contact_phone: string
+          p_contact_email?: string
+          p_contact_phone?: string
           p_name: string
           p_status: Database["public"]["Enums"]["tenant_status"]
           p_subdomain: string
@@ -2059,15 +2132,20 @@ export type Database = {
         Args: { p_subdomain: string }
         Returns: {
           full_name: string
+          group_name: string
           id: string
           leader_type: string
+          leader_type_id: string
         }[]
       }
       public_leader_types: {
         Args: { p_subdomain: string }
         Returns: {
           id: string
+          level_rank: number
           name: string
+          reports_to_name: string
+          reports_to_type_id: string
         }[]
       }
       public_open_services: {
@@ -2114,14 +2192,16 @@ export type Database = {
       register_leader: {
         Args: {
           p_code: string
-          p_dob: string
+          p_dob?: string
           p_email: string
           p_full_name: string
-          p_ip: string
-          p_leader_type: string
-          p_location: string
+          p_group_name?: string
+          p_ip?: string
+          p_leader_type?: string
+          p_location?: string
           p_phone: string
-          p_photo_path: string
+          p_photo_path?: string
+          p_reports_to?: string
           p_subdomain: string
           p_user: string
         }
@@ -2250,6 +2330,10 @@ export type Database = {
       text2ltree: { Args: { "": string }; Returns: unknown }
       tier_entitlements: {
         Args: { p_tier: Database["public"]["Enums"]["tenant_tier"] }
+        Returns: Json
+      }
+      toggle_service_live: {
+        Args: { p_is_live: boolean; p_service: string; p_stream_url?: string }
         Returns: Json
       }
       update_account_permissions: {
