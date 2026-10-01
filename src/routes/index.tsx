@@ -279,7 +279,7 @@ function LandingPage() {
           />
           <div
             aria-hidden
-            className="absolute inset-x-0 bottom-0 h-[52svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
+            className="absolute inset-x-0 bottom-0 h-[58svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
           />
 
           {/* Foreground scripture and actions */}
