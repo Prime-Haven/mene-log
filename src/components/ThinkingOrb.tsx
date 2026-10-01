@@ -191,6 +191,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
       const compact = width < 640;
       const labelWidth = compact ? 112 : 138;
       const labelHeight = compact ? 38 : 42;
+      const occupiedLabels: Array<{ x: number; y: number; width: number; height: number }> = [];
 
       callouts.forEach((callout, calloutIndex) => {
         const point = projectedPoints.find((candidate) => candidate.index === callout.pointIndex);
@@ -206,8 +207,31 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
             placeRight ? point.px + horizontalReach : point.px - horizontalReach - labelWidth,
           ),
         );
-        const verticalOffset = calloutIndex % 2 === 0 ? -labelHeight - 12 : 12;
-        const labelY = Math.max(82, Math.min(height - labelHeight - 24, point.py + verticalOffset));
+        const preferredY = point.py + (calloutIndex % 2 === 0 ? -labelHeight - 12 : 12);
+        const candidateYs = [
+          preferredY,
+          point.py + 12,
+          point.py - labelHeight - 12,
+          point.py + labelHeight + 22,
+          point.py - labelHeight * 2 - 22,
+        ];
+        const overlaps = (candidateY: number) =>
+          occupiedLabels.some(
+            (placed) =>
+              labelX < placed.x + placed.width + 6 &&
+              labelX + labelWidth + 6 > placed.x &&
+              candidateY < placed.y + placed.height + 6 &&
+              candidateY + labelHeight + 6 > placed.y,
+          );
+        const availableY = candidateYs.find((candidateY) => {
+          const clamped = Math.max(82, Math.min(height - labelHeight - 24, candidateY));
+          return !overlaps(clamped);
+        });
+        const labelY = Math.max(
+          82,
+          Math.min(height - labelHeight - 24, availableY ?? preferredY),
+        );
+        occupiedLabels.push({ x: labelX, y: labelY, width: labelWidth, height: labelHeight });
         const lineEndX = placeRight ? labelX : labelX + labelWidth;
         const lineEndY = labelY + labelHeight / 2;
         const value = callout.baseValue + ((elapsedStep + calloutIndex * 2) % callout.range);

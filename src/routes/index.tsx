@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -128,11 +128,6 @@ function LandingPage() {
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
   const heroRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const videoScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
-  const videoOpacity = useTransform(scrollYProgress, [0, 0.72, 1], [1, 0.52, 0]);
-  const contentY = useTransform(scrollYProgress, [0, 1], [0, -80]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.68], [1, 0]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -258,8 +253,8 @@ function LandingPage() {
         </AnimatePresence>
       </header>
 
-      <section ref={heroRef} className="relative h-[145svh] bg-deep overflow-hidden">
-        <div className="sticky top-0 h-svh overflow-hidden">
+      <section ref={heroRef} className="relative h-[125svh] overflow-hidden bg-deep">
+        <div className="sticky top-0 h-[100svh] overflow-hidden">
           {/* Blurred world glow backdrop */}
           <div
             aria-hidden
@@ -282,8 +277,10 @@ function LandingPage() {
 
           {/* Foreground scripture and actions */}
           <motion.div
-            style={{ y: contentY, opacity: contentOpacity }}
-            className="relative z-10 mx-auto flex h-full max-w-7xl items-end justify-center px-4 pb-20 sm:pb-16 text-center"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15 }}
+            className="absolute inset-0 z-10 mx-auto flex max-w-7xl items-end justify-center px-4 pb-12 pt-24 text-center sm:pb-16"
           >
             <div className="max-w-3xl rounded-3xl border border-white/15 bg-deep/55 p-7 sm:p-10 shadow-2xl backdrop-blur-xl text-deep-foreground">
               <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
@@ -324,7 +321,7 @@ function LandingPage() {
         </div>
       </section>
 
-      <main className="relative z-10 -mt-[28svh]">
+      <main className="relative z-10 -mt-[18svh]">
         <section id="why" className="px-3 sm:px-5">
           <div className="mx-auto max-w-7xl rounded-t-lg border-x border-t border-deep-foreground/20 bg-deep/80 px-5 py-14 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-10 lg:px-14">
             <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
