@@ -94,7 +94,7 @@ export function ThinkingOrb({ className = "" }: { className?: string }) {
       rotationY += (targetRotationY - rotationY) * 0.05;
       if (!reducedMotion) angle += 0.0035;
 
-      const sphereRadius = Math.min(width, height) * 0.52;
+      const sphereRadius = Math.min(width, height) * 0.59;
       const centerX = width / 2;
       const centerY = height / 2;
 

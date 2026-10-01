@@ -272,8 +272,15 @@ function LandingPage() {
           {/* Huge interactive 3D Thinking Orb that fills the hero section */}
           <ThinkingOrb className="absolute inset-0 size-full z-0 opacity-85" />
 
-          {/* Atmospheric gradient overlay */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_top,var(--deep)_0%,transparent_50%,rgba(5,10,24,0.3)_100%)] pointer-events-none z-[1]" />
+          {/* Bottom-only atmospheric blend: from 'Made for churches' downwards to mask the orb under the scripture while leaving the sides and top of the orb completely unobstructed */}
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-[52svh] bg-[linear-gradient(to_top,var(--deep)_0%,var(--deep)_42%,rgba(5,10,24,0.85)_65%,rgba(5,10,24,0.3)_82%,transparent_100%)] pointer-events-none z-[1]"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-[46svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
+          />
 
           {/* Foreground scripture and actions */}
           <motion.div
@@ -282,13 +289,13 @@ function LandingPage() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="absolute inset-0 z-10 mx-auto flex max-w-7xl items-end justify-center px-4 pb-12 pt-24 text-center sm:pb-16"
           >
-            <div className="max-w-3xl rounded-3xl border border-white/15 bg-deep/55 p-7 sm:p-10 shadow-2xl backdrop-blur-xl text-deep-foreground">
+            <div className="relative max-w-3xl text-deep-foreground">
               <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
                 Made for churches · Built for people
               </p>
               <h1 className="sr-only">Mene:Log — Church Attendance and membership, made simple</h1>
               <VerseTyper />
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-deep-foreground/85 sm:text-lg">
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-deep-foreground/90 sm:text-lg">
                 Mene:Log brings attendance, membership, leadership and communication together so
                 your church can care with clarity.
               </p>
@@ -323,7 +330,7 @@ function LandingPage() {
 
       <main className="relative z-10 -mt-[18svh]">
         <section id="why" className="px-3 sm:px-5">
-          <div className="mx-auto max-w-7xl rounded-t-lg border-x border-t border-deep-foreground/20 bg-deep/80 px-5 py-14 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-10 lg:px-14">
+          <div className="mx-auto max-w-7xl rounded-t-3xl border-t border-white/10 bg-deep/90 px-5 py-14 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-10 lg:px-14">
             <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/60">

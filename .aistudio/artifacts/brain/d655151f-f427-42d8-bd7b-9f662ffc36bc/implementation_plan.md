@@ -1,99 +1,81 @@
-# Revised Implementation Plan: Super Admin Autonomy, Database Purge & Settings Layout
+# Implementation Plan: Platform Overview Recharts Visualizations & Audit Trail Suite
 
-This plan provides the complete PostgreSQL database schema and application architecture to give you full autonomy and control over the Prime Haven console.
-
----
-
-## 1. Database Schema (`schema-update-super-admin-autonomy.sql`)
-
-The schema upgrade script is saved in the project root at **`schema-update-super-admin-autonomy.sql`** and can be run directly in your Supabase SQL Editor:
-
-```sql
--- 1. Global Platform System State (Maintenance Mode & Global Banner)
-CREATE TABLE IF NOT EXISTS public.platform_system_state (
-  id text PRIMARY KEY DEFAULT 'current',
-  maintenance_mode boolean NOT NULL DEFAULT false,
-  maintenance_message text DEFAULT 'Mene:Log is currently undergoing scheduled platform maintenance. Services will resume shortly.',
-  pause_signups boolean NOT NULL DEFAULT false,
-  global_banner_enabled boolean NOT NULL DEFAULT false,
-  global_banner_message text DEFAULT '',
-  global_banner_level text NOT NULL DEFAULT 'info', -- 'info', 'warning', 'critical'
-  global_banner_show_on_checkin boolean NOT NULL DEFAULT true,
-  global_banner_show_on_admin boolean NOT NULL DEFAULT true,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  updated_by uuid
-);
-
--- 2. Complete Church Purge Stored Procedure (Cascading Hard Delete)
-CREATE OR REPLACE FUNCTION public.platform_purge_tenant(
-  p_tenant_id uuid,
-  p_confirm_name text
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
--- Deletes attendance_records, watch_sessions, messages, members, services,
--- support_tickets, structure_levels, backups, subscriptions, tenant_users,
--- branches, and the tenant record itself, recording an immutable audit event.
-$$;
-
--- 3. Super Admin Profile Customization Function
-CREATE OR REPLACE FUNCTION public.platform_update_my_profile(
-  p_username text,
-  p_display_name text DEFAULT NULL,
-  p_phone text DEFAULT NULL
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
--- Updates operator username and metadata in auth.users
-$$;
-```
+This plan establishes a comprehensive visual **Platform Overview Dashboard** using `recharts` and builds a dedicated, full-history **Audit Trail** tab in the super admin console (`/platform`) with action type, severity, and actor search filters, plus one-click CSV export, accompanied by the required database schema script.
 
 ---
 
-## 2. Proposed Application Changes
+## User Review Required
 
-### A. Settings Navigation: Collapsible Accordion Sidebar & Dropdown
-- In `src/components/platform/ConsoleSettings.tsx`:
-  - Replace the horizontal tabs with a **collapsible accordion sidebar** grouped into:
-    - **Operator & Security**: Profile, username customization, password, 2FA.
-    - **Platform Identity & Branding**: Prime Haven branding, login logos, system titles, and site metadata.
-    - **Global Controls & Autonomy**: Maintenance mode switch, global broadcast banners, registration lockdown.
-    - **Commercials & Tiers**: Pricing, discount coupons, plan matrix limits.
-    - **Communications & Legal**: System email routing, SMS provider configuration, legal terms.
-  - Add a **Quick-Jump Dropdown Selector** at the top of the settings page for fast navigation on both mobile and desktop.
-
-### B. Complete Church Purge (Hard CRUD Delete)
-- In `src/components/platform/PrimeChurches.tsx`:
-  - Add a dedicated **Danger Zone** tab/card in the church detail sheet.
-  - Button: **"Permanently Purge Church from Database"**.
-  - Modal prompt: Requires the operator to type `<Church Name> DELETE` in an uppercase confirmation input before enabling the wipe action.
-  - Dispatches `platform_purge_tenant` via Supabase RPC, cascading across all tables and instantly refreshing the churches list with toast confirmation.
-
-### C. Direct Church Database Export & Backup
-- In `src/components/platform/PrimeChurches.tsx`:
-  - Add **"Export Complete Database Archive"** action button.
-  - Generates a full structured `.json` data dump containing the church's profile, branches, members, services, and attendance logs for immediate download.
-
-### D. Global Broadcast Banner & Maintenance Mode
-- In `ConsoleSettings.tsx` under **Global Controls**:
-  - Toggles for `global_banner_enabled`, severity levels (Info, Warning, Critical), display target (public check-in, church admin, or both).
-  - Toggles for `maintenance_mode` and `pause_signups`.
-- In `src/routes/_app.tsx` and `src/routes/c.$subdomain.tsx`:
-  - Render a top banner if `global_banner_enabled` is active, styled according to the configured severity level.
+> [!IMPORTANT]
+> - **Visualizations (`recharts`)**:
+>   1. **Total Church Count & Growth**: Cumulative and new church signups over time.
+>   2. **Active Check-ins Over Time**: Interactive area chart with a **30-day daily trend** and a **90-day view toggle** showing daily congregation check-ins, online attendance, and QR scans across all churches.
+>   3. **Subscription Tiers Distribution**: Donut / Pie chart displaying Free, Basic, Standard, and Premium distribution with percentages and revenue weights.
+> - **Audit Trail System**:
+>   - Dedicated administrative log tracking critical operations:
+>     - Church permanent deletions (`tenant.permanently_purged`)
+>     - Maintenance mode toggles & emergency lockdowns (`system.maintenance_toggled`)
+>     - Global broadcast banner announcements (`system.broadcast_updated`)
+>     - Operator credential and profile changes (`operator.profile_updated`, `operator.password_changed`)
+>     - Plan feature config toggles (`plan.config_updated`)
+>   - **Filters**: Filter by Action Category (*All, Church Lifecycle, System & Lockdown, Security, Commercials*), Severity (*Critical, Warning, Info*), and live Actor/Church keyword search.
+>   - **One-Click CSV Export**: Download complete administrative audit records with full JSON details.
+> - **Database Schema Migration (`schema-update-platform-overview-and-audit.sql`)**:
+>   - Schema for `platform_audit_events` with category, severity, actor username, and indexed lookup.
+>   - Analytics trend function `get_platform_metrics_trend(p_days)` for time-series attendance and church metrics.
 
 ---
 
-## 3. Verification Plan
+## Proposed Changes
 
-1. **Schema Execution**: Confirm that `schema-update-super-admin-autonomy.sql` executes in Supabase SQL editor without warnings.
-2. **Settings Layout**: Verify the accordion sidebar groups expand/collapse and dropdown switches sections smoothly.
-3. **Username Customization**: Update operator username and verify persistence.
-4. **Hard Delete Test**: Test deleting a test church using `<Church Name> DELETE` verification and verify that all related rows are removed from the database.
-5. **Database Export**: Click export on a church and inspect the downloaded JSON package.
-6. **Global Banner Test**: Toggle banner in settings and verify rendering on check-in and dashboard pages.
+### 1. Database Schema (`schema-update-platform-overview-and-audit.sql`)
+- Create / upgrade `public.platform_audit_events` table with:
+  - `action`, `category` (`tenant`, `system`, `security`, `commercial`), `severity` (`info`, `warning`, `critical`), `actor_username`, `tenant_name`, `detail` (jsonb), and `created_at`.
+- Function `public.log_platform_audit(...)` for recording administrative events.
+- Time-series aggregation function for attendance and church counts.
+
+### 2. Platform Overview Dashboard (`src/components/platform/PrimeOverview.tsx`)
+- Embed responsive `recharts` components:
+  - **Check-ins Over Time Area Chart**:
+    - Toggle button between **Last 30 Days** and **Last 90 Days**.
+    - Custom tooltip showing date, daily attendance count, and peak day markers.
+  - **Tier Distribution Donut Chart**:
+    - Visual breakdown by plan tier with color-coded legend, percentages, and total church count.
+  - **Church Growth Chart**:
+    - Bar / Area chart tracking cumulative church activations.
+  - **Key Metrics KPI Grid**:
+    - Quick metrics cards: Total Churches, Active Check-ins (30d), Total Members, MRR / Revenue, and System Health.
+
+### 3. Dedicated Audit Trail Component (`src/components/platform/PrimeAuditTrail.tsx`)
+- Create dedicated component for the `/platform` Audit Trail:
+  - Action Category selector pills: *All Events*, *Critical Actions*, *Church Purges*, *System Controls*, *Security*.
+  - Severity level filter dropdown: *All Severities*, *Critical (Red)*, *Warning (Amber)*, *Info (Blue)*.
+  - Search input for operator username, church name, or action keyword.
+  - JSON payload inspection modal / expandable drawer for each audit event.
+  - One-click **"Export Audit Trail (CSV)"** button.
+- Integrate into `src/routes/platform.tsx` under the **Audit log** tab.
+
+### 4. Wire Critical Actions to the Audit Logger
+- Record audit log entries on:
+  - Church permanent purge (`delete_church_permanent`)
+  - Maintenance mode toggle & emergency lockdown
+  - Global broadcast banner update
+  - Operator profile / username changes
+
+---
+
+## Verification Plan
+
+### Automated Verification
+- Run `compile_applet` to confirm zero TypeScript compilation errors.
+- Run `lint_applet` for code style and formatting.
+
+### Manual Verification
+1. Open `/platform` (Overview):
+   - Confirm the three `recharts` visualizations render with clean tooltips and correct data.
+   - Toggle between **30-day** and **90-day** on the check-ins chart to confirm timeframe switching.
+2. Open `/platform` (Audit Log / Trail):
+   - Filter by "Critical Actions" to see church deletions.
+   - Filter by severity and search by operator username.
+   - Click "Export Audit Trail (CSV)" and verify downloaded CSV contains structured event rows.
+3. Review `schema-update-platform-overview-and-audit.sql` for idempotency and security rules.
