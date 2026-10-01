@@ -10,7 +10,7 @@ import {
   verifyPassword,
 } from "./operator.server";
 import { SITE_URL } from "./site";
-import { sendEmail } from "./messaging.server";
+import { renderEmail, sendEmail } from "./messaging.server";
 
 export type SupportTicketStatus = "open" | "in_progress" | "resolved" | "closed";
 export type SupportTicketPriority = "low" | "normal" | "high" | "urgent";

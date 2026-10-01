@@ -18,6 +18,26 @@ import {
 
 const GENERIC = "Username or password is incorrect.";
 
+type SerializableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | SerializableValue[]
+  | { [key: string]: SerializableValue };
+
+function serializable(value: unknown): SerializableValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (Array.isArray(value)) return value.map(serializable);
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, serializable(item)]),
+    );
+  }
+  return String(value ?? "");
+}
+
 /* ---------------- Sign in with username + password ---------------- */
 export const operatorSignIn = createServerFn({ method: "POST" })
   .inputValidator((d) =>
@@ -464,7 +484,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
           severity?: string | null;
           tenant_id: string | null;
           tenant_name?: string | null;
-          detail: Record<string, unknown> | null;
+          detail: unknown;
           created_at: string;
         }>
       ).map((a) => {
@@ -510,6 +530,7 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         const churchName = a.tenant_name || (a.tenant_id ? (churchNameMap[a.tenant_id] ?? null) : null);
         return {
           ...a,
+          detail: serializable(a.detail),
           category,
           severity,
           actor: actorName,
