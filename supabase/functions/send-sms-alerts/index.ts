@@ -1,4 +1,9 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// Minimal Deno global declaration — the jsr edge-runtime types pull in an
+// unresolvable npm:openai dependency, which breaks `deno check`.
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: { get(key: string): string | undefined };
+};
 
 /**
  * Supabase Edge Function: send-sms-alerts

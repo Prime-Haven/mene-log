@@ -1,7 +1,9 @@
 import logo07 from "@/assets/mene-log-logo-07.png";
 import logo08 from "@/assets/mene-log-logo-08.png";
-import darkLogo from "@/assets/mene-log-logo-dark-cropped.png.asset.json";
-import lightLogo from "@/assets/mene-log-logo-light-cropped.png.asset.json";
+// The remote full-logo assets belonged to a previous project and no longer
+// resolve (404). Use the bundled local marks so the logo always renders.
+const darkLogo = { url: logo07 };
+const lightLogo = { url: logo08 };
 
 type Props = {
   variant?: "dark" | "light"; // "dark" = dark logo on white/light bg; "light" = light logo on dark/black bg

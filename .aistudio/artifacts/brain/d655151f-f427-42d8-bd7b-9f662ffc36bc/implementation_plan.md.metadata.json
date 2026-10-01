@@ -1,6 +1,0 @@
-{
-  "summary": "Implementation plan for Platform Overview recharts visualizations, enhanced Audit Trail history with action/severity filtering and CSV export, and complete PostgreSQL schema migration.",
-  "updatedAt": "2026-09-29T16:34:58.831984450Z",
-  "requestFeedback": true,
-  "userFacing": true
-}
