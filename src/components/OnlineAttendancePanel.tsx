@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -108,7 +108,11 @@ export function OnlineAttendancePanel() {
       url?: string;
       min?: number;
     }) => {
-      const updates: Record<string, unknown> = { is_live };
+      const updates: {
+        is_live: boolean;
+        stream_url?: string | null;
+        online_min_minutes?: number;
+      } = { is_live };
       if (url !== undefined) updates.stream_url = url.trim() || null;
       if (min !== undefined) updates.online_min_minutes = min;
 

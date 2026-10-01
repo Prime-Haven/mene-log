@@ -148,10 +148,10 @@ export function AttendanceRegister() {
     enabled: !!activeId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("watch_sessions")
-        .select("id, member_id, total_seconds, verified_attendance")
+        .from("attendance")
+        .select("id, member_id")
         .eq("service_id", activeId)
-        .eq("verified_attendance", true);
+        .eq("method", "online");
       if (error) return [];
       return data ?? [];
     },

@@ -186,7 +186,7 @@ export function Scan() {
 
     busy.current = true;
     try {
-      let res: {
+      type ScanResolution = {
         ok: boolean;
         member_name?: string;
         member_code?: string;
@@ -195,7 +195,8 @@ export function Scan() {
         designation?: string;
         reason?: string;
         message?: string;
-      } | null = null;
+      };
+      let res: ScanResolution | null = null;
 
       // Try primary database RPC
       try {
@@ -205,7 +206,7 @@ export function Scan() {
         });
 
         if (!error && data) {
-          res = data as unknown as typeof res;
+          res = data as unknown as ScanResolution;
         }
       } catch {
         res = null;
