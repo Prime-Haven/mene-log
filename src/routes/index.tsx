@@ -275,11 +275,11 @@ function LandingPage() {
           {/* Bottom-only atmospheric blend: from 'Made for churches' downwards to mask the orb under the scripture while leaving the sides and top of the orb completely unobstructed */}
           <div
             aria-hidden
-            className="absolute inset-x-0 bottom-0 h-[52svh] bg-[linear-gradient(to_top,var(--deep)_0%,var(--deep)_42%,rgba(5,10,24,0.85)_65%,rgba(5,10,24,0.3)_82%,transparent_100%)] pointer-events-none z-[1]"
+            className="absolute inset-x-0 bottom-0 h-[58svh] bg-[linear-gradient(to_top,var(--deep)_0%,var(--deep)_42%,rgba(5,10,24,0.85)_65%,rgba(5,10,24,0.3)_82%,transparent_100%)] pointer-events-none z-[1]"
           />
           <div
             aria-hidden
-            className="absolute inset-x-0 bottom-0 h-[46svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
+            className="absolute inset-x-0 bottom-0 h-[52svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
           />
 
           {/* Foreground scripture and actions */}
