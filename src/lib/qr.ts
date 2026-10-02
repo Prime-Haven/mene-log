@@ -1,4 +1,4 @@
-import QRCode from "qrcode";
+import QRCode from "qrcode/lib/browser";
 
 /** QR code PNG with the church, member name, and member code printed underneath. */
 export async function labelledQr(
