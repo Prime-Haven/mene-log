@@ -1,1 +1,0 @@
-{ "name": "@vercel/oidc", "version": "0.0.0-stub", "type": "module", "main": "index.js", "module": "index.js", "exports": { ".": { "import": "./index.js", "require": "./index.cjs", "default": "./index.js" } } }

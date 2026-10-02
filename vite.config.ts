@@ -12,6 +12,20 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  plugins: [
+    {
+      // @vercel/oidc (pulled in by the AI SDK) loads node:fs at startup, which
+      // crashes the edge server. Swap it for a no-op stub in every build.
+      name: "stub-vercel-oidc",
+      enforce: "pre",
+      resolveId(id) {
+        if (id === "@vercel/oidc") {
+          return new URL("./src/lib/vercel-oidc-stub.ts", import.meta.url).pathname;
+        }
+        return null;
+      },
+    },
+  ],
   vite: {
     // Public browser configuration must be present in the compiled bundle.
     // Lovable Cloud normally injects these values, while these non-secret
