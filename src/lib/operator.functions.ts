@@ -798,6 +798,14 @@ export const operatorAction = createServerFn({ method: "POST" })
         return { ok: true, message: "Welcome email sent" };
       }
       case "announce": {
+        if (!(await rateLimit("operator_announce", me, 3, 86400)))
+          throw new Error("Announcement limit reached (3 per day). Try again tomorrow.");
+        const linkRe = /(https?:\/\/|www\.)[^\s]+/gi;
+        const badLink = [data.subject, data.body]
+          .flatMap((t) => t.match(linkRe) ?? [])
+          .some((u) => !/^(https?:\/\/)?(www\.)?menelog\.site(\/|$)/i.test(u));
+        if (badLink)
+          throw new Error("Announcements can only link to menelog.site.");
         const { data: ts } = await db
           .from("tenants")
           .select("id,name,brand_primary")
@@ -898,6 +906,18 @@ export const operatorAction = createServerFn({ method: "POST" })
         return { ok: true, message: "Password reset" };
       }
       case "test_email": {
+        if (!(await rateLimit("operator_test_email", me, 5, 3600)))
+          throw new Error("Too many test emails. Try again later.");
+        const target = data.to.toLowerCase();
+        const allowed = new Set(
+          [process.env["ADMIN_ALERT_EMAIL"], "support@menelog.site"]
+            .filter(Boolean)
+            .map((e) => String(e).trim().toLowerCase()),
+        );
+        const { data: meUser } = await db.auth.admin.getUserById(me);
+        if (meUser?.user?.email) allowed.add(meUser.user.email.toLowerCase());
+        if (!allowed.has(target))
+          throw new Error("Test emails can only go to the platform alert or support address.");
         const { renderEmail, sendEmail } = await import("./messaging.server");
         const html = renderEmail({
           churchName: "Prime Haven · Mene:Log",
