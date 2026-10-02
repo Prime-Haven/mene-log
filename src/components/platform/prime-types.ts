@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv";
 import type { consoleSnapshot, OperatorActionInput } from "@/lib/operator.functions";
 import type { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -83,7 +84,7 @@ export function downloadCsv(name: string, rows: Array<Record<string, unknown>>) 
     return;
   }
   const cols = Object.keys(rows[0]!);
-  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const esc = csvCell;
   const csv = [
     cols.join(","),
     ...rows.map((r) =>

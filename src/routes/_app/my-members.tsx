@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -272,13 +273,13 @@ export function MyMembers() {
     }
     const headers = ["Full Name", "Phone", "Email", "Status", "Joined On", "Residential Area", "Last Seen"];
     const rows = data.members.map((m) => [
-      `"${m.full_name.replace(/"/g, '""')}"`,
-      `"${m.phone ?? ""}"`,
-      `"${m.email ?? ""}"`,
-      `"${m.status}"`,
-      `"${m.joined_on}"`,
-      `"${m.residential_area ?? ""}"`,
-      `"${m.last_seen ?? "Never"}"`,
+      csvCell(m.full_name),
+      csvCell(m.phone ?? ""),
+      csvCell(m.email ?? ""),
+      csvCell(m.status),
+      csvCell(m.joined_on),
+      csvCell(m.residential_area ?? ""),
+      csvCell(m.last_seen ?? "Never"),
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
