@@ -57,20 +57,20 @@ export function MeneLogLogo({
 
   return (
     <span className="inline-flex items-center">
-      {/* Mobile view: standalone icon logo, square aspect ratio, never distorted */}
+      {/* Tablet & mobile view: standalone icon logo, square aspect ratio, never distorted */}
       <img
         src={iconSrc}
         alt="Mene:Log"
-        className="aspect-square size-9 sm:size-10 object-contain select-none rounded-lg md:hidden"
+        className="aspect-square size-9 sm:size-10 lg:size-9 object-contain select-none rounded-lg lg:hidden"
       />
-      {/* Desktop view: full logo */}
+      {/* Web / desktop view: full logo */}
       <img
         src={fullLogoUrl}
         alt="Mene:Log"
         onError={(e) => {
           e.currentTarget.src = iconSrc;
         }}
-        className={`hidden md:block w-auto object-contain select-none ${className}`}
+        className={`hidden lg:block w-auto object-contain select-none ${className}`}
       />
     </span>
   );
