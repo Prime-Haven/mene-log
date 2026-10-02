@@ -152,6 +152,17 @@ export const createBranch = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const head = await assertHeadOffice(context, data.tenant_id);
+    const email = data.admin_email.toLowerCase();
+    {
+      const rl = await adminDb();
+      const checks = await Promise.all([
+        rl.rpc("check_rate_limit", { _bucket: "branch_invite_user", _identifier: context.userId, _max: 5, _window_seconds: 3600 }),
+        rl.rpc("check_rate_limit", { _bucket: "branch_invite_tenant", _identifier: head.id, _max: 20, _window_seconds: 86400 }),
+        rl.rpc("check_rate_limit", { _bucket: "branch_invite_email", _identifier: email, _max: 2, _window_seconds: 86400 }),
+      ]);
+      if (checks.some((c) => c.error || c.data === false))
+        return { ok: false as const, message: "Too many branch invitations. Please try again later." };
+    }
     if (!(await subdomainFree(data.subdomain)))
       return { ok: false as const, message: "That check-in address is taken." };
     const id = await createBranchTenant(
@@ -160,13 +171,13 @@ export const createBranch = createServerFn({ method: "POST" })
       true,
       null,
     );
-    const invited = await inviteOwner(id, data.admin_email, data.name, head.name);
+    const invited = await inviteOwner(id, email, data.name, head.name);
     const db = await adminDb();
     await db.rpc("log_audit", {
       _tenant: head.id,
       _action: "branch.created",
       _target: data.subdomain,
-      _detail: { branch: id },
+      _detail: { branch: id, invited_email: email, invited },
       _actor: context.userId,
     });
     return {
