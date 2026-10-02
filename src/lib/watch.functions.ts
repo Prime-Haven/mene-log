@@ -51,51 +51,41 @@ async function resolveViewer(admin: Admin, subdomain: string, code: string) {
   let member: { id: string; full_name: string; status: string; branch_id: string | null } | null =
     null;
 
-  // 1. Direct match on member_code (e.g. ML-10294, ML10294, or exact)
-  const { data: memberByCode } = await admin
-    .from("members")
-    .select("id, full_name, status, branch_id, member_code")
-    .eq("tenant_id", tenant.id)
-    .or(`member_code.ilike.${rawCode},member_code.ilike.${normalized}`)
-    .maybeSingle();
+  // Caller input is never placed inside a filter expression: only safe code
+  // characters survive and each lookup uses exact-value parameters.
+  const safe = normalized.replace(/[^A-Z0-9]/g, "").slice(0, 32);
+  const bare = safe.startsWith("ML") ? safe.slice(2) : safe;
+  const candidates = bare ? Array.from(new Set([`ML-${bare}`, `ML${bare}`, bare])) : [];
 
-  if (memberByCode) {
-    member = memberByCode;
-  } else {
-    // 2. Try prefix variations (stripping ML or adding ML-)
-    const bareCode = normalized.startsWith("ML") ? normalized.slice(2) : normalized;
-
-    const { data: altMember } = await admin
+  if (candidates.length) {
+    const { data: byCode } = await admin
       .from("members")
       .select("id, full_name, status, branch_id, member_code")
       .eq("tenant_id", tenant.id)
-      .or(`member_code.ilike.ML-${bareCode},member_code.ilike.ML${bareCode},member_code.ilike.%${bareCode}`)
-      .maybeSingle();
-
-    if (altMember) {
-      member = altMember;
-    }
+      .in("member_code", candidates)
+      .limit(1);
+    if (byCode?.[0]) member = byCode[0];
   }
 
-  // 3. Fallback: match by phone number if user entered their phone
+  // Fallback: match by phone number if user entered their phone
   if (!member && rawCode.length >= 9) {
     const { data: phoneMember } = await admin
       .from("members")
       .select("id, full_name, status, branch_id, member_code")
       .eq("tenant_id", tenant.id)
       .eq("phone", rawCode.replace(/[^0-9+]/g, ""))
-      .maybeSingle();
-    if (phoneMember) member = phoneMember;
+      .limit(1);
+    if (phoneMember?.[0]) member = phoneMember[0];
   }
 
-  // 4. Fallback: check qr_tokens if hex hash or token was provided
-  if (!member) {
+  // Fallback: QR token hash
+  if (!member && /^[A-Za-z0-9_-]{8,128}$/.test(rawCode)) {
     const hash = await sha256Hex(rawCode.toLowerCase());
     const { data: token } = await admin
       .from("qr_tokens")
       .select("member_id")
       .eq("tenant_id", tenant.id)
-      .or(`token_hash.eq.\\x${hash},token_hash.eq.${rawCode}`)
+      .eq("token_hash", `\\x${hash}`)
       .is("revoked_at", null)
       .maybeSingle();
 
