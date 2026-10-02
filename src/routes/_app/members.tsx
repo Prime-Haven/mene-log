@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
@@ -357,7 +358,7 @@ function Members() {
       ],
       ...rows,
     ]
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .map((r) => r.map((v) => csvCell(v)).join(","))
       .join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");

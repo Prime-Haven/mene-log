@@ -135,9 +135,26 @@ export const registerLeader = createServerFn({ method: "POST" })
               "An account with this email is already registered as a leader. Please use 'Leader Login' to sign in.",
           };
         }
+        // Never take over an existing account: the owner must prove control
+        // by signing in with their own password.
+        const { createClient } = await import("@supabase/supabase-js");
+        const verifier = createClient(
+          process.env["SUPABASE_URL"] ?? "",
+          process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "",
+          { auth: { persistSession: false, autoRefreshToken: false } },
+        );
+        const { error: signInError } = await verifier.auth.signInWithPassword({
+          email: data.email.toLowerCase().trim(),
+          password: data.password,
+        });
+        if (signInError) {
+          return {
+            ok: false as const,
+            message:
+              "An account with this email already exists. Enter that account's current password to register as a leader.",
+          };
+        }
         leaderUserId = matched.id;
-        // Update password if they registered again
-        await supabaseAdmin.auth.admin.updateUserById(matched.id, { password: data.password });
       }
     }
 

@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -181,7 +182,7 @@ function downloadCsv(name: string, rows: Array<Record<string, unknown>>) {
     return;
   }
   const cols = Object.keys(rows[0]!);
-  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const esc = csvCell;
   const csv = [
     cols.join(","),
     ...rows.map((r) =>

@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/_app/reports")({
 
 function download(filename: string, rows: Array<Array<string | number>>) {
   const csv = rows
-    .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .map((r) => r.map((v) => csvCell(v)).join(","))
     .join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const a = document.createElement("a");

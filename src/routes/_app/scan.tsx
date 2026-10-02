@@ -105,15 +105,41 @@ export function Scan() {
     if (!tenant) throw new Error("Church account unavailable");
     const clean = tokenOrCode.trim();
 
-    // 1. Search member by member_code, id, or phone
-    const { data: foundMembers, error: memberErr } = await supabase
-      .from("members")
-      .select("id, full_name, member_code, branch_id, position_id, is_leader")
-      .eq("tenant_id", tenant.id)
-      .or(
-        `member_code.ilike.${clean},member_code.ilike.ML-${clean.replace(/^ml-/i, "")},phone.eq.${clean},id.eq.${clean.length === 36 ? clean : "00000000-0000-0000-0000-000000000000"}`,
-      )
-      .limit(1);
+    // 1. Search member by member_code, id, or phone using exact-value filters only
+    const codeSafe = clean.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
+    const bare = codeSafe.replace(/^ML-?/, "");
+    const codes = bare ? Array.from(new Set([codeSafe, `ML-${bare}`, `ML${bare}`])) : [];
+    const memberCols = "id, full_name, member_code, branch_id, position_id, is_leader";
+    let foundMembers: Array<{
+      id: string;
+      full_name: string;
+      member_code: string | null;
+      branch_id: string | null;
+      position_id: string | null;
+      is_leader: boolean;
+    }> | null = null;
+    let memberErr: unknown = null;
+    const attempts = [
+      codes.length
+        ? () => supabase.from("members").select(memberCols).eq("tenant_id", tenant.id).in("member_code", codes).limit(1)
+        : null,
+      /^\+?[0-9]{6,20}$/.test(clean)
+        ? () => supabase.from("members").select(memberCols).eq("tenant_id", tenant.id).eq("phone", clean).limit(1)
+        : null,
+      /^[0-9a-f-]{36}$/i.test(clean)
+        ? () => supabase.from("members").select(memberCols).eq("tenant_id", tenant.id).eq("id", clean).limit(1)
+        : null,
+    ];
+    for (const run of attempts) {
+      if (!run) continue;
+      const { data, error } = await run();
+      if (error) memberErr = error;
+      if (data && data.length) {
+        foundMembers = data;
+        memberErr = null;
+        break;
+      }
+    }
 
     if (memberErr || !foundMembers || foundMembers.length === 0) {
       return {
