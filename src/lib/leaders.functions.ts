@@ -137,7 +137,13 @@ export const registerLeader = createServerFn({ method: "POST" })
         }
         // Never take over an existing account: the owner must prove control
         // by signing in with their own password.
-        const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        const { createClient } = await import("@supabase/supabase-js");
+        const verifier = createClient(
+          process.env["SUPABASE_URL"] ?? "",
+          process.env["SUPABASE_PUBLISHABLE_KEY"] ?? "",
+          { auth: { persistSession: false, autoRefreshToken: false } },
+        );
+        const { error: signInError } = await verifier.auth.signInWithPassword({
           email: data.email.toLowerCase().trim(),
           password: data.password,
         });
