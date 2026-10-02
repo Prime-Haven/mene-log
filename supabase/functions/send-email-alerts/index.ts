@@ -189,9 +189,49 @@ async function sendResendEmail(options: {
   }
 }
 
+async function callerAllowed(req: Request): Promise<boolean> {
+  const provided =
+    req.headers.get("x-menelog-alert-secret") ??
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+    "";
+  const allowed = [Deno.env.get("MENELOG_CRON_SECRET"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")]
+    .filter((v): v is string => !!v);
+  if (!provided || !allowed.length) return false;
+  const enc = new TextEncoder();
+  const digest = async (v: string) =>
+    new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(v)));
+  const p = await digest(provided);
+  for (const a of allowed) {
+    const d = await digest(a);
+    let diff = 0;
+    for (let i = 0; i < d.length; i++) diff |= d[i] ^ p[i];
+    if (diff === 0) return true;
+  }
+  return false;
+}
+
+function escapeDeep(value: any): any {
+  if (typeof value === "string")
+    return value.replace(
+      /[&<>"']/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
+    );
+  if (Array.isArray(value)) return value.map(escapeDeep);
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, escapeDeep(v)]));
+  return value;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+  // Internal-only: callers must present the server alert secret.
+  if (!(await callerAllowed(req))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -206,9 +246,11 @@ Deno.serve(async (req: Request) => {
     const adminEmail = Deno.env.get("ADMIN_ALERT_EMAIL") || "primehaven26@gmail.com";
     const appUrl = Deno.env.get("APP_URL") || "https://menelog.site";
     const payload: EmailPayload = await req.json().catch(() => ({}));
+    // Every value is HTML-escaped before it can reach an email template.
+    if (payload.record) payload.record = escapeDeep(payload.record);
 
     let eventType = payload.event;
-    let eventData = payload.data || {};
+    let eventData = escapeDeep(payload.data || {});
 
     // 1. Detect if payload is a Supabase Database Webhook
     if (payload.table && payload.record) {

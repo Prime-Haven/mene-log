@@ -89,9 +89,37 @@ async function dispatchArkeselSms(options: {
   }
 }
 
+async function callerAllowed(req: Request): Promise<boolean> {
+  const provided =
+    req.headers.get("x-menelog-alert-secret") ??
+    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
+    "";
+  const allowed = [Deno.env.get("MENELOG_CRON_SECRET"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")]
+    .filter((v): v is string => !!v);
+  if (!provided || !allowed.length) return false;
+  const enc = new TextEncoder();
+  const digest = async (v: string) =>
+    new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(v)));
+  const p = await digest(provided);
+  for (const a of allowed) {
+    const d = await digest(a);
+    let diff = 0;
+    for (let i = 0; i < d.length; i++) diff |= d[i] ^ p[i];
+    if (diff === 0) return true;
+  }
+  return false;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+  // Internal-only: callers must present the server alert secret.
+  if (!(await callerAllowed(req))) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
