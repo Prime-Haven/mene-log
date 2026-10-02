@@ -85,34 +85,6 @@ export const getPublicOpenServices = createServerFn({ method: "GET" })
 
     if (!tenant) return [];
 
-    // 2. Ensure canonical default services exist (Sunday Service, Midweek Service, Prayer Service)
-    const defaults = [
-      { name: "Sunday Service", type: "sunday" },
-      { name: "Midweek Service", type: "midweek" },
-      { name: "Prayer Service", type: "prayer" },
-    ];
-
-    for (const def of defaults) {
-      const { data: existing } = await supabaseAdmin
-        .from("services")
-        .select("id, is_open")
-        .eq("tenant_id", tenant.id)
-        .eq("service_type", def.type)
-        .maybeSingle();
-
-      if (!existing) {
-        await supabaseAdmin.from("services").insert({
-          tenant_id: tenant.id,
-          name: def.name,
-          service_type: def.type,
-          is_default: true,
-          is_open: true,
-        });
-      } else if (!existing.is_open) {
-        await supabaseAdmin.from("services").update({ is_open: true }).eq("id", existing.id);
-      }
-    }
-
     // 3. Fetch all open services for this church
     const { data: allServices } = await supabaseAdmin
       .from("services")

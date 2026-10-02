@@ -1,3 +1,4 @@
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -232,6 +233,7 @@ export const pingWatch = createServerFn({ method: "POST" })
 
 /** Admin query for online attendance & live streaming stats */
 export const getOnlineAttendanceOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: { tenant_id: string; service_id?: string }) =>
     z
       .object({
@@ -240,7 +242,11 @@ export const getOnlineAttendanceOverview = createServerFn({ method: "GET" })
       })
       .parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { data: allowed } = await context.supabase.rpc("is_tenant_admin", {
+      _tenant: data.tenant_id,
+    });
+    if (allowed !== true) throw new Error("You do not have access to this church's attendance.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // 1. Get services with streaming configured

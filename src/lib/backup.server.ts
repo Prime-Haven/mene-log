@@ -3,9 +3,8 @@ import { admin, audit, verifyPassword, findOperator } from "./operator.server";
 
 function getBackupKey(): Buffer {
   const secret =
-    process.env["TENANT_BACKUP_SECRET"] ||
-    process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
-    "menelog-tenant-backup-secret-key-2026";
+    process.env["MENELOG_BACKUP_ENCRYPTION_KEY"] || process.env["TENANT_BACKUP_SECRET"];
+  if (!secret) throw new Error("Backup encryption is not configured.");
   return crypto.createHash("sha256").update(secret).digest();
 }
 
