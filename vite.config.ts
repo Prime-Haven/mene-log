@@ -13,11 +13,6 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    resolve: {
-      alias: {
-        "@vercel/oidc": new URL("./src/lib/vercel-oidc-stub.ts", import.meta.url).pathname,
-      },
-    },
     // Public browser configuration must be present in the compiled bundle.
     // Lovable Cloud normally injects these values, while these non-secret
     // fallbacks keep published auth and data pages functional if injection is
