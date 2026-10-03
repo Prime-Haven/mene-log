@@ -20,8 +20,10 @@ import {
   Send,
   Calendar,
   Users,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import { csvCell } from "@/lib/csv";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { OnlineAttendancePanel } from "@/components/OnlineAttendancePanel";
@@ -421,6 +423,51 @@ export function AttendanceRegister() {
   const absentShown = members.length - presentShown;
   const writable = register.data?.writable ?? false;
 
+  function exportAttendanceCsv() {
+    if (!register.data?.members.length) {
+      toast.error("No attendance records to export");
+      return;
+    }
+    const currentService = services.data?.find((s) => s.id === activeId);
+    const serviceName = currentService?.name || "Service";
+    const dateStr = currentService?.service_date || new Date().toISOString().slice(0, 10);
+    const headers = [
+      "Member Name",
+      "Member Code",
+      "Phone",
+      "Status",
+      "Designation",
+      "Attendance Method",
+      "Recorded At",
+    ];
+    const rows = register.data.members
+      .filter((m) => m.present)
+      .map((m) => [
+        csvCell(m.full_name),
+        csvCell(m.member_code ?? ""),
+        csvCell(m.phone ?? ""),
+        csvCell(m.status),
+        csvCell(m.designation),
+        csvCell(m.method ?? "manual"),
+        csvCell(m.recorded_at ? new Date(m.recorded_at).toLocaleTimeString() : ""),
+      ]);
+
+    if (rows.length === 0) {
+      toast.info("No present members recorded yet for this service.");
+      return;
+    }
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-${serviceName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} attendance records.`);
+  }
+
   if (!canManageMembers) {
     return (
       <div className="surface p-6 text-center text-sm text-muted-foreground">
@@ -443,6 +490,15 @@ export function AttendanceRegister() {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportAttendanceCsv}
+            className="font-medium"
+            disabled={!register.data?.present_count}
+          >
+            <Download className="size-4 mr-1.5" /> Export CSV
+          </Button>
           <Button
             variant="outline"
             size="sm"

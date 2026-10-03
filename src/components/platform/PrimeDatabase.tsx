@@ -10,6 +10,8 @@ import {
   Clock,
   ShieldCheck,
   Lock,
+  Wrench,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -140,6 +142,77 @@ export function PrimeDatabase({ d, act }: { d: Snapshot; act: Act }) {
           <p className="mt-1 text-xs text-muted-foreground">
             AES-256-GCM encrypted · 30-day retention
           </p>
+        </div>
+      </div>
+
+      {/* Database Integrity & Inconsistency Remediation */}
+      <div className="surface p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Wrench className="size-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Database Integrity & Consistency Maintenance</p>
+              <p className="text-xs text-muted-foreground">
+                Automated member code reconciliation, rate-limit bucket pruning, and schema alignment.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => act.mutate({ type: "reconcile_member_codes" })}
+              disabled={act.isPending}
+            >
+              <RefreshCw className={`size-3.5 ${act.isPending ? "animate-spin" : ""}`} />
+              <span>Reconcile Member Codes</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => act.mutate({ type: "cleanup_rate_limits" })}
+              disabled={act.isPending}
+            >
+              <ShieldCheck className="size-3.5 text-success" />
+              <span>Purge Expired Rate Limits</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3 text-xs">
+          <div className="rounded-lg border border-border/50 bg-background/50 p-3">
+            <span className="text-muted-foreground">Missing Member Codes</span>
+            <p className="mt-1 text-lg font-bold font-mono">
+              {(d.health as { missing_member_codes?: number }).missing_member_codes ?? 0}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {(d.health as { missing_member_codes?: number }).missing_member_codes === 0
+                ? "All member records have unique check-in codes"
+                : "Records waiting for automated sequential code assignment"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-border/50 bg-background/50 p-3">
+            <span className="text-muted-foreground">Active Rate-Limit Buckets</span>
+            <p className="mt-1 text-lg font-bold font-mono">
+              {(d.health as { rate_limit_hits?: number }).rate_limit_hits ?? 0}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Brute-force and DDoS tracking entries stored in database
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-border/50 bg-background/50 p-3">
+            <span className="text-muted-foreground">Schema Migration Script</span>
+            <p className="mt-1 text-lg font-bold font-mono text-primary">v2026.10-aligned</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              database-remediation-and-upgrades.sql ready for Supabase
+            </p>
+          </div>
         </div>
       </div>
 

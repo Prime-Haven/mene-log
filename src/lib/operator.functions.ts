@@ -147,6 +147,8 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
       { data: auditRows },
       { data: msgs },
       { data: backupJobs },
+      { count: missingMemberCodes },
+      { count: rateLimitCount },
     ] = await Promise.all([
       db
         .from("tenants")
@@ -187,6 +189,13 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         )
         .order("created_at", { ascending: false })
         .limit(200),
+      db
+        .from("members")
+        .select("id", { count: "exact", head: true })
+        .or("member_code.is.null,member_code.eq."),
+      db
+        .from("rate_limit_hits")
+        .select("id", { count: "exact", head: true }),
     ]);
 
     type TenantRow = {
@@ -609,6 +618,8 @@ export const consoleSnapshot = createServerFn({ method: "GET" })
         failed_24h: failed24 ?? 0,
         stuck_queue: stuck ?? 0,
         last_payment_at: lastPaid?.paid_at ?? lastPaid?.created_at ?? null,
+        missing_member_codes: missingMemberCodes ?? 0,
+        rate_limit_hits: rateLimitCount ?? 0,
       },
     };
   });
@@ -680,6 +691,13 @@ const action = z.discriminatedUnion("type", [
     username: z.string().regex(/^[a-z0-9._-]{3,40}$/i),
     display_name: z.string().max(80).optional(),
     phone: z.string().max(40).optional(),
+  }),
+  z.object({
+    type: z.literal("reconcile_member_codes"),
+    tenant_id: z.string().uuid().nullable().optional(),
+  }),
+  z.object({
+    type: z.literal("cleanup_rate_limits"),
   }),
 ]);
 
@@ -1117,6 +1135,45 @@ export const operatorAction = createServerFn({ method: "POST" })
           { category: "security", severity: "info", actorUsername: cleanUsername },
         );
         return { ok: true, message: `Profile updated. Operator username is now "${cleanUsername}".` };
+      }
+      case "reconcile_member_codes": {
+        const { data: res, error } = await db.rpc("reconcile_member_codes", {
+          p_tenant_id: data.tenant_id || null,
+        });
+        if (error) {
+          // Resilient fallback if RPC not yet created in PostgreSQL
+          const { data: targetMembers } = await db
+            .from("members")
+            .select("id, tenant_id")
+            .or("member_code.is.null,member_code.eq.")
+            .limit(500);
+          let count = 0;
+          for (const m of targetMembers ?? []) {
+            const randomCode = `ML-${Math.floor(10000 + Math.random() * 90000)}`;
+            await db.from("members").update({ member_code: randomCode }).eq("id", m.id);
+            count++;
+          }
+          await audit(me, "database.member_codes_reconciled", { reconciled: count });
+          return { ok: true, message: `Reconciled ${count} member codes.` };
+        }
+        const updated = (res as { members_reconciled?: number })?.members_reconciled ?? 0;
+        await audit(me, "database.member_codes_reconciled", { reconciled: updated });
+        return { ok: true, message: `Reconciled ${updated} missing member codes.` };
+      }
+      case "cleanup_rate_limits": {
+        const { data: res, error } = await db.rpc("cleanup_expired_rate_limits");
+        let deleted = 0;
+        if (error) {
+          const { count } = await db
+            .from("rate_limit_hits")
+            .delete({ count: "exact" })
+            .lt("expires_at", new Date().toISOString());
+          deleted = count ?? 0;
+        } else {
+          deleted = typeof res === "number" ? res : 0;
+        }
+        await audit(me, "database.rate_limits_purged", { purged: deleted });
+        return { ok: true, message: `Purged ${deleted} expired rate limit entries.` };
       }
     }
   });

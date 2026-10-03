@@ -41,6 +41,7 @@ export const attendanceMethodEnum = pgEnum("attendance_method", [
   "self_checkin",
   "manual",
   "corrected",
+  "online",
 ]);
 export const accountStatusEnum = pgEnum("account_status", ["active", "suspended"]);
 
@@ -64,6 +65,8 @@ export const tenants = pgTable("tenants", {
   contactPhone: text("contact_phone"),
   groupVocabulary: text("group_vocabulary").notNull().default("Group"),
   parentTenantId: uuid("parent_tenant_id"),
+  extraMemberSlots: integer("extra_member_slots").notNull().default(0),
+  requireMfa: boolean("require_mfa").notNull().default(false),
   trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   settings: jsonb("settings").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -406,3 +409,96 @@ export const platformAuditEvents = pgTable("platform_audit_events", {
   detail: jsonb("detail").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Watch Sessions (Livestream attendee heartbeats and watch duration)
+export const watchSessions = pgTable("watch_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  serviceId: uuid("service_id")
+    .notNull()
+    .references(() => services.id, { onDelete: "cascade" }),
+  memberId: uuid("member_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  seconds: integer("seconds").notNull().default(0),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  lastPing: timestamp("last_ping", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Plan Config (Pricing overrides and active feature flags)
+export const planConfig = pgTable("plan_config", {
+  id: text("id").primaryKey(),
+  data: jsonb("data").notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid("updated_by"),
+});
+
+// Platform System State (Super Admin locks, maintenance, global broadcasts)
+export const platformSystemState = pgTable("platform_system_state", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull().default({}),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid("updated_by"),
+});
+
+// Tenant Encrypted Backup Jobs
+export const tenantBackupJobs = pgTable("tenant_backup_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  requestedBy: uuid("requested_by"),
+  status: text("status").notNull().default("pending"),
+  backupType: text("backup_type").notNull().default("manual"),
+  fileUrl: text("file_url"),
+  fileSize: integer("file_size"),
+  checksumSha256: text("checksum_sha256"),
+  recordsCount: jsonb("records_count").default({}),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Import Batches (Excel / CSV membership imports)
+export const importBatches = pgTable("import_batches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  importedByUserId: uuid("imported_by_user_id").notNull(),
+  fileName: text("file_name"),
+  rowCount: integer("row_count").notNull().default(0),
+  successCount: integer("success_count").notNull().default(0),
+  errorCount: integer("error_count").notNull().default(0),
+  errors: jsonb("errors").default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Tenant Audit Events
+export const auditEvents = pgTable("audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  actorUserId: uuid("actor_user_id").notNull(),
+  action: text("action").notNull(),
+  targetType: text("target_type"),
+  targetId: text("target_id"),
+  detail: jsonb("detail").notNull().default({}),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Rate Limit Hits
+export const rateLimitHits = pgTable("rate_limit_hits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  bucket: text("bucket").notNull(),
+  identifier: text("identifier").notNull(),
+  hitCount: integer("hit_count").notNull().default(1),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+

@@ -225,7 +225,21 @@ export const pingWatch = createServerFn({ method: "POST" })
           method: "online",
           designation: "member",
         });
-        recorded = !error || error.code === "23505";
+        if (error && error.code !== "23505") {
+          // Graceful fallback if enum value 'online' is pending migration in PostgreSQL
+          const fallback = await supabaseAdmin.from("attendance").insert({
+            tenant_id: v.tenant.id,
+            service_id: svc.id,
+            member_id: v.member.id,
+            branch_id: v.member.branch_id ?? svc.branch_id,
+            method: "self_checkin",
+            designation: "member",
+            notes: "Online Livestream (auto-logged)",
+          });
+          recorded = !fallback.error || fallback.error.code === "23505";
+        } else {
+          recorded = !error || error.code === "23505";
+        }
       }
     }
     return { ok: true as const, seconds, recorded, minMinutes: svc.online_min_minutes };
