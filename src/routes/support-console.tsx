@@ -298,10 +298,10 @@ export function SupportConsolePage() {
     },
   });
 
-  // Query support staff accounts (super_admin only)
+  // Query support staff accounts (any operator can view the team)
   const { data: staffList = [], isLoading: isLoadingStaff } = useQuery({
     queryKey: ["support-staff-list", isSuperAdmin],
-    enabled: isOperator && isSuperAdmin && activeTab === "staff",
+    enabled: isOperator && activeTab === "staff",
     queryFn: async () => {
       const headers = await getAuthHeader();
       return listStaffFn({ headers });
@@ -518,46 +518,44 @@ export function SupportConsolePage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Super admin quick links */}
-          {isSuperAdmin && (
-            <>
-              <div className="flex items-center bg-secondary rounded-lg p-0.5 text-xs font-medium">
-                <button
-                  onClick={() => {
-                    setActiveTab("queue");
-                    setSelectedTicketId(null);
-                  }}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    activeTab === "queue"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Tickets Queue
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("staff");
-                    setSelectedTicketId(null);
-                  }}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    activeTab === "staff"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Manage Staff
-                </button>
-              </div>
+          {/* Console tabs — all operators can view the team; only Super Admins manage it */}
+          <div className="flex items-center bg-secondary rounded-lg p-0.5 text-xs font-medium">
+            <button
+              onClick={() => {
+                setActiveTab("queue");
+                setSelectedTicketId(null);
+              }}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                activeTab === "queue"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Tickets Queue
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("staff");
+                setSelectedTicketId(null);
+              }}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                activeTab === "staff"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {isSuperAdmin ? "Manage Staff" : "Support Team"}
+            </button>
+          </div>
 
-              <Link
-                to="/platform"
-                className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors border border-border/60 px-2.5 py-1.5 rounded-md"
-              >
-                <span>Super Admin Console</span>
-                <ExternalLink className="size-3" />
-              </Link>
-            </>
+          {isSuperAdmin && (
+            <Link
+              to="/platform"
+              className="hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors border border-border/60 px-2.5 py-1.5 rounded-md"
+            >
+              <span>Super Admin Console</span>
+              <ExternalLink className="size-3" />
+            </Link>
           )}
 
           <div className="flex items-center gap-2 pl-2 border-l border-border/60">
@@ -592,22 +590,25 @@ export function SupportConsolePage() {
           </div>
         )}
 
-        {/* Tab 2: Manage Support Staff (Super Admin Only) */}
-        {activeTab === "staff" && isSuperAdmin ? (
+        {/* Tab 2: Support Team (all operators can view; only Super Admins manage) */}
+        {activeTab === "staff" ? (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
               <div>
                 <p className="text-eyebrow">Personnel & Access</p>
                 <h2 className="text-display mt-1">Support Staff Accounts</h2>
                 <p className="text-subtitle mt-1">
-                  Provision dedicated support accounts that can triage tickets and reply to churches
-                  without full platform admin privileges.
+                  {isSuperAdmin
+                    ? "Provision dedicated support accounts that can triage tickets and reply to churches without full platform admin privileges."
+                    : "The support operators who can triage tickets and reply to churches. Only a Super Admin can add or remove accounts."}
                 </p>
               </div>
-              <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2">
-                <UserPlus className="size-4" />
-                <span>Add Support Operator</span>
-              </Button>
+              {isSuperAdmin && (
+                <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2">
+                  <UserPlus className="size-4" />
+                  <span>Add Support Operator</span>
+                </Button>
+              )}
             </div>
 
             {isLoadingStaff ? (
@@ -624,10 +625,12 @@ export function SupportConsolePage() {
                   Super Admins can directly handle tickets, or you can provision dedicated support
                   operator accounts for your team.
                 </p>
-                <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2 mt-2">
-                  <UserPlus className="size-4" />
-                  <span>Provision First Support Operator</span>
-                </Button>
+                {isSuperAdmin && (
+                  <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2 mt-2">
+                    <UserPlus className="size-4" />
+                    <span>Provision First Support Operator</span>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="surface overflow-hidden divide-y divide-border/60">
@@ -654,26 +657,28 @@ export function SupportConsolePage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Revoke support console access for ${staff.display_name} (@${staff.username})?`,
-                            )
-                          ) {
-                            removeStaffMutation.mutate(staff.id);
-                          }
-                        }}
-                        disabled={removeStaffMutation.isPending}
-                        className="gap-1.5 h-8 text-xs"
-                      >
-                        <Trash2 className="size-3.5" />
-                        <span>Revoke Access</span>
-                      </Button>
-                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Revoke support console access for ${staff.display_name} (@${staff.username})?`,
+                              )
+                            ) {
+                              removeStaffMutation.mutate(staff.id);
+                            }
+                          }}
+                          disabled={removeStaffMutation.isPending}
+                          className="gap-1.5 h-8 text-xs"
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span>Revoke Access</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

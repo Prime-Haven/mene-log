@@ -836,14 +836,12 @@ export const replySupportConsoleTicket = createServerFn({ method: "POST" })
    3. SUPPORT STAFF MANAGEMENT (SUPER ADMIN ONLY)
    ========================================================================= */
 
-/** List support staff accounts */
+/** List support staff accounts — any support operator may view the team;
+ *  only Super Admins can add or remove accounts. */
 export const listSupportStaffAccounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const role = await assertSupportOperator(context.userId);
-    if (role !== "super_admin") {
-      throw new Error("Only Super Admins can manage support staff accounts.");
-    }
+    await assertSupportOperator(context.userId);
 
     const db = await admin();
     const { data: staff, error } = await db
