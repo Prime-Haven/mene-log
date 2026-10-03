@@ -625,10 +625,12 @@ export function SupportConsolePage() {
                   Super Admins can directly handle tickets, or you can provision dedicated support
                   operator accounts for your team.
                 </p>
-                <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2 mt-2">
-                  <UserPlus className="size-4" />
-                  <span>Provision First Support Operator</span>
-                </Button>
+                {isSuperAdmin && (
+                  <Button onClick={() => setIsAddStaffOpen(true)} className="gap-2 mt-2">
+                    <UserPlus className="size-4" />
+                    <span>Provision First Support Operator</span>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="surface overflow-hidden divide-y divide-border/60">
@@ -655,26 +657,28 @@ export function SupportConsolePage() {
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Revoke support console access for ${staff.display_name} (@${staff.username})?`,
-                            )
-                          ) {
-                            removeStaffMutation.mutate(staff.id);
-                          }
-                        }}
-                        disabled={removeStaffMutation.isPending}
-                        className="gap-1.5 h-8 text-xs"
-                      >
-                        <Trash2 className="size-3.5" />
-                        <span>Revoke Access</span>
-                      </Button>
-                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Revoke support console access for ${staff.display_name} (@${staff.username})?`,
+                              )
+                            ) {
+                              removeStaffMutation.mutate(staff.id);
+                            }
+                          }}
+                          disabled={removeStaffMutation.isPending}
+                          className="gap-1.5 h-8 text-xs"
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span>Revoke Access</span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
