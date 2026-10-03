@@ -298,10 +298,10 @@ export function SupportConsolePage() {
     },
   });
 
-  // Query support staff accounts (super_admin only)
+  // Query support staff accounts (any operator can view the team)
   const { data: staffList = [], isLoading: isLoadingStaff } = useQuery({
     queryKey: ["support-staff-list", isSuperAdmin],
-    enabled: isOperator && isSuperAdmin && activeTab === "staff",
+    enabled: isOperator && activeTab === "staff",
     queryFn: async () => {
       const headers = await getAuthHeader();
       return listStaffFn({ headers });
