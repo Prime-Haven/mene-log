@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   customType,
+  bigserial,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -429,8 +430,8 @@ export const watchSessions = pgTable("watch_sessions", {
 
 // Plan Config (Pricing overrides and active feature flags)
 export const planConfig = pgTable("plan_config", {
-  id: text("id").primaryKey(),
-  data: jsonb("data").notNull().default({}),
+  tier: tenantTierEnum("tier").primaryKey(),
+  config: jsonb("config").notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   updatedBy: uuid("updated_by"),
 });
@@ -494,11 +495,9 @@ export const auditEvents = pgTable("audit_events", {
 
 // Rate Limit Hits
 export const rateLimitHits = pgTable("rate_limit_hits", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   bucket: text("bucket").notNull(),
   identifier: text("identifier").notNull(),
-  hitCount: integer("hit_count").notNull().default(1),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

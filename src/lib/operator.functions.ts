@@ -1164,10 +1164,11 @@ export const operatorAction = createServerFn({ method: "POST" })
         const { data: res, error } = await db.rpc("cleanup_expired_rate_limits");
         let deleted = 0;
         if (error) {
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
           const { count } = await db
             .from("rate_limit_hits")
             .delete({ count: "exact" })
-            .lt("expires_at", new Date().toISOString());
+            .lt("created_at", oneDayAgo);
           deleted = count ?? 0;
         } else {
           deleted = typeof res === "number" ? res : 0;
