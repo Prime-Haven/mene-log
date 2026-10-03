@@ -1,9 +1,11 @@
 import logo07 from "@/assets/mene-log-logo-07.png";
 import logo08 from "@/assets/mene-log-logo-08.png";
-// The remote full-logo assets belonged to a previous project and no longer
-// resolve (404). Use the bundled local marks so the logo always renders.
-const darkLogo = { url: logo07 };
-const lightLogo = { url: logo08 };
+import darkCropped from "@/assets/mene-log-logo-dark-cropped.png.asset.json";
+import lightCropped from "@/assets/mene-log-logo-light-cropped.png.asset.json";
+// Full desktop wordmarks: cropped wide artwork hosted as pointer assets.
+// Compact icon: the bundled square marks (logo07 light bg / logo08 dark bg).
+const darkLogo = { url: darkCropped.url };
+const lightLogo = { url: lightCropped.url };
 
 type Props = {
   variant?: "dark" | "light"; // "dark" = dark logo on white/light bg; "light" = light logo on dark/black bg
