@@ -1907,6 +1907,7 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      cleanup_expired_rate_limits: { Args: never; Returns: number }
       clear_test_attendance: { Args: { p_tenant: string }; Returns: Json }
       complete_verified_onboarding: { Args: never; Returns: string }
       create_member: {
@@ -2185,6 +2186,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reconcile_member_codes: { Args: { p_tenant_id?: string }; Returns: Json }
       record_delivery_event: {
         Args: { p_event: string; p_provider_id: string }
         Returns: undefined
