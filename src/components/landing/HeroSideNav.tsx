@@ -48,12 +48,12 @@ export function HeroSideNav({
         if (el) {
           const top = el.offsetTop;
           if (scrollPosition >= top) {
-            setActiveSection(item.id);
+            setInternalActiveSection(item.id);
             return;
           }
         }
       }
-      setActiveSection("hero");
+      setInternalActiveSection("hero");
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });

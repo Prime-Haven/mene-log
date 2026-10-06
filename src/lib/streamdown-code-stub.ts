@@ -11,7 +11,7 @@ export interface CodePluginOptions {
 export function createCodePlugin(options: CodePluginOptions = {}) {
   const themes = options.themes ?? ["github-light", "github-dark"];
   return {
-    name: "clean-code-highlighter",
+    name: "shiki" as const,
     type: "code-highlighter" as const,
     supportsLanguage(_lang: string) {
       return true;
