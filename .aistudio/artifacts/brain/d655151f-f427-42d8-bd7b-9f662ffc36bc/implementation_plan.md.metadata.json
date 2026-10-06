@@ -1,6 +1,6 @@
 {
-  "summary":  "Comprehensive system upgrade and database consistency plan covering core church check-in & member care, Super Admin platform controls, data synchronization & export reporting, and security hardening. Includes database schema alignment (Drizzle & Supabase), enum corrections, relational integrity rules, and executable SQL migrations.",
-  "updatedAt":  "2026-10-03T02:09:02.652407056Z",
+  "summary":  "Implementation plan to fix the attendance metric in the hero section:\n- Identifies the root cause where a falsy check on 0 Sunday attendances triggered a hardcoded '98.5%' fallback.\n- Updates the metric evaluation to strictly read real database numbers (including 0) using compact number formatting.\n- Ensures all 4 live telemetry metrics (churches, members, check-ins, attendance) reliably reflect live PostgreSQL data without percentage confusion.",
+  "updatedAt":  "2026-10-06T01:32:21.909883609Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

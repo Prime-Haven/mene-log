@@ -14,13 +14,17 @@ export default defineConfig({
   },
   plugins: [
     {
-      // @vercel/oidc (pulled in by the AI SDK) loads node:fs at startup, which
-      // crashes the edge server. Swap it for a no-op stub in every build.
-      name: "stub-vercel-oidc",
+      // Stubs for edge-incompatible and WebAssembly packages:
+      // 1. @vercel/oidc loads node:fs which crashes edge runtime.
+      // 2. @streamdown/code pulls in shiki/dist/onig.wasm which triggers unwasm module "env" error.
+      name: "stub-edge-incompatible-modules",
       enforce: "pre",
       resolveId(id) {
         if (id === "@vercel/oidc") {
           return new URL("./src/lib/vercel-oidc-stub.ts", import.meta.url).pathname;
+        }
+        if (id === "@streamdown/code") {
+          return new URL("./src/lib/streamdown-code-stub.ts", import.meta.url).pathname;
         }
         return null;
       },

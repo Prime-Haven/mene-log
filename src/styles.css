@@ -19,6 +19,7 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Sora", "Manrope", ui-sans-serif, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -296,5 +297,20 @@
   }
   .motion-blur {
     animation: none;
+  }
+}
+
+/* Native Mobile App Touch & Safe-Area Optimizations */
+html {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

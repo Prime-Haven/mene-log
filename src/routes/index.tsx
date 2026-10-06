@@ -33,13 +33,14 @@ import {
 } from "@/lib/pricing";
 
 import { Button } from "@/components/ui/button";
-import { VerseTyper } from "@/components/VerseTyper";
 import { ReviewCarousel } from "@/components/ReviewCarousel";
 import { SiteFooter } from "@/components/SiteFooter";
-import { HomepageStats } from "@/components/HomepageStats";
 import { PublicAskMene } from "@/components/PublicAskMene";
-import { MeneLogLogo } from "@/components/MeneLogLogo";
-import { ThinkingOrb } from "@/components/ThinkingOrb";
+import { HeroNavbar } from "@/components/landing/HeroNavbar";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { HeroShowreelModal } from "@/components/landing/HeroShowreelModal";
+import { MobileAppTabBar } from "@/components/landing/MobileAppTabBar";
+import { useActiveSection } from "@/hooks/useActiveSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -126,241 +127,30 @@ function LandingPage() {
   const currency = useCurrency();
   const settings = usePlatformSettings();
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
-  const heroRef = useRef<HTMLElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [showreelOpen, setShowreelOpen] = useState(false);
+  const activeSection = useActiveSection(["hero", "features", "care", "pricing", "faq"], 320);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground pb-20 lg:pb-0">
       {settings?.homepage?.banner && (
         <div className="fixed inset-x-0 bottom-0 z-40 bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground md:top-0 md:bottom-auto">
           {settings.homepage.banner}
         </div>
       )}
-      <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-5">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between rounded-2xl border border-white/20 bg-deep/80 px-4 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-6">
-          <Link to="/" aria-label="Mene:Log home" className="flex items-center gap-2.5">
-            <MeneLogLogo variant="light" className="h-10 max-w-48" />
-          </Link>
-          <nav className="hidden items-center gap-8 text-xs font-semibold text-white/80 md:flex">
-            <a href="#why" className="transition-colors hover:text-white">
-              Why Mene:Log
-            </a>
-            <a href="#features" className="transition-colors hover:text-white">
-              Features
-            </a>
-            <Link to="/church-membership-software" className="transition-colors hover:text-white">
-              Membership
-            </Link>
-            <Link to="/church-check-in-software" className="transition-colors hover:text-white">
-              Check-in
-            </Link>
-            <a href="#pricing" className="transition-colors hover:text-white">
-              Plans
-            </a>
-            <a href="#faq" className="transition-colors hover:text-white">
-              FAQ
-            </a>
-            <Link to="/terms" className="transition-colors hover:text-white">
-              Terms
-            </Link>
-            <Link to="/privacy" className="transition-colors hover:text-white">
-              Privacy
-            </Link>
-          </nav>
-          <div className="flex items-center gap-2.5">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="hidden text-white/90 hover:bg-white/10 hover:text-white sm:inline-flex"
-            >
-              <Link to="/auth" search={{ mode: "signin" }}>
-                Sign in
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-xl bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
-            >
-              <Link to="/onboarding">
-                Get Started <ArrowRight className="ml-1 size-3.5" />
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/10 md:hidden"
-              aria-label="Open navigation"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-            </Button>
-          </div>
-        </div>
 
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.nav
-              initial={{ opacity: 0, y: -12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.98 }}
-              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-2 grid max-w-7xl overflow-hidden rounded-2xl border border-white/20 bg-deep/95 p-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-2xl md:hidden"
-            >
-              {[
-                ["#why", "Why Mene:Log"],
-                ["#features", "Features"],
-                ["#pricing", "Plans"],
-                ["#faq", "Questions & Answers"],
-              ].map(([href, label]) => (
-                <a
-                  key={href}
-                  href={href}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-4 py-3 transition-colors hover:bg-white/10"
-                >
-                  {label}
-                </a>
-              ))}
-              <div className="my-1 border-t border-white/10" />
-              <Link
-                to="/terms"
-                onClick={() => setMenuOpen(false)}
-                className="rounded-xl px-4 py-3 transition-colors hover:bg-white/10"
-              >
-                Terms of Use
-              </Link>
-              <Link
-                to="/privacy"
-                onClick={() => setMenuOpen(false)}
-                className="rounded-xl px-4 py-3 transition-colors hover:bg-white/10"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                to="/auth"
-                search={{ mode: "signin" }}
-                onClick={() => setMenuOpen(false)}
-                className="rounded-xl px-4 py-3 transition-colors hover:bg-white/10"
-              >
-                Sign in to your church
-              </Link>
-            </motion.nav>
-          )}
-        </AnimatePresence>
-      </header>
+      {/* Top Floating Glassmorphism Navigation Bar */}
+      <HeroNavbar activeSection={activeSection} />
 
-      <section ref={heroRef} className="relative h-[125svh] overflow-hidden bg-deep">
-        <div className="sticky top-0 h-[100svh] overflow-hidden">
-          {/* Blurred world glow backdrop */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_40%,rgba(14,165,233,0.18)_0%,rgba(99,102,241,0.12)_45%,rgba(5,10,24,0.92)_85%)]"
-          />
-          <div
-            aria-hidden
-            className="absolute -top-32 -left-32 size-[42rem] rounded-full bg-primary/20 blur-[140px] pointer-events-none"
-          />
-          <div
-            aria-hidden
-            className="absolute -bottom-32 -right-32 size-[38rem] rounded-full bg-indigo-500/20 blur-[130px] pointer-events-none"
-          />
+      {/* Redesigned Architectural Hero Section with Expanded Growing Together Deck */}
+      <HeroSection onWatchShowreel={() => setShowreelOpen(true)} />
 
-          {/* Huge interactive 3D Thinking Orb that fills the hero section */}
-          <ThinkingOrb className="absolute inset-0 size-full z-0 opacity-85" />
+      {/* Interactive Video Tour / Showreel Modal */}
+      <HeroShowreelModal
+        open={showreelOpen}
+        onClose={() => setShowreelOpen(false)}
+      />
 
-          {/* Bottom-only atmospheric blend: from 'Made for churches' downwards to mask the orb under the scripture while leaving the sides and top of the orb completely unobstructed */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-[58svh] bg-[linear-gradient(to_top,var(--deep)_0%,var(--deep)_42%,rgba(5,10,24,0.85)_65%,rgba(5,10,24,0.3)_82%,transparent_100%)] pointer-events-none z-[1]"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-[58svh] bg-[radial-gradient(ellipse_85%_70%_at_50%_75%,var(--deep)_40%,rgba(5,10,24,0.7)_65%,transparent_95%)] pointer-events-none z-[1]"
-          />
-
-          {/* Foreground scripture and actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="absolute inset-0 z-10 mx-auto flex max-w-7xl items-end justify-center px-4 pb-12 pt-24 text-center sm:pb-16"
-          >
-            <div className="relative max-w-3xl text-deep-foreground">
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-primary backdrop-blur-md">
-                Made for churches · Built for people
-              </p>
-              <h1 className="sr-only">Mene:Log — Church Attendance and membership, made simple</h1>
-              <VerseTyper />
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-deep-foreground/90 sm:text-lg">
-                Mene:Log brings attendance, membership, leadership and communication together so
-                your church can care with clarity.
-              </p>
-              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-12 bg-primary px-7 text-primary-foreground shadow-lg hover:bg-primary/90 rounded-xl font-semibold"
-                >
-                  <Link to="/onboarding">
-                    Get started <ArrowRight className="ml-1 size-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="h-12 border-white/25 bg-white/10 px-7 text-deep-foreground backdrop-blur hover:bg-white/20 hover:text-white rounded-xl font-semibold"
-                >
-                  <a href="#why">
-                    <Play className="fill-current mr-1 size-4" /> See how it works
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-          <div className="absolute bottom-6 right-5 hidden items-center gap-3 text-xs font-semibold text-deep-foreground/70 sm:flex z-10">
-            <span className="h-px w-14 bg-deep-foreground/40" /> Scroll to explore
-          </div>
-        </div>
-      </section>
-
-      <main className="relative z-10 -mt-[18svh]">
-        <section id="why" className="px-3 sm:px-5">
-          <div className="mx-auto max-w-7xl rounded-t-3xl border-t border-white/10 bg-deep/90 px-5 py-14 text-deep-foreground shadow-2xl backdrop-blur-2xl sm:px-10 lg:px-14">
-            <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-deep-foreground/60">
-                  One connected church record
-                </p>
-                <h2 className="mt-4 max-w-4xl font-display text-3xl font-bold leading-tight text-deep-foreground sm:text-5xl">
-                  From a welcome at the door to meaningful care during the week.
-                </h2>
-              </div>
-              <p className="max-w-xl leading-relaxed text-deep-foreground/70">
-                Check people in quickly, understand who is present or absent, and give leaders the
-                information they need without exposing what they do not.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-px overflow-hidden rounded-lg border border-deep-foreground/15 bg-deep-foreground/15 sm:grid-cols-3">
-              {[
-                ["< 4 sec", "average check-in"],
-                ["One record", "from arrival to follow-up"],
-                ["Every plan", "protected by church-level access"],
-              ].map(([value, label]) => (
-                <div key={label} className="bg-deep/35 p-6 backdrop-blur-xl">
-                  <p className="font-display text-3xl font-bold text-deep-foreground">{value}</p>
-                  <p className="mt-1 text-sm text-deep-foreground/60">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {settings?.homepage?.show_stats !== false && <HomepageStats />}
+      <main className="relative z-10">
 
         <section id="features" className="bg-background px-5 py-24 sm:py-28">
           <div className="mx-auto max-w-7xl">
@@ -397,7 +187,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="bg-primary px-5 py-24 text-primary-foreground sm:py-28">
+        <section id="care" className="bg-primary px-5 py-24 text-primary-foreground sm:py-28">
           <div className="mx-auto max-w-7xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary-foreground/65">
               Churches thrive through people
@@ -605,6 +395,9 @@ function LandingPage() {
 
       <SiteFooter />
       <PublicAskMene />
+
+      {/* Native App-Style Mobile Bottom Navigation Tab Bar */}
+      <MobileAppTabBar activeSection={activeSection} />
     </div>
   );
 }
