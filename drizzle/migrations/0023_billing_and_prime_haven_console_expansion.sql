@@ -109,7 +109,7 @@ BEGIN
 
   BEGIN
     INSERT INTO public.tenants (name, subdomain, tier, contact_email, contact_phone, approval_status, approval_risk_flags, status, trial_ends_at, approved_at)
-    VALUES (trim(p_name), v_sub, p_tier, nullif(v_email,''), v_phone, v_initial_approval, v_risk_flags, v_initial_status, now() + interval '14 days', CASE WHEN v_initial_approval = 'approved' THEN now() ELSE NULL END)
+    VALUES (trim(p_name), v_sub, p_tier, nullif(v_email,''), v_phone, v_initial_approval, v_risk_flags, v_initial_status, now() + interval '30 days', CASE WHEN v_initial_approval = 'approved' THEN now() ELSE NULL END)
     RETURNING id INTO v_tenant;
   EXCEPTION WHEN unique_violation THEN
     RAISE EXCEPTION 'That check-in address is already taken';
@@ -117,13 +117,13 @@ BEGIN
 
   INSERT INTO public.branches (tenant_id, name, is_default) VALUES (v_tenant, 'Main', true) RETURNING id INTO v_branch;
   INSERT INTO public.tenant_users (tenant_id, user_id, role, branch_id) VALUES (v_tenant, auth.uid(), 'owner', v_branch);
-  INSERT INTO public.subscriptions (tenant_id, tier, period_start, period_end) VALUES (v_tenant, p_tier, v_start, v_start + 14);
+  INSERT INTO public.subscriptions (tenant_id, tier, period_start, period_end) VALUES (v_tenant, p_tier, v_start, v_start + 30);
 
   IF p_tier IN ('standard','premium') THEN
     INSERT INTO public.structure_levels (tenant_id, name, rank) VALUES (v_tenant, 'Leader', 1);
   END IF;
 
-  PERFORM public.log_audit(v_tenant, 'tenant.provisioned', v_sub, jsonb_build_object('tier', p_tier, 'trial_days', 14, 'approval_status', v_initial_approval, 'risk_flags', v_risk_flags));
+  PERFORM public.log_audit(v_tenant, 'tenant.provisioned', v_sub, jsonb_build_object('tier', p_tier, 'trial_days', 30, 'approval_status', v_initial_approval, 'risk_flags', v_risk_flags));
   RETURN v_tenant;
 END; $$;
 

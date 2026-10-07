@@ -350,19 +350,43 @@ export async function sendNewChurchSignupAlert(options: {
 </body>
 </html>`;
 
+  // 1. Dispatch SMS alert to admin mobile 0550160237 (+233550160237)
   try {
-    const res = await sendEmail({
-      to: SUPPORT_NOTIFICATION_EMAIL,
-      subject: emailSubject,
-      html,
-      fromName: "Mene:Log Sign-up Alert",
-      replyTo: "support@menelog.site",
-    });
-    return res;
-  } catch (err) {
-    console.error("[signup alert] Failed to send new church notification email:", err);
-    return { ok: false, error: String(err) };
+    const { sendSms, smsConfigured } = await import("./messaging.server");
+    if (smsConfigured()) {
+      const smsBody = `[Mene:Log] New church onboarded: ${options.churchName} (${options.subdomain}) on 30-day ${options.tier.toUpperCase()} trial. Contact: ${options.contactPhone || options.contactEmail}. Admin: ${options.adminName || "N/A"}.`;
+      await sendSms({
+        to: "+233550160237",
+        body: smsBody,
+        sender: "Mene Log",
+      });
+    }
+  } catch (smsErr) {
+    console.error("[signup alert] Failed to send new church SMS notification:", smsErr);
   }
+
+  // 2. Dispatch email alerts to mene.log26@gmail.com and operations desk
+  const recipientEmails = Array.from(new Set(["mene.log26@gmail.com", SUPPORT_NOTIFICATION_EMAIL]));
+  let primaryResult = { ok: true, providerId: undefined as string | undefined };
+
+  for (const recipient of recipientEmails) {
+    try {
+      const res = await sendEmail({
+        to: recipient,
+        subject: emailSubject,
+        html,
+        fromName: "Mene:Log Sign-up Alert",
+        replyTo: "support@menelog.site",
+      });
+      if (recipient === "mene.log26@gmail.com") {
+        primaryResult = res;
+      }
+    } catch (err) {
+      console.error(`[signup alert] Failed to send new church notification email to ${recipient}:`, err);
+    }
+  }
+
+  return primaryResult;
 }
 
 /**

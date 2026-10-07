@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Check, X, ArrowRight, ShieldAlert, Sparkles, Building2 } from "lucide-react";
@@ -10,10 +10,21 @@ import {
   startPayment,
   startSpacePurchase,
   resendReceipt,
+  downgradeToFree,
   EXTRA_SPACE_BUNDLES,
 } from "@/lib/billing.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatUsd } from "@/lib/currency";
 import { BillingToggle } from "@/components/BillingToggle";
@@ -48,17 +59,41 @@ export const Route = createFileRoute("/_app/billing")({
 });
 
 export function Billing() {
+  const qc = useQueryClient();
   const ctx = useTenant();
   const { tenant } = ctx;
   const trialActive =
     !!tenant?.trial_ends_at && new Date(tenant.trial_ends_at).getTime() > Date.now();
+  const currentTier = (tenant?.tier ?? "free") as "free" | PlanTier;
+  const trialExpired =
+    !!tenant?.trial_ends_at &&
+    new Date(tenant.trial_ends_at).getTime() <= Date.now() &&
+    currentTier !== "free";
+
+  const [downgradeConfirmOpen, setDowngradeConfirmOpen] = useState(false);
   const pay = useServerFn(startPayment);
+  const downgradeFn = useServerFn(downgradeToFree);
   const currency = useCurrency();
   const [interval, setInterval] = useState<BillingInterval>("monthly");
   usePlatformSettings();
   const [coupon, setCoupon] = useState("");
 
-  const currentTier = (tenant?.tier ?? "free") as "free" | PlanTier;
+  const downgradeMutation = useMutation({
+    mutationFn: async () => {
+      const result = await downgradeFn({ data: { tenant_id: tenant!.id } });
+      if (!result.ok) throw new Error(result.message);
+      return result;
+    },
+    onSuccess: (data) => {
+      setDowngradeConfirmOpen(false);
+      toast.success(data.message || "Switched to Free plan. All records are safe.");
+      void qc.invalidateQueries({ queryKey: ["tenant"] });
+      void qc.invalidateQueries({ queryKey: ["membership"] });
+      void qc.invalidateQueries({ queryKey: ["subscription"] });
+      window.location.reload();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not downgrade plan"),
+  });
 
   const renew = useMutation({
     mutationFn: async (tier: PlanTier) => {
@@ -242,6 +277,40 @@ export function Billing() {
         </div>
       )}
 
+      {trialExpired && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm flex items-start gap-3.5 shadow-sm">
+          <ShieldAlert className="size-6 shrink-0 text-amber-500 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-bold text-base text-foreground">Your 30-day trial has concluded</h3>
+            <p className="mt-1 text-muted-foreground leading-relaxed">
+              All your church member records, attendance logs, and data remain 100% safe and preserved.
+              To continue accessing advanced capabilities, please select and activate your package below.
+              You can also choose to downgrade to the Free plan at any time.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground font-semibold"
+                onClick={() => {
+                  const el = document.getElementById("plan-selection");
+                  el?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                Choose & Pay Package <ArrowRight className="size-4 ml-1.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canModifyPlan || downgradeMutation.isPending}
+                onClick={() => setDowngradeConfirmOpen(true)}
+              >
+                Downgrade to Free Plan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Usage Against Limits */}
       <div className="surface p-5">
         <h2 className="text-base font-semibold">Account usage vs package limits</h2>
@@ -333,7 +402,7 @@ export function Billing() {
       </div>
 
       {/* Plan Selection with Homepage Treatment */}
-      <div className="space-y-6">
+      <div id="plan-selection" className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <p className="text-eyebrow">Package Selection</p>
@@ -494,10 +563,11 @@ export function Billing() {
                   {tier.id === "free" ? (
                     <Button
                       variant={isCurrent ? "outline" : "secondary"}
-                      className="w-full h-10 text-xs"
-                      disabled={isCurrent || !canModifyPlan}
+                      className="w-full h-10 text-xs font-semibold"
+                      disabled={isCurrent || !canModifyPlan || downgradeMutation.isPending}
+                      onClick={() => setDowngradeConfirmOpen(true)}
                     >
-                      {isCurrent ? "Current plan" : "Select Free"}
+                      {isCurrent ? "Current plan" : "Downgrade to Free"}
                     </Button>
                   ) : (
                     <Button
@@ -574,6 +644,40 @@ export function Billing() {
           <p className="p-8 text-center text-sm text-muted-foreground">No payments recorded yet.</p>
         )}
       </div>
+
+      {/* Confirmation Dialog for Downgrading to Free */}
+      <AlertDialog open={downgradeConfirmOpen} onOpenChange={setDowngradeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Downgrade to Free plan?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
+              <span className="block">
+                Your church will switch to the Free plan. All your congregation members,
+                check-ins, and service records will remain 100% safe and accessible.
+              </span>
+              <span className="block text-xs">
+                Pro features (such as automated broadcasts, WhatsApp messaging, multi-branch management,
+                and custom leadership hierarchies) will be locked until you upgrade again.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={downgradeMutation.isPending}>
+              Keep Current Plan
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={downgradeMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                downgradeMutation.mutate();
+              }}
+            >
+              {downgradeMutation.isPending ? "Downgrading..." : "Confirm Downgrade"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -362,3 +362,74 @@ export const resendReceipt = createServerFn({ method: "POST" })
       };
     return { ok: true as const, email: profile.email };
   });
+
+export const downgradeToFree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ tenant_id: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isAdmin } = await supabase.rpc("is_tenant_admin", { _tenant: data.tenant_id });
+    if (isAdmin !== true) {
+      return { ok: false as const, message: "Only a church administrator can manage plans." };
+    }
+
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("id, tier, name, parent_tenant_id")
+      .eq("id", data.tenant_id)
+      .maybeSingle();
+
+    if (!tenant) {
+      return { ok: false as const, message: "Church not found." };
+    }
+
+    if (tenant.parent_tenant_id) {
+      return {
+        ok: false as const,
+        message: "Branch accounts are managed from the head office church.",
+      };
+    }
+
+    if (tenant.tier === "free") {
+      return { ok: true as const, message: "Church is already on the Free plan." };
+    }
+
+    // 1. Update tenants table to 'free'
+    const { error: tenantErr } = await supabase
+      .from("tenants")
+      .update({
+        tier: "free",
+        status: "active",
+      })
+      .eq("id", data.tenant_id);
+
+    if (tenantErr) {
+      return { ok: false as const, message: "Failed to update church plan." };
+    }
+
+    // 2. Update subscriptions table to 'free'
+    await supabase
+      .from("subscriptions")
+      .update({
+        tier: "free",
+        period_end: "9999-12-31",
+      })
+      .eq("tenant_id", data.tenant_id);
+
+    // 3. Log audit event
+    await supabase.rpc("log_audit", {
+      _tenant: data.tenant_id,
+      _action: "billing.downgraded_to_free",
+      _target: "plan",
+      _detail: { previous_tier: tenant.tier, new_tier: "free" },
+      _actor: userId,
+    });
+
+    return {
+      ok: true as const,
+      message: "Successfully switched to the Free plan. All records and member logs remain safe.",
+    };
+  });
+
