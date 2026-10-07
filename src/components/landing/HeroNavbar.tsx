@@ -63,6 +63,7 @@ export function HeroNavbar({
             aria-label="Mene:Log Home"
           >
             <MeneLogLogo
+              variant="light"
               onBackground="black"
               className="h-9 sm:h-10 lg:h-8 xl:h-9 w-auto"
             />
