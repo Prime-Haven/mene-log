@@ -4126,13 +4126,14 @@ DECLARE
   v_code text;
   v_exists boolean;
   v_chars text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  v_len int := 6;
+  v_bytes bytea;
   i int;
 BEGIN
   LOOP
+    v_bytes := extensions.gen_random_bytes(8);
     v_code := 'ML-';
-    FOR i IN 1..v_len LOOP
-      v_code := v_code || substr(v_chars, floor(random() * length(v_chars) + 1)::int, 1);
+    FOR i IN 0..7 LOOP
+      v_code := v_code || substr(v_chars, (get_byte(v_bytes, i) % 32) + 1, 1);
     END LOOP;
     SELECT EXISTS (
       SELECT 1 FROM public.members

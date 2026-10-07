@@ -86,13 +86,13 @@ export const registerLeader = createServerFn({ method: "POST" })
       .eq("tenant_id", tenant.id)
       .maybeSingle();
 
-    let expectedCode = codeRow?.code;
-    if (!expectedCode) {
-      expectedCode = `LEAD-${data.subdomain.toUpperCase().slice(0, 6)}`;
-      await supabaseAdmin.from("tenant_leader_access").insert({
-        tenant_id: tenant.id,
-        code: expectedCode,
-      });
+    // Never derive a code from public data: churches must set one explicitly.
+    const expectedCode = codeRow?.code;
+    if (!expectedCode || expectedCode.trim().length < 8) {
+      return {
+        ok: false as const,
+        message: "Leader sign-up isn't open yet. Please ask your church administrator for the leader access code.",
+      };
     }
 
     if (data.access_code.trim().toUpperCase() !== expectedCode.trim().toUpperCase()) {

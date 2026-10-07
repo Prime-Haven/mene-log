@@ -465,7 +465,7 @@ export const testSupportSmsConfig = createServerFn({ method: "POST" })
     z
       .object({
         tenant_id: z.string().uuid(),
-        recipients: z.array(z.string().trim()).min(1),
+        recipients: z.array(z.string().trim().max(32)).max(5).optional(),
       })
       .parse(d),
   )
@@ -473,17 +473,27 @@ export const testSupportSmsConfig = createServerFn({ method: "POST" })
     const db = await admin();
     await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
 
+    // Only text the numbers already saved in this church's settings,
+    // never numbers supplied with the request.
     const { data: tenant } = await db
       .from("tenants")
-      .select("name")
+      .select("name, support_sms_recipients")
       .eq("id", data.tenant_id)
       .maybeSingle();
 
     const churchName = tenant?.name || "Church Partner";
-    const res = await sendTestSupportSmsAlert({
-      churchName,
-      recipients: data.recipients,
-    });
+    const saved = String(tenant?.support_sms_recipients ?? "")
+      .split(/[,;\n]/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    if (saved.length === 0) {
+      return { ok: false, error: "Save at least one alert phone number before sending a test." };
+    }
+    const { rateLimit } = await import("./operator.server");
+    const allowed = await rateLimit("support_sms_test", data.tenant_id, 3, 3600);
+    if (!allowed) return { ok: false, error: "Too many test texts. Please try again in an hour." };
+    const res = await sendTestSupportSmsAlert({ churchName, recipients: saved });
 
     return res;
   });
