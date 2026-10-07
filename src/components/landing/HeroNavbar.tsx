@@ -62,8 +62,11 @@ export function HeroNavbar({
             className="flex items-center gap-2.5 transition-transform hover:scale-105 shrink-0 group"
             aria-label="Mene:Log Home"
           >
-            {/* Brand: official Mene:Log icon logo on ALL viewports (icon only, no full wordmark) */}
+            {/* Brand: official Mene:Log icon logo with the Mene:Log wordmark text beside it */}
             <MeneLogLogo onBackground="black" compact className="size-9 sm:size-10" />
+            <span className="font-heading text-base sm:text-lg font-bold tracking-tight text-white leading-none">
+              Mene<span className="text-sky-400">:</span>Log
+            </span>
           </Link>
 
           {/* Center: Frosted Glass Nav Links (Desktop Web View) */}
