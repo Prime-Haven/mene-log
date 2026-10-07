@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Menu, X, QrCode } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 type NavItem = {
   label: string;
