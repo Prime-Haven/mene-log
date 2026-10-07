@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Menu, X, QrCode } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MeneLogLogo } from "@/components/MeneLogLogo";
 
 type NavItem = {
   label: string;
@@ -61,21 +62,8 @@ export function HeroNavbar({
             className="flex items-center gap-2.5 transition-transform hover:scale-105 shrink-0 group"
             aria-label="Mene:Log Home"
           >
-            {/* Logo Icon: ALWAYS visible on mobile, tablet, and web */}
-            <div className="size-8 sm:size-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-display font-extrabold text-sm shadow-md shadow-blue-600/40 backdrop-blur-md border border-white/30 group-hover:bg-blue-500 transition-colors">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-4 sm:size-5 fill-current"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 2L3 9v11a2 2 0 002 2h14a2 2 0 002-2V9l-9-7zm0 3.8L18 10v9H6v-9l6-4.2zM11 12h2v5h-2v-5z" />
-              </svg>
-            </div>
-
-            {/* Logo Text: ONLY on desktop / web view (lg:inline-block), HIDDEN on tab and mobile view */}
-            <span className="hidden lg:inline-block font-display text-lg sm:text-xl font-bold tracking-tight text-white drop-shadow-md">
-              Mene:Log
-            </span>
+            {/* Brand: official Mene:Log icon logo on ALL viewports (icon only, no full wordmark) */}
+            <MeneLogLogo onBackground="black" compact className="size-9 sm:size-10" />
           </Link>
 
           {/* Center: Frosted Glass Nav Links (Desktop Web View) */}
