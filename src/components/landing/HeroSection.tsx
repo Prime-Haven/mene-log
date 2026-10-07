@@ -12,7 +12,6 @@ import {
   QrCode,
   ScanLine,
   ShieldCheck,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -139,71 +138,53 @@ export function HeroSection({
   return (
     <section
       id="hero"
-      aria-label="Mene:Log Architectural Sanctuary Hero"
-      className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col justify-between pt-24 sm:pt-28 pb-10 sm:pb-16 text-white overflow-hidden"
+      aria-label="Mene:Log Sanctuary Hero"
+      className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col justify-between overflow-hidden bg-black text-white pt-28 sm:pt-36 pb-10 sm:pb-14"
     >
-      {/* 1. Photorealistic Glass Sanctuary Architecture Background */}
+      {/* 1. Sanctuary photo backdrop */}
       <SanctuaryHeroBackdrop />
 
-      {/* 2. Top-Right Architectural Feature Tags */}
-      <div className="absolute top-28 sm:top-32 right-4 sm:right-8 lg:right-12 hidden md:flex flex-col items-end gap-2 z-20 pointer-events-none">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/35 px-4 py-1.5 text-[11px] font-semibold tracking-wider uppercase text-white/90 backdrop-blur-xl shadow-lg">
-          <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-          Sanctuary Experience v3.4
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-3.5 py-1 text-[11px] font-medium text-white/75 backdrop-blur-md">
-          Sub-4s QR Door Check-in
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-3.5 py-1 text-[11px] font-medium text-white/75 backdrop-blur-md">
-          99.8% Sunday Morning Reliability
-        </span>
+      {/* 2. Cinematic overlay + atmospheric blue glow */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/30 to-transparent" />
+        <div className="absolute -top-[10%] -right-[10%] size-[520px] rounded-full bg-sky-500/10 blur-[130px]" />
+        <div className="absolute -bottom-[10%] -left-[5%] size-[420px] rounded-full bg-sky-300/5 blur-[110px]" />
       </div>
 
-      {/* 3. Main Hero Typography & Call-To-Action (Left Column) */}
-      <div className="relative z-20 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
-        <div className="max-w-3xl">
-          {/* Eyebrow Glass Capsule */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-xl shadow-lg mb-6">
-            <Sparkles className="size-3.5 text-amber-300 animate-spin-slow" />
-            <span>Modern Church Attendance & Membership System</span>
-          </div>
-
+      {/* 3. Main hero content */}
+      <div className="relative z-20 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-12">
+        <div className="max-w-4xl">
           {/* Hero Main Headline */}
-          <h1 className="font-display text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08] drop-shadow-lg">
+          <h1 className="font-display text-5xl sm:text-7xl lg:text-8xl font-extrabold tracking-tighter leading-[0.95] text-white">
             Architecting Stronger Churches,{" "}
-            <span className="bg-gradient-to-r from-blue-300 via-white to-blue-200 bg-clip-text text-transparent">
-              One Soul at a Time.
-            </span>
+            <span className="text-sky-300">One Soul</span> at a Time.
           </h1>
 
           {/* Hero Subtitle */}
-          <p className="mt-6 text-base sm:text-lg lg:text-xl leading-relaxed text-slate-100/90 font-sans max-w-2xl drop-shadow-md">
+          <p className="mt-8 text-lg sm:text-xl leading-relaxed text-zinc-400 max-w-2xl">
             From lightning-fast 4-second QR door check-ins to deep pastoral care,
-            Mene:Log provides the digital sanctuary your congregation needs to flourish,
-            connect, and grow together.
+            Mene:Log provides the digital sanctuary your congregation needs to
+            flourish, connect, and grow together.
           </p>
 
-          {/* Call-to-Action Buttons (Optimized for mobile thumbs and desktop) */}
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            {/* Primary Action: Sleek Dark / Contrast Glass Pill */}
+          {/* Call-to-Action Buttons */}
+          <div className="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <Link
               to="/onboarding"
-              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-slate-950 shadow-2xl transition-all duration-200 hover:bg-slate-100 hover:shadow-white/20 active:scale-95"
+              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full bg-white px-8 py-4 text-sm font-bold text-black shadow-[0_0_30px_-8px_rgba(255,255,255,0.35)] transition-all duration-300 hover:bg-sky-300 active:scale-95"
             >
               <span>Start Free Church Setup</span>
-              <span className="grid size-6 place-items-center rounded-full bg-slate-900 text-white transition-transform duration-200 group-hover:translate-x-1">
-                <ArrowRight className="size-3.5" />
-              </span>
+              <ArrowRight className="size-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
 
-            {/* Secondary Action: Frosted Glass Circular Play Button */}
             <button
               type="button"
               onClick={onWatchShowreel}
-              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full border border-white/40 bg-white/15 px-5 py-3.5 text-sm font-semibold text-white shadow-xl backdrop-blur-xl transition-all duration-200 hover:bg-white/25 hover:border-white/60 active:scale-95"
+              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full border border-white/10 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 active:scale-95"
             >
-              <span className="grid size-7 place-items-center rounded-full bg-white/20 text-white transition-transform duration-200 group-hover:scale-110">
-                <Play className="size-3.5 fill-current ml-0.5" />
+              <span className="grid size-8 place-items-center rounded-full bg-white/10 transition-colors duration-300 group-hover:bg-white/20">
+                <Play className="size-4 fill-current ml-0.5" />
               </span>
               <span>Watch Interactive Tour</span>
             </button>
@@ -211,116 +192,117 @@ export function HeroSection({
         </div>
       </div>
 
-      {/* 4. Bottom Floating Glassmorphism Cards Deck */}
-      <div className="relative z-20 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 mt-12 sm:mt-16">
-        <div className="grid gap-4 sm:gap-5 lg:grid-cols-12 items-stretch">
-          {/* ------------------------------------------------------------- */}
-          {/* Card A: Expanded "Growing together" Metrics Panel (7 Columns)  */}
-          {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-7 rounded-3xl border border-white/35 bg-white/20 p-5 sm:p-6 shadow-2xl backdrop-blur-2xl flex flex-col justify-between transition-all duration-300 hover:border-white/50 hover:bg-white/25">
+      {/* 4. Bottom glass cards deck */}
+      <div className="relative z-20 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-12 mt-14 sm:mt-16">
+        <div className="grid gap-6 lg:grid-cols-12 items-stretch">
+          {/* Card A: "Growing together" live telemetry (7 columns) */}
+          <div className="lg:col-span-7 group rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8 backdrop-blur-2xl flex flex-col justify-between transition-colors duration-300 hover:border-sky-500/30">
             <div>
-              <div className="flex items-center justify-between border-b border-white/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-white/90">
-                    Growing together
-                  </span>
+              <div className="flex items-start justify-between mb-6 sm:mb-8">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-sky-400 animate-pulse" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-300">
+                      Growing Together
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] font-medium uppercase tracking-widest text-zinc-500">
+                    Live Platform Telemetry
+                  </p>
                 </div>
-                <span className="text-[11px] font-medium text-white/70">
-                  Live Platform Telemetry
-                </span>
               </div>
 
-              {/* 4-Column Balanced Metrics Grid */}
-              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-3 divide-y sm:divide-y-0 sm:divide-x divide-white/15 text-left">
-                <div className="pt-2 sm:pt-0 sm:pr-3">
-                  <div className="flex items-center gap-1.5 text-white/75 text-xs">
-                    <Church className="size-3.5 text-blue-300" />
-                    <span>Churches</span>
+              {/* 4-column metrics grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 border-y border-white/5 py-5 sm:py-6 text-left">
+                <div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <Church className="size-4" />
+                    <span className="text-[11px] font-semibold">Churches</span>
                   </div>
-                  <div className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-white tabular-nums">
+                  <div className="mt-2 font-display text-3xl font-bold tracking-tight text-white tabular-nums">
                     {churchesCount}
                   </div>
-                  <p className="mt-1 text-[11px] text-white/70 leading-tight">
+                  <p className="mt-1 text-[10px] font-medium text-zinc-600">
                     Active ministries
                   </p>
                 </div>
 
-                <div className="pt-2 sm:pt-0 sm:px-3">
-                  <div className="flex items-center gap-1.5 text-white/75 text-xs">
-                    <Users className="size-3.5 text-amber-300" />
-                    <span>Members</span>
+                <div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <Users className="size-4" />
+                    <span className="text-[11px] font-semibold">Members</span>
                   </div>
-                  <div className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-white tabular-nums">
+                  <div className="mt-2 font-display text-3xl font-bold tracking-tight text-white tabular-nums">
                     {membersCount}
                   </div>
-                  <p className="mt-1 text-[11px] text-white/70 leading-tight">
+                  <p className="mt-1 text-[10px] font-medium text-zinc-600">
                     Cared for weekly
                   </p>
                 </div>
 
-                <div className="pt-2 sm:pt-0 sm:px-3">
-                  <div className="flex items-center gap-1.5 text-white/75 text-xs">
-                    <ScanLine className="size-3.5 text-emerald-300" />
-                    <span>Check-ins</span>
+                <div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <ScanLine className="size-4" />
+                    <span className="text-[11px] font-semibold">Check-ins</span>
                   </div>
-                  <div className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-white tabular-nums">
+                  <div className="mt-2 font-display text-3xl font-bold tracking-tight text-white tabular-nums">
                     {checkinsCount}
                   </div>
-                  <p className="mt-1 text-[11px] text-white/70 leading-tight">
+                  <p className="mt-1 text-[10px] font-medium text-zinc-600">
                     Sub-4s door scans
                   </p>
                 </div>
 
-                <div className="pt-2 sm:pt-0 sm:pl-3">
-                  <div className="flex items-center gap-1.5 text-white/75 text-xs">
-                    <BarChart3 className="size-3.5 text-purple-300" />
-                    <span>Attendance</span>
+                <div>
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <BarChart3 className="size-4" />
+                    <span className="text-[11px] font-semibold">Attendance</span>
                   </div>
-                  <div className="mt-2 font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-white tabular-nums">
+                  <div className="mt-2 font-display text-3xl font-bold tracking-tight text-sky-300 tabular-nums">
                     {attendanceCount}
                   </div>
-                  <p className="mt-1 text-[11px] text-white/70 leading-tight">
+                  <p className="mt-1 text-[10px] font-medium text-zinc-600">
                     Sunday average
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Guarantee Micro-banner */}
-            <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/80">
-              <span className="flex items-center gap-1.5">
-                <Clock className="size-3.5 text-amber-300" />
+            {/* Bottom micro-banner */}
+            <div className="mt-6 flex items-center justify-between">
+              <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                <Clock className="size-4 text-sky-400" />
                 Zero Sunday morning bottlenecks
               </span>
               <Link
                 to="/onboarding"
-                className="font-semibold text-white hover:underline inline-flex items-center gap-1"
+                className="inline-flex items-center gap-2 text-xs font-bold text-white transition-colors hover:text-sky-300"
               >
                 <span>Join churches</span>
-                <ArrowRight className="size-3" />
+                <ArrowUpRight className="size-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
             </div>
           </div>
 
-          {/* ------------------------------------------------------------- */}
-          {/* Card B: Interactive Feature Showcase Carousel (5 Columns)     */}
-          {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-5 rounded-3xl border border-white/35 bg-white/20 p-5 sm:p-6 shadow-2xl backdrop-blur-2xl flex flex-col justify-between transition-all duration-300 hover:border-white/50 hover:bg-white/25">
+          {/* Card B: Feature spotlight carousel (5 columns) */}
+          <div className="lg:col-span-5 group relative overflow-hidden rounded-3xl border border-white/15 bg-white/[0.05] p-6 sm:p-8 backdrop-blur-2xl flex flex-col justify-between transition-colors duration-300 hover:border-sky-500/30">
+            {/* Decorative corner glow */}
+            <div className="absolute -bottom-6 -right-6 size-24 rounded-full bg-sky-500/5 blur-2xl transition-all duration-700 group-hover:bg-sky-500/20" />
+
             <div>
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-                  <HighlightIcon className="size-3" />
+              <div className="flex items-center justify-between mb-6">
+                <span className="inline-flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-sky-400">
+                  <HighlightIcon className="size-4" />
                   {currentHighlight.tag}
                 </span>
 
                 {/* Prev / Next Controls */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={prevSlide}
                     aria-label="Previous feature"
-                    className="grid size-7 place-items-center rounded-full border border-white/30 bg-white/15 text-white transition-colors hover:bg-white/30 active:scale-90"
+                    className="grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 active:scale-90"
                   >
                     <ChevronLeft className="size-4" />
                   </button>
@@ -328,49 +310,48 @@ export function HeroSection({
                     type="button"
                     onClick={nextSlide}
                     aria-label="Next feature"
-                    className="grid size-7 place-items-center rounded-full border border-white/30 bg-white/15 text-white transition-colors hover:bg-white/30 active:scale-90"
+                    className="grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 text-white transition-colors hover:bg-white/10 active:scale-90"
                   >
                     <ChevronRight className="size-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="mt-3.5 min-h-[5.5rem]">
-                <h3 className="font-display text-lg font-bold text-white leading-snug">
+              <div className="min-h-[6rem]">
+                <h3 className="font-display text-2xl font-bold leading-snug tracking-tight text-white">
                   {currentHighlight.title}
                 </h3>
-                <p className="mt-1.5 text-xs sm:text-sm text-white/80 leading-relaxed line-clamp-2">
+                <p className="mt-3 text-sm leading-relaxed text-zinc-400">
                   {currentHighlight.description}
                 </p>
               </div>
             </div>
 
-            {/* Avatar Stack & Dots Navigation */}
-            <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-between">
-              {/* Pastoral Avatar Group */}
-              <div className="flex items-center gap-2">
+            {/* Avatar stack & dots */}
+            <div className="mt-8 flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div className="flex -space-x-2 overflow-hidden">
                   <img
-                    className="inline-block size-6 rounded-full ring-2 ring-white/50 object-cover"
+                    className="inline-block size-7 rounded-full border-2 border-black object-cover"
                     src={pastorPortrait}
                     alt="Pastor portrait"
                   />
                   <img
-                    className="inline-block size-6 rounded-full ring-2 ring-white/50 object-cover"
+                    className="inline-block size-7 rounded-full border-2 border-black object-cover"
                     src={worshipPoster}
                     alt="Sanctuary volunteer"
                   />
-                  <div className="inline-grid size-6 place-items-center rounded-full bg-blue-600 text-[9px] font-bold ring-2 ring-white/50 text-white">
+                  <div className="inline-grid size-7 place-items-center rounded-full border-2 border-black bg-sky-500 text-[10px] font-bold text-white">
                     +4k
                   </div>
                 </div>
-                <span className="text-[11px] font-medium text-white/80">
+                <span className="text-[11px] font-bold uppercase tracking-tight text-zinc-500">
                   Pastoral leaders
                 </span>
               </div>
 
               {/* Dots */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {SPOTLIGHT_SLIDES.map((_, i) => (
                   <button
                     key={i}
@@ -378,7 +359,7 @@ export function HeroSection({
                     onClick={() => setActiveSlide(i)}
                     aria-label={`Go to slide ${i + 1}`}
                     className={`h-1.5 rounded-full transition-all duration-200 ${
-                      activeSlide === i ? "w-5 bg-white" : "w-1.5 bg-white/40"
+                      activeSlide === i ? "w-6 bg-white" : "w-1.5 bg-white/20"
                     }`}
                   />
                 ))}
