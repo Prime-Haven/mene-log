@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BranchInviteRouteImport } from './routes/branch-invite'
 import { Route as ChurchCheckInSoftwareRouteImport } from './routes/church-check-in-software'
 import { Route as ChurchMembershipSoftwareRouteImport } from './routes/church-membership-software'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -59,6 +60,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BranchInviteRoute = BranchInviteRouteImport.update({
+  id: '/branch-invite',
+  path: '/branch-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChurchCheckInSoftwareRoute = ChurchCheckInSoftwareRouteImport.update({
@@ -237,6 +243,7 @@ const ApiPublicWebhooksPaystackRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/branch-invite': typeof BranchInviteRoute
   '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
   '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
@@ -275,6 +282,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/branch-invite': typeof BranchInviteRoute
   '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
   '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/branch-invite': typeof BranchInviteRoute
   '/church-check-in-software': typeof ChurchCheckInSoftwareRoute
   '/church-membership-software': typeof ChurchMembershipSoftwareRoute
   '/onboarding': typeof OnboardingRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/branch-invite'
     | '/church-check-in-software'
     | '/church-membership-software'
     | '/onboarding'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/branch-invite'
     | '/church-check-in-software'
     | '/church-membership-software'
     | '/onboarding'
@@ -432,6 +443,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/branch-invite'
     | '/church-check-in-software'
     | '/church-membership-software'
     | '/onboarding'
@@ -472,6 +484,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BranchInviteRoute: typeof BranchInviteRoute
   ChurchCheckInSoftwareRoute: typeof ChurchCheckInSoftwareRoute
   ChurchMembershipSoftwareRoute: typeof ChurchMembershipSoftwareRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -511,6 +524,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/branch-invite': {
+      id: '/branch-invite'
+      path: '/branch-invite'
+      fullPath: '/branch-invite'
+      preLoaderRoute: typeof BranchInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/church-check-in-software': {
@@ -804,6 +824,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  BranchInviteRoute: BranchInviteRoute,
   ChurchCheckInSoftwareRoute: ChurchCheckInSoftwareRoute,
   ChurchMembershipSoftwareRoute: ChurchMembershipSoftwareRoute,
   OnboardingRoute: OnboardingRoute,
