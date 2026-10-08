@@ -36,8 +36,9 @@ function BranchesPage() {
   const listFn = useServerFn(listBranches);
   const createFn = useServerFn(createBranch);
   const manageFn = useServerFn(manageBranch);
-  const [f, setF] = useState({ name: "", subdomain: "", city: "", admin_email: "" });
+  const [f, setF] = useState({ name: "", subdomain: "", city: "" });
   const [adding, setAdding] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const allowed = can("branches") && !isBranch && isAdmin;
 
   const q = useQuery({
@@ -50,8 +51,9 @@ function BranchesPage() {
     onSuccess: (r) => {
       if (r.ok) {
         toast.success(r.message);
-        setF({ name: "", subdomain: "", city: "", admin_email: "" });
+        setF({ name: "", subdomain: "", city: "" });
         setAdding(false);
+        if (r.invitePath) setInviteLink(`${origin}${r.invitePath}`);
         qc.invalidateQueries({ queryKey: ["branches"] });
       } else toast.error(r.message);
     },
@@ -154,15 +156,10 @@ function BranchesPage() {
               onChange={(e) => setF({ ...f, city: e.target.value })}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Branch administrator's email</Label>
-            <Input
-              required
-              type="email"
-              value={f.admin_email}
-              onChange={(e) => setF({ ...f, admin_email: e.target.value })}
-            />
-          </div>
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            After creating the branch you'll get a one-time invite link to share with its
+            administrator yourself (WhatsApp, in person, etc.). No email is sent.
+          </p>
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" disabled={create.isPending}>
               {create.isPending ? "Creating…" : "Create branch"}
@@ -172,6 +169,33 @@ function BranchesPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {inviteLink && (
+        <div className="surface space-y-2 border-primary/40 p-5">
+          <p className="font-semibold">Share this invite link with the branch administrator</p>
+          <p className="text-xs text-muted-foreground">
+            It works once and expires in 7 days. Send it yourself — no email was sent.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="max-w-full flex-1 truncate rounded-md bg-muted px-3 py-2 text-xs">
+              {inviteLink}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(inviteLink);
+                toast.success("Invite link copied");
+              }}
+            >
+              <Copy className="size-4" /> Copy
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setInviteLink(null)}>
+              Done
+            </Button>
+          </div>
+        </div>
       )}
 
       {pending.length > 0 && (
