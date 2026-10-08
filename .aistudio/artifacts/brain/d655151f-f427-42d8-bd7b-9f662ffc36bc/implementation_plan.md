@@ -1,111 +1,59 @@
-# Onboarding Walkthrough Guide & Dashboard Tutorial Video
+# Walkthrough Spotlight Cutout, Support Sender Branding, & Ticket Resolution Lock Plan
 
-Implement an interactive, tier-aware walkthrough guide for first-time church signups that spotlights active features, guides page actions, removes the video from the hero section, and adds a dedicated tutorial video banner to the main dashboard.
+This implementation plan addresses the three issues identified by the user:
 
-## User Review & Critical Decisions
-
-> [!IMPORTANT]
-> The following confirmed decisions guide this execution:
-> - **Interactive Spotlight Beacons**: Walkthrough will use interactive spotlight beacons and callouts anchored to active sidebar navigation items and page controls.
-> - **Strict Tier-Aware Feature Gating**: Locked features under lower tiers will **not** be included in the walkthrough. On Premium accounts (or active tiers), all available features will have their step-by-step guidance.
-> - **Sub-Page Guidance**: When a user clicks a feature and enters its page, context-sensitive guided callouts highlight primary controls (e.g. Add Member, Launch Kiosk, Create Service).
-> - **Hero Video Removal**: The video modal and button in the public landing page hero section will be replaced with a clean "Explore Platform" anchor action.
-> - **Dedicated Dashboard Tutorial Video Banner**: As the final step after completing the walkthrough (or accessible directly on `/dashboard`), a dedicated video banner will feature the tutorial player with an easily replaceable demo video source.
+1. **Walkthrough Spotlight Hole vs Blur**: The current walkthrough was blurring the entire screen including the target feature. We will implement a clean 4-panel cutout spotlight where the target element remains 100% crisp, unblurred, and directly clickable, while the rest of the page is dimmed and blurred.
+2. **Support Church Sender Identity**: In `support-console.tsx`, `support.tsx`, and backend notifications, replace generic "Church Submitter" / "Your Church" with the real church name and tier status indicator: `[HQR]` for headquarters / parent church and `[BRE]` for branch church (e.g. `GCYC Exusia [HQR]` or `ICGC Kumasi [BRE]`).
+3. **Resolved Support Ticket Locking**: Once a support ticket is marked as `resolved` (or `closed`), lock the reply composer so the conversation cannot be reopened. The church can still view the entire chat history in read-only mode with a clear resolution banner.
+4. **Single-Shot Automated Support Response**: Ensure the predefined support greeting (*"Hello [Church], thank you for contacting Mene:Log Live Support Desk..."*) only triggers on the ticket's very first creation message. Do not trigger or re-insert the automated message when the church sends follow-up replies or when support responds.
 
 ---
 
-## 1. Overview & Architecture
+## Proposed Changes
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          NEW CHURCH ONBOARDING FLOW                         │
-│                                                                             │
-│  [Complete Onboarding]                                                      │
-│           │                                                                 │
-│           ▼                                                                 │
-│  [Enter Dashboard (First Time)]                                             │
-│           │                                                                 │
-│           ▼                                                                 │
-│  [Walkthrough Spotlight Tour Launches]                                      │
-│    • Step 1: Dashboard Overview                                             │
-│    • Step 2: Door Check-In & Scanner (active on all tiers)                  │
-│    • Step 3: Attendance Register (active on all tiers)                      │
-│    • Step 4: Services Setup (active on all tiers)                           │
-│    • Step 5: Member Directory (active on all tiers)                         │
-│    • Step 6+: Pro/Premium Features (Follow-ups, Leaders, Reports,           │
-│               Messaging, Structure, Branches, Billing — ONLY if unlocked)   │
-│           │                                                                 │
-│           ▼                                                                 │
-│  [Final Step: Dedicated Tutorial Video Banner on Dashboard]                 │
-│    • Plays demo video with easy code replacement slot                       │
-│    • Once watched or dismissed, full workspace is ready                     │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 1. Walkthrough Spotlight Cutout (`src/components/walkthrough/WalkthroughTour.tsx`)
+- Replace the monolithic full-screen backdrop with a **4-panel cutout window** surrounding `targetRect` (top, bottom, left, right).
+- The cutout area over the target feature will have **zero blur and zero overlay**, keeping the actual buttons, menus, and text 100% sharp and visible.
+- The 4 surrounding panels will apply `bg-slate-950/50 backdrop-blur-sm` to softly dim and blur the rest of the page.
+- Direct click handling: Clicks inside the spotlight window will interact directly with the underlying control, enabling seamless guided navigation.
+- The glowing primary ring and pulsing radar beacon remain positioned around the cutout border.
 
----
+### 2. Church Sender Identification (`src/routes/support-console.tsx`, `src/routes/_app/support.tsx`, `src/lib/support.functions.ts`)
+- In `src/routes/support-console.tsx`:
+  - When rendering replies where `isChurch` is true, replace the hardcoded `"Church Submitter"` label with:
+    `{churchName} [{isBranch ? "BRE" : "HQR"}]`
+    (e.g., `"GCYC Exusia [HQR]"` or `"ICGC Kumasi [BRE]"`).
+  - Also ensure the left profile sidebar clearly identifies the church type as **Headquarters / Main Campus [HQR]** or **Branch Campus [BRE]**.
+- In `src/routes/_app/support.tsx`:
+  - When rendering church messages in the client thread, show `{tenant?.name || "Your Church"} [{tenant?.parent_tenant_id ? "BRE" : "HQR"}]`.
+- In `src/lib/support.functions.ts` & `src/lib/support.server.ts`:
+  - Include the branch tag in notification emails and SMS alerts (e.g. `"New ticket from GCYC Exusia [HQR]"`).
 
-## 2. User Experience & Flows
+### 3. Resolved Ticket Chat Lock (`src/routes/_app/support.tsx`, `src/lib/support.functions.ts`)
+- In `src/routes/_app/support.tsx`:
+  - When `selectedTicket.status === "resolved"` or `selectedTicket.status === "closed"`:
+    - Disable or replace the reply Textarea and Send button with a dedicated resolution notice banner:
+      *"✓ This ticket has been marked as Resolved. The conversation is closed. If you need assistance with another matter, please submit a new ticket."*
+    - The chat message history remains completely accessible in read-only mode.
+- In `src/lib/support.functions.ts` (`replyChurchTicket`):
+  - Add backend validation: If `ticket.status === "resolved"` or `"closed"`, reject the reply with an error preventing reopening.
 
-### A. Walkthrough Spotlight Engine (`src/components/walkthrough/WalkthroughTour.tsx`)
-- **First-Time Detection**: Automatically opens on `/dashboard` if `menelog_walkthrough_completed_${tenantId}` is false in `localStorage`.
-- **Spotlight Anchors (`data-tour="..."`)**:
-  - `data-tour="nav-dashboard"`: "Operations Hub — View your weekly Sunday headcounts, demographics, and first-timer trends."
-  - `data-tour="nav-scan"`: "4-Second Door Scanner — Launch mobile camera scanning or tablet kiosk check-in."
-  - `data-tour="nav-attendance"`: "Live Attendance Register — View present attendees, manual overrides, and timestamps."
-  - `data-tour="nav-services"`: "Church Services — Create Sunday services, prayer meetings, and live streams."
-  - `data-tour="nav-members"`: "Member Directory — Add congregation profiles, upload photos, and track family data."
-  - `data-tour="nav-followups"`: *(Tier-gated)* "Pastoral Follow-ups — Track first-timers and check-in absence alerts."
-  - `data-tour="nav-leaders"`: *(Tier-gated)* "Pastoral Leadership — Assign church leaders and department overseers."
-  - `data-tour="nav-reports"`: *(Tier-gated)* "Ministry Analytics — Generate growth reports and export member records."
-  - `data-tour="nav-messaging"`: *(Tier-gated)* "Broadcast Announcements — Send instant SMS and Email notifications."
-  - `data-tour="nav-structure"`: *(Tier-gated)* "Congregation Structure — Set up committees, departments, and cells."
-  - `data-tour="nav-branches"`: *(Tier-gated)* "Multi-Branch Oversight — Manage campuses and satellite parishes."
-  - `data-tour="nav-billing"`: "Plans & Space Addons — Manage your 30-day trial and church packages."
-- **Page-Level Sub-Guides**:
-  - On `/members`: highlights "Add Member" button and Search/Filter bar.
-  - On `/services`: highlights "Create Service" button.
-  - On `/scan`: highlights "Kiosk Mode" and Camera Scanner.
-- **Controls**: "Next", "Back", "Skip Walkthrough", plus a "Restart Walkthrough" option in the user profile menu.
-
-### B. Dashboard Tutorial Video Banner (`src/components/dashboard/DashboardTutorialBanner.tsx`)
-- Appears prominently near the top of `/dashboard` after walkthrough completion (or collapsed/expandable).
-- High-fidelity player styling with poster frame, play/pause controls, time display, and fullscreen.
-- Includes a dedicated code comment and configuration variable:
-  ```ts
-  // TUTORIAL VIDEO SOURCE CONFIGURATION:
-  // Replace this path with your finalized video asset or direct URL/embed
-  export const DASHBOARD_TUTORIAL_VIDEO_SRC = "/assets/mene-worship-hero.webm";
-  ```
-- Action buttons: "Mark as Watched", "Dismiss Banner", and "Replay Tutorial".
-
-### C. Hero Section Simplification
-- In `src/components/landing/HeroSection.tsx`:
-  - Remove `Watch Interactive Tour` video modal trigger and play button.
-  - Replace with a clean, elegant anchor button:
-    `<a href="#features" className="...">Explore Capabilities</a>`
-  - In `src/routes/index.tsx`:
-    - Remove `HeroShowreelModal` component and `showreelOpen` state.
+### 4. Single-Shot Auto-Responder (`src/lib/support.functions.ts`)
+- In `src/lib/support.functions.ts`:
+  - `submitChurchTicket`: Retain the automated instant greeting for the **first message** when a ticket is opened.
+  - `replyChurchTicket`: **Remove** the secondary `generateInstantSupportResponse` invocation that was re-inserting the automated response on every follow-up reply.
+  - When support staff replies from `support-console.tsx`, ensure no automated messages are inserted.
 
 ---
 
-## 3. Technical Implementation Steps
+## Verification Plan
 
-### Step 1: Create Walkthrough Tour Engine
-- Create `src/components/walkthrough/WalkthroughTour.tsx` and `src/components/walkthrough/walkthrough-context.tsx`.
-- Connect to `useTenant()` so active tier filters out any features where `ctx.can(feature)` is false.
-- Inject `data-tour` attributes into `src/routes/_app/route.tsx` for all sidebar navigation links.
-- Add page-level tour targets on `/dashboard`, `/members`, `/services`, and `/scan`.
+### Automated Checks
+- Run `lint_applet` to verify no TypeScript or lint warnings.
+- Run `compile_applet` to ensure full build compiles cleanly.
 
-### Step 2: Create Dashboard Tutorial Video Banner
-- Create `src/components/dashboard/DashboardTutorialBanner.tsx`.
-- Place a working video player referencing the bundled video (`@/assets/mene-worship-hero.webm`).
-- Mount on `src/routes/_app/dashboard.tsx` with persistent dismiss/watched status.
-
-### Step 3: Remove Video from Landing Hero
-- In `src/components/landing/HeroSection.tsx`, replace the `Watch Interactive Tour` button with an "Explore Capabilities" link.
-- In `src/routes/index.tsx`, remove `HeroShowreelModal` imports and rendering.
-
-### Step 4: Verification
-- Verify build with `lint_applet` and `compile_applet`.
-- Verify tier gating: simulate Free, Standard, and Premium to confirm locked items never show in the walkthrough.
-- Verify video playback and dismiss persistence.
+### Manual / Browser Verification
+1. **Spotlight Cutout**: Open the walkthrough; verify that the active sidebar/page feature is completely sharp, unblurred, and clickable, while the surrounding page is dimmed and blurred.
+2. **Support Sender Name**: Check ticket messages in the support console; verify they display the church name with `[HQR]` or `[BRE]` instead of "Church Submitter".
+3. **Resolved Ticket Lock**: Mark a ticket as resolved; confirm the chat is viewable but the reply composer is locked.
+4. **Auto-Reply**: Send a follow-up reply in a ticket; confirm that the predefined greeting is not triggered a second time.

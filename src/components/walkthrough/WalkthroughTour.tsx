@@ -423,16 +423,19 @@ export function WalkthroughTour() {
   }, [updateTargetPosition, active, currentStepIndex]);
 
   // 4. Navigation & Step Transitions
-  const goToStep = (index: number) => {
-    if (index < 0 || index >= steps.length) return;
-    const targetStep = steps[index]!;
-    setCurrentStepIndex(index);
+  const goToStep = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= steps.length) return;
+      const targetStep = steps[index]!;
+      setCurrentStepIndex(index);
 
-    // If step requires a different route, navigate there
-    if (targetStep.route && currentPath !== targetStep.route) {
-      void navigate({ to: targetStep.route });
-    }
-  };
+      // If step requires a different route, navigate there
+      if (targetStep.route && currentPath !== targetStep.route) {
+        void navigate({ to: targetStep.route });
+      }
+    },
+    [steps, currentPath, navigate],
+  );
 
   const handleNext = () => {
     if (currentStepIndex < steps.length - 1) {
@@ -459,60 +462,142 @@ export function WalkthroughTour() {
     }
   };
 
-  // Clicking on the spotlighted frame itself triggers navigation or next step
-  const handleSpotlightClick = () => {
-    if (targetElementRef.current instanceof HTMLElement) {
-      targetElementRef.current.click();
-    }
-    handleNext();
-  };
+  // User interaction listener: when user clicks the spotlighted feature directly,
+  // allow the normal action to execute freely and smoothly advance the tour
+  useEffect(() => {
+    const el = targetElementRef.current;
+    if (!el || !active) return;
+
+    const onTargetClick = (e: Event) => {
+      // Don't intercept clicks inside the walkthrough floating tooltip card
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-tour-card="true"]')) return;
+
+      setTimeout(() => {
+        if (currentStepIndex < steps.length - 1) {
+          goToStep(currentStepIndex + 1);
+        }
+      }, 450);
+    };
+
+    el.addEventListener("click", onTargetClick);
+    return () => {
+      el.removeEventListener("click", onTargetClick);
+    };
+  }, [active, currentStepIndex, steps.length, goToStep]);
 
   if (!active || !currentStep) return null;
 
   const isLast = currentStepIndex === steps.length - 1;
   const isFirst = currentStepIndex === 0;
 
-  // Calculate tooltip placement relative to target element
-  const cardTop = targetRect
-    ? Math.min(Math.max(targetRect.top - 10, 80), window.innerHeight - 360)
-    : 120;
-  const cardLeft = targetRect
-    ? targetRect.right + 24 < window.innerWidth - 390
-      ? targetRect.right + 24
-      : Math.max(targetRect.left - 400, 20)
-    : 80;
+  // Smart cutout dimensions: feature area has NO blur, NO dimmer overlay, and is 100% clickable
+  const pad = 6;
+  const holeTop = targetRect ? Math.max(0, targetRect.top - pad) : 100;
+  const holeLeft = targetRect ? Math.max(0, targetRect.left - pad) : 80;
+  const holeRight = targetRect ? Math.min(window.innerWidth, targetRect.right + pad) : 200;
+  const holeBottom = targetRect ? Math.min(window.innerHeight, targetRect.bottom + pad) : 150;
+  const holeWidth = Math.max(0, holeRight - holeLeft);
+  const holeHeight = Math.max(0, holeBottom - holeTop);
+
+  // Position tooltip card comfortably next to or below the cutout window
+  let cardTop = 120;
+  let cardLeft = 80;
+
+  if (targetRect) {
+    const spaceRight = window.innerWidth - holeRight;
+    const spaceLeft = holeLeft;
+    const spaceBelow = window.innerHeight - holeBottom;
+
+    if (holeWidth > 450 || (spaceRight < 380 && spaceLeft < 380)) {
+      // Place below or above wide sections (e.g. KPI cards or banner)
+      if (spaceBelow >= 300) {
+        cardTop = Math.min(window.innerHeight - 340, holeBottom + 16);
+        cardLeft = Math.max(20, Math.min(window.innerWidth - 400, holeLeft));
+      } else {
+        cardTop = Math.max(80, holeTop - 320);
+        cardLeft = Math.max(20, Math.min(window.innerWidth - 400, holeLeft));
+      }
+    } else if (spaceRight >= 380) {
+      // Right side of sidebar or control
+      cardTop = Math.min(Math.max(80, holeTop - 10), window.innerHeight - 340);
+      cardLeft = holeRight + 20;
+    } else if (spaceLeft >= 380) {
+      // Left side
+      cardTop = Math.min(Math.max(80, holeTop - 10), window.innerHeight - 340);
+      cardLeft = Math.max(20, holeLeft - 390);
+    } else {
+      // Centered fallback
+      cardTop = Math.min(window.innerHeight - 340, holeBottom + 16);
+      cardLeft = Math.max(20, (window.innerWidth - 380) / 2);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none select-none">
-      {/* Dimmed background backdrop */}
-      <div
-        onClick={handleComplete}
-        className="pointer-events-auto absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] transition-opacity duration-300"
-      />
+      {/* 4-Panel Cutout Window: Surrounding areas get softly blurred and dimmed,
+          while the active target element is 100% UNBLURRED, crystal clear, and fully clickable */}
+      {targetRect ? (
+        <>
+          {/* Top blurred curtain */}
+          <div
+            style={{ top: 0, left: 0, right: 0, height: `${holeTop}px` }}
+            className="pointer-events-auto absolute bg-slate-950/70 backdrop-blur-[5px] transition-all duration-200"
+          />
+          {/* Bottom blurred curtain */}
+          <div
+            style={{ top: `${holeBottom}px`, left: 0, right: 0, bottom: 0 }}
+            className="pointer-events-auto absolute bg-slate-950/70 backdrop-blur-[5px] transition-all duration-200"
+          />
+          {/* Left blurred curtain */}
+          <div
+            style={{
+              top: `${holeTop}px`,
+              left: 0,
+              width: `${holeLeft}px`,
+              height: `${holeHeight}px`,
+            }}
+            className="pointer-events-auto absolute bg-slate-950/70 backdrop-blur-[5px] transition-all duration-200"
+          />
+          {/* Right blurred curtain */}
+          <div
+            style={{
+              top: `${holeTop}px`,
+              left: `${holeRight}px`,
+              right: 0,
+              height: `${holeHeight}px`,
+            }}
+            className="pointer-events-auto absolute bg-slate-950/70 backdrop-blur-[5px] transition-all duration-200"
+          />
+        </>
+      ) : (
+        <div
+          onClick={handleComplete}
+          className="pointer-events-auto absolute inset-0 bg-slate-950/70 backdrop-blur-[5px] transition-opacity duration-300"
+        />
+      )}
 
-      {/* Target element spotlight frame & pulsing beacon */}
+      {/* Target element spotlight frame & pulsing beacon around the clear, interactive hole */}
       {targetRect && (
         <div
-          onClick={handleSpotlightClick}
           style={{
-            top: `${Math.max(0, targetRect.top - 6)}px`,
-            left: `${Math.max(0, targetRect.left - 6)}px`,
-            width: `${targetRect.width + 12}px`,
-            height: `${targetRect.height + 12}px`,
+            top: `${holeTop}px`,
+            left: `${holeLeft}px`,
+            width: `${holeWidth}px`,
+            height: `${holeHeight}px`,
           }}
-          className="pointer-events-auto cursor-pointer absolute rounded-xl ring-4 ring-primary shadow-[0_0_35px_rgba(59,130,246,0.7)] transition-all duration-300 z-50 bg-primary/10 hover:bg-primary/20 hover:ring-sky-400 group"
-          title="Click to interact with this feature"
+          className="pointer-events-none absolute rounded-xl ring-2 ring-primary shadow-[0_0_35px_rgba(59,130,246,0.7)] transition-all duration-200 z-50 group"
         >
           {/* Pulsing beacon radar dot */}
-          <span className="absolute -top-2 -right-2 flex size-5">
+          <span className="absolute -top-2 -right-2 flex size-5 pointer-events-none">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex size-5 rounded-full bg-primary border-2 border-white shadow-md" />
           </span>
 
           {/* Interactive hint badge */}
-          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 hidden group-hover:flex items-center gap-1 rounded-md bg-black/90 px-2 py-0.5 text-[10px] font-semibold text-white whitespace-nowrap shadow-lg">
-            <MousePointerClick className="size-3 text-sky-400" />
-            <span>Click to enter</span>
+          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-slate-900/95 border border-white/20 px-3 py-1 text-[11px] font-semibold text-white whitespace-nowrap shadow-xl pointer-events-none">
+            <MousePointerClick className="size-3.5 text-sky-400 animate-pulse" />
+            <span>Click feature to interact & proceed</span>
           </div>
         </div>
       )}
@@ -529,6 +614,7 @@ export function WalkthroughTour() {
             top: `${cardTop}px`,
             left: `${cardLeft}px`,
           }}
+          data-tour-card="true"
           className="pointer-events-auto fixed z-50 w-[92vw] sm:w-[380px] rounded-2xl border border-white/20 bg-slate-900/95 p-5 text-white shadow-2xl backdrop-blur-2xl ring-1 ring-black/50"
         >
           {/* Card Header */}

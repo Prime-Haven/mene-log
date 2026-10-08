@@ -20,6 +20,7 @@ import {
   sendSupportNotificationAlert,
   sendSupportTicketSmsAlert,
   sendTestSupportSmsAlert,
+  sendTicketResolvedNotification,
   type SupportTicketPriority,
   type SupportTicketStatus,
 } from "./support.server";
@@ -69,14 +70,30 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
     const db = await admin();
     await assertChurchAdmin(context.supabase, data.tenant_id, context.userId);
 
-    // Get tenant details for alert email & SMS
+    // Get tenant and branch details for clean sender label and alert email & SMS
     const { data: tenant } = await db
       .from("tenants")
-      .select("name, contact_email, contact_phone")
+      .select("name, contact_email, contact_phone, parent_tenant_id")
       .eq("id", data.tenant_id)
       .maybeSingle();
 
-    const churchName = tenant?.name || "Church Partner";
+    let branchName = "";
+    if (data.branch_id) {
+      const { data: branchRow } = await db
+        .from("branches")
+        .select("name")
+        .eq("id", data.branch_id)
+        .maybeSingle();
+      if (branchRow?.name) branchName = branchRow.name;
+    }
+
+    const isBranch = !!(data.branch_id || tenant?.parent_tenant_id || branchName);
+    const baseName = tenant?.name || "Church Partner";
+    const churchSenderLabel = isBranch
+      ? (branchName && !baseName.toLowerCase().includes(branchName.toLowerCase())
+          ? `${baseName} - ${branchName} [BRE]`
+          : `${baseName} [BRE]`)
+      : `${baseName} [HQR]`;
 
     // Insert ticket
     const { data: ticket, error: ticketError } = await db
@@ -113,10 +130,11 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
     }
 
     // Generate instant real-time response from Mene:Log support desk (0s-1s delivery)
+    // ONLY triggered on the first initial message upon ticket creation.
     const instantText = generateInstantSupportResponse({
       subject: data.subject,
       message: data.description,
-      churchName,
+      churchName: churchSenderLabel,
       ticketId: ticket.id,
     });
 
@@ -132,10 +150,10 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
       .select()
       .maybeSingle();
 
-    // Fire email alert to primehaven26@gmail.com asynchronously
+    // Fire email alert to primehaven26@gmail.com asynchronously on ticket creation
     sendSupportNotificationAlert({
       type: "new_ticket",
-      churchName,
+      churchName: churchSenderLabel,
       ticketId: ticket.id,
       subject: data.subject,
       priority: data.priority,
@@ -146,7 +164,7 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
     // Fire SMS alert to +233550160237 and branch/church phone recipients with 'Mene Log' sender ID
     sendSupportTicketSmsAlert({
       ticketId: ticket.id,
-      churchName,
+      churchName: churchSenderLabel,
       churchPhone: tenant?.contact_phone,
       tenantId: data.tenant_id,
       branchId: data.branch_id ?? null,
@@ -214,7 +232,11 @@ export const getChurchTicketThread = createServerFn({ method: "GET" })
     const { data: ticket, error: ticketError } = await db
       .from("support_tickets")
       .select(
-        "id, tenant_id, submitted_by_user_id, subject, description, status, priority, created_at, updated_at, resolved_at",
+        `
+        id, tenant_id, branch_id, submitted_by_user_id, subject, description, status, priority, created_at, updated_at, resolved_at,
+        tenant:tenants(name, parent_tenant_id),
+        branch:branches(name)
+        `,
       )
       .eq("id", data.ticket_id)
       .eq("tenant_id", data.tenant_id)
@@ -223,6 +245,16 @@ export const getChurchTicketThread = createServerFn({ method: "GET" })
     if (ticketError || !ticket) {
       throw new Error("Ticket not found.");
     }
+
+    const tObj = ticket.tenant as unknown as { name?: string; parent_tenant_id?: string | null } | null;
+    const bObj = ticket.branch as unknown as { name?: string } | null;
+    const isBranch = !!(tObj?.parent_tenant_id || bObj?.name || ticket.branch_id);
+    const baseName = tObj?.name || "Your Church";
+    const churchLabel = isBranch
+      ? (bObj?.name && !baseName.toLowerCase().includes(bObj.name.toLowerCase())
+          ? `${baseName} - ${bObj.name} [BRE]`
+          : `${baseName} [BRE]`)
+      : `${baseName} [HQR]`;
 
     // Church only sees non-internal replies
     const { data: replies, error: repliesError } = await db
@@ -237,7 +269,14 @@ export const getChurchTicketThread = createServerFn({ method: "GET" })
       throw new Error("Could not load ticket conversation.");
     }
 
-    return { ticket, replies: replies ?? [] };
+    return {
+      ticket: {
+        ...ticket,
+        church_label: churchLabel,
+        is_branch: isBranch,
+      },
+      replies: replies ?? [],
+    };
   });
 
 /** Reply to a ticket by the church */
@@ -259,13 +298,20 @@ export const replyChurchTicket = createServerFn({ method: "POST" })
     // Fetch ticket and tenant details
     const { data: ticket, error: ticketError } = await db
       .from("support_tickets")
-      .select("id, subject, status, priority, tenant:tenants(name, contact_email)")
+      .select("id, subject, status, priority, tenant:tenants(name, contact_email, parent_tenant_id)")
       .eq("id", data.ticket_id)
       .eq("tenant_id", data.tenant_id)
       .maybeSingle();
 
     if (ticketError || !ticket) {
       throw new Error("Ticket not found.");
+    }
+
+    // Do not allow replies on resolved or closed tickets
+    if (ticket.status === "resolved" || ticket.status === "closed") {
+      throw new Error(
+        "This support ticket has been marked as resolved and closed. Please open a new ticket if you need further assistance."
+      );
     }
 
     // Insert church reply
@@ -286,54 +332,16 @@ export const replyChurchTicket = createServerFn({ method: "POST" })
       throw new Error("Could not send reply.");
     }
 
-    // If ticket was resolved or closed, reopening to open when church responds
-    const newStatus =
-      ticket.status === "resolved" || ticket.status === "closed" ? "open" : ticket.status;
-
+    // Update ticket updated_at timestamp
     await db
       .from("support_tickets")
       .update({
-        status: newStatus,
         updated_at: new Date().toISOString(),
-        resolved_at: newStatus === "open" ? null : undefined,
       })
       .eq("id", data.ticket_id);
 
-    const tenantInfo = ticket.tenant as unknown as { name?: string; contact_email?: string } | null;
-    const churchName = tenantInfo?.name || "Church Partner";
-
-    // Generate instant real-time response from Mene:Log support desk (0s-1s delivery)
-    const instantText = generateInstantSupportResponse({
-      subject: ticket.subject,
-      message: data.message,
-      churchName,
-      ticketId: data.ticket_id,
-    });
-
-    const { data: instantReply } = await db
-      .from("support_ticket_replies")
-      .insert({
-        ticket_id: data.ticket_id,
-        author_type: "support",
-        author_id: "00000000-0000-0000-0000-000000000001",
-        message: instantText,
-        is_internal: false,
-      })
-      .select()
-      .maybeSingle();
-
-    // Send email alert to primehaven26@gmail.com asynchronously
-    sendSupportNotificationAlert({
-      type: "church_reply",
-      churchName,
-      ticketId: data.ticket_id,
-      subject: ticket.subject,
-      priority: ticket.priority as SupportTicketPriority,
-      messageSnippet: data.message,
-      submittedByEmail: tenantInfo?.contact_email,
-    }).catch((err) => console.error("[support alert] reply email error:", err));
-
-    return { ok: true as const, reply, supportReply: instantReply };
+    // Conversation continues smoothly in real time without sending alerts for every message.
+    return { ok: true as const, reply };
   });
 
 /** Get church and branch support SMS settings */
@@ -588,6 +596,7 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         `
         id,
         tenant_id,
+        branch_id,
         submitted_by_user_id,
         subject,
         description,
@@ -596,7 +605,8 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         created_at,
         updated_at,
         resolved_at,
-        tenant:tenants(id, name, subdomain, contact_email)
+        tenant:tenants(id, name, subdomain, contact_email, parent_tenant_id),
+        branch:branches(id, name)
       `,
       )
       .order("updated_at", { ascending: false });
@@ -636,10 +646,21 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         name?: string;
         subdomain?: string;
         contact_email?: string;
+        parent_tenant_id?: string | null;
       } | null;
+      const branchInfo = t.branch as unknown as { id?: string; name?: string } | null;
+      const isBranch = !!(tenantInfo?.parent_tenant_id || branchInfo?.name || t.branch_id);
+      const churchName = tenantInfo?.name ?? "Unknown Church";
+      const churchLabel = isBranch
+        ? (branchInfo?.name && !churchName.toLowerCase().includes(branchInfo.name.toLowerCase())
+            ? `${churchName} - ${branchInfo.name} [BRE]`
+            : `${churchName} [BRE]`)
+        : `${churchName} [HQR]`;
+
       return {
         id: t.id,
         tenant_id: t.tenant_id,
+        branch_id: t.branch_id,
         submitted_by_user_id: t.submitted_by_user_id,
         subject: t.subject,
         description: t.description,
@@ -648,7 +669,9 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         created_at: t.created_at,
         updated_at: t.updated_at,
         resolved_at: t.resolved_at,
-        tenant_name: tenantInfo?.name ?? "Unknown Church",
+        tenant_name: churchName,
+        church_label: churchLabel,
+        is_branch: isBranch,
         tenant_subdomain: tenantInfo?.subdomain ?? "",
         tenant_contact_email: tenantInfo?.contact_email ?? "",
         reply_count: replyCounts[t.id] || 0,
@@ -661,6 +684,7 @@ export const listSupportConsoleTickets = createServerFn({ method: "GET" })
         (t) =>
           t.subject.toLowerCase().includes(term) ||
           t.tenant_name.toLowerCase().includes(term) ||
+          t.church_label.toLowerCase().includes(term) ||
           t.tenant_subdomain.toLowerCase().includes(term) ||
           t.id.toLowerCase().includes(term),
       );
@@ -683,6 +707,7 @@ export const getSupportConsoleTicket = createServerFn({ method: "GET" })
         `
         id,
         tenant_id,
+        branch_id,
         submitted_by_user_id,
         subject,
         description,
@@ -691,7 +716,8 @@ export const getSupportConsoleTicket = createServerFn({ method: "GET" })
         created_at,
         updated_at,
         resolved_at,
-        tenant:tenants(id, name, subdomain, contact_email, contact_phone, tier, status)
+        tenant:tenants(id, name, subdomain, contact_email, contact_phone, tier, status, parent_tenant_id),
+        branch:branches(id, name)
       `,
       )
       .eq("id", data.ticket_id)
@@ -721,12 +747,22 @@ export const getSupportConsoleTicket = createServerFn({ method: "GET" })
       contact_phone?: string;
       tier?: string;
       status?: string;
+      parent_tenant_id?: string | null;
     } | null;
+    const branchInfo = ticket.branch as unknown as { id?: string; name?: string } | null;
+    const isBranch = !!(tenantInfo?.parent_tenant_id || branchInfo?.name || ticket.branch_id);
+    const churchName = tenantInfo?.name ?? "Church Partner";
+    const churchLabel = isBranch
+      ? (branchInfo?.name && !churchName.toLowerCase().includes(branchInfo.name.toLowerCase())
+          ? `${churchName} - ${branchInfo.name} [BRE]`
+          : `${churchName} [BRE]`)
+      : `${churchName} [HQR]`;
 
     return {
       ticket: {
         id: ticket.id,
         tenant_id: ticket.tenant_id,
+        branch_id: ticket.branch_id,
         submitted_by_user_id: ticket.submitted_by_user_id,
         subject: ticket.subject,
         description: ticket.description,
@@ -735,8 +771,10 @@ export const getSupportConsoleTicket = createServerFn({ method: "GET" })
         created_at: ticket.created_at,
         updated_at: ticket.updated_at,
         resolved_at: ticket.resolved_at,
+        church_label: churchLabel,
+        is_branch: isBranch,
       },
-      tenant: tenantInfo,
+      tenant: tenantInfo ? { ...tenantInfo, church_label: churchLabel, is_branch: isBranch } : null,
       replies: replies ?? [],
     };
   });
@@ -765,6 +803,36 @@ export const updateSupportConsoleTicket = createServerFn({ method: "POST" })
       patch["status"] = data.status;
       if (data.status === "resolved") {
         patch["resolved_at"] = new Date().toISOString();
+        // Dispatch resolution email to the church administrator
+        try {
+          const { data: tRow } = await db
+            .from("support_tickets")
+            .select("subject, tenant:tenants(name, contact_email, parent_tenant_id), branch:branches(name)")
+            .eq("id", data.ticket_id)
+            .maybeSingle();
+
+          const tObj = tRow?.tenant as unknown as {
+            name?: string;
+            contact_email?: string;
+            parent_tenant_id?: string | null;
+          } | null;
+          const bObj = tRow?.branch as unknown as { name?: string } | null;
+          if (tObj?.contact_email) {
+            const isBranch = !!(tObj.parent_tenant_id || bObj?.name);
+            const cName = isBranch
+              ? `${tObj.name || "Church"} [BRE]`
+              : `${tObj.name || "Church"} [HQR]`;
+            sendTicketResolvedNotification({
+              churchName: cName,
+              recipientEmail: tObj.contact_email,
+              ticketId: data.ticket_id,
+              subject: tRow?.subject || "Support Inquiry",
+              status: "resolved",
+            }).catch((e) => console.error("[support-console] Resolution email failed:", e));
+          }
+        } catch (err) {
+          console.error("[support-console] Error sending ticket resolution email:", err);
+        }
       } else if (data.status === "open" || data.status === "in_progress") {
         patch["resolved_at"] = null;
       }

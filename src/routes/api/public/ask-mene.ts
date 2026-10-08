@@ -90,9 +90,83 @@ export const Route = createFileRoute("/api/public/ask-mene")({
               { status: 403 },
             );
 
-          const apiKey = process.env["LOVABLE_API_KEY"];
+          const apiKey = process.env["LOVABLE_API_KEY"] || process.env["GEMINI_API_KEY"];
           if (!apiKey)
             return Response.json({ error: "Ask Mene is not configured yet." }, { status: 503 });
+
+          // Fetch rich live church context: services, attendee rosters, and members
+          const { data: churchTenant } = await supabaseAdmin
+            .from("tenants")
+            .select("id, name, subdomain, tier, contact_email, contact_phone, created_at, parent_tenant_id")
+            .eq("id", tenantId)
+            .maybeSingle();
+
+          const { data: recentServices } = await supabaseAdmin
+            .from("services")
+            .select("id, name, service_type, starts_at, target_attendance")
+            .eq("tenant_id", tenantId)
+            .order("starts_at", { ascending: false })
+            .limit(10);
+
+          const serviceIds = (recentServices ?? []).map((s) => s.id);
+          let attendeesList: Array<{
+            service_name: string;
+            service_date: string;
+            attendee_name: string;
+            method: string;
+            recorded_at: string;
+          }> = [];
+
+          if (serviceIds.length > 0) {
+            const { data: attRows } = await supabaseAdmin
+              .from("attendance")
+              .select(`
+                service_id,
+                method,
+                recorded_at,
+                member:members(full_name, phone, gender, is_leader)
+              `)
+              .in("service_id", serviceIds)
+              .order("recorded_at", { ascending: false })
+              .limit(150);
+
+            const serviceMap = new Map((recentServices ?? []).map((s) => [s.id, s]));
+            attendeesList = (attRows ?? []).map((a) => {
+              const svc = serviceMap.get(a.service_id);
+              const mem = a.member as unknown as { full_name?: string } | null;
+              return {
+                service_name: svc?.name || "Church Service",
+                service_date: svc?.starts_at ? new Date(svc.starts_at).toLocaleDateString() : "",
+                attendee_name: mem?.full_name || "Guest Attendee",
+                method: a.method,
+                recorded_at: a.recorded_at,
+              };
+            });
+          }
+
+          const { count: memberCount } = await supabaseAdmin
+            .from("members")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", tenantId);
+
+          const { data: recentMembers } = await supabaseAdmin
+            .from("members")
+            .select("full_name, joined_on, is_leader")
+            .eq("tenant_id", tenantId)
+            .order("joined_on", { ascending: false })
+            .limit(20);
+
+          const fullChurchContext = {
+            church_name: churchTenant?.name || "Your Church",
+            church_subdomain: churchTenant?.subdomain || "",
+            church_tier: churchTenant?.tier || tier,
+            is_branch: !!churchTenant?.parent_tenant_id,
+            total_registered_members: memberCount || 0,
+            recent_services: recentServices ?? [],
+            recent_attendees_sample: attendeesList,
+            recent_members: recentMembers ?? [],
+            aggregate_snapshot: context ?? null,
+          };
 
           const { data: conversation, error: conversationError } = await supabaseAdmin
             .from("ask_mene_conversations")
@@ -113,17 +187,43 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           });
 
           const gateway = createLovableAiGatewayProvider(apiKey);
-          const system = pro
-            ? `You are Ask Mene:Log Pro, a thorough church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. Give a fuller analysis: start with a one-line headline, then structured sections with exact figures, week-on-week trends, and 2-3 concrete recommended actions. If the snapshot cannot answer, say so plainly.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`
-            : `You are Ask Mene:Log, a concise church operations analyst. Answer only from the aggregate JSON snapshot below. Never infer or request names, contacts, dates of birth, QR data, or individual records. If the snapshot cannot answer, say so plainly. Prefer 2-5 short bullets, include exact dates/counts when relevant, and identify trends without overstating causality.\n\nAGGREGATE CHURCH SNAPSHOT:\n${JSON.stringify(context)}`;
+          const system = `You are Ask Mene (ManyChat AI), the helpful, knowledgeable church operations assistant for "${fullChurchContext.church_name}" on the Mene:Log platform.
+
+CORE RESPONSIBILITIES:
+1. CONVERSATIONAL & WELCOMING:
+   If the user greets you (e.g. "Hello", "How are you doing?", "Good morning"), respond warmly and conversationally as a helpful church operations assistant. Ask how you can support their ministry, services, or church account today. Do NOT merely dump raw trend numbers.
+
+2. ATTENDANCE & ATTENDEE LOOKUPS:
+   The user should be able to ask for attendance details, who came, or who attended recent services.
+   Use the REAL church records provided below:
+   - Identify the service asked about (or the most recent services).
+   - List the names of attendees who checked in, the service title, and check-in count or method (QR badge scan, camera, or manual register).
+   - If attendees are recorded in the data, share their names clearly so the user sees who attended.
+
+3. STEP-BY-STEP ACCOUNT & FEATURE GUIDANCE:
+   Guide the user step by step when they need help with their Mene:Log church account:
+   - QR Check-in & Scanner (/scan): Explain how ushers launch the camera scanner, scan member QR passcards, or use the "Manual Search & Check-in" tab to search by name/phone.
+   - Church Services (/services): How to click "New Service" to schedule Sunday gatherings, midweek services, or revival meetings with target attendances.
+   - Congregation Members (/members): How to register new members, import via CSV (First Name, Last Name, Phone, Gender), and view or print member QR cards.
+   - Attendance Register (/attendance): How to view live registers for any service, toggle attendance markers, and export timestamped CSV files.
+   - Member Follow-ups (/followups): How missing-Sunday members (2+ weeks absent) are automatically detected for pastoral visitation and calls.
+   - Church Structure & Leaders (/structure, /leaders): How to manage departments and generate leader passcodes.
+   - Multi-Campus Branches (/branches): How to set up and monitor branch campuses.
+   - Billing & Upgrades (/billing): How to manage the 30-day trial, select monthly/annual plans in GHS or USD via Card/Momo, and download official receipts.
+   - Support Desk (/support): How to submit instant support tickets directly to the 24/7 technical operations desk.
+
+4. POLITE OUT-OF-BOUNDS DECLINE:
+   You are exclusively an assistant for this church's account and ministry operations on Mene:Log. If the user asks about general topics outside of their church operations, attendance, members, or Mene:Log account (e.g., world politics, unrelated coding, pop culture, random trivia, recipes), politely and warmly decline:
+   "I am your dedicated Mene:Log church assistant for ${fullChurchContext.church_name}. I can only assist with your church records, attendance, member care, services, and account operations in Mene:Log. How can I help with your ministry today?"
+
+LIVE CHURCH DATA SNAPSHOT:
+${JSON.stringify(fullChurchContext, null, 2)}`;
+
           const result = streamText({
             model: gateway(GEMINI_MODEL),
             system,
-            // Conversation roles are server-owned. The client may submit UI
-            // history for rendering, but only the latest validated user text
-            // is sent to the model.
             messages: [{ role: "user", content: question }],
-            maxOutputTokens: pro ? 1600 : 700,
+            maxOutputTokens: pro ? 1800 : 900,
           });
 
           void supabaseAdmin.from("audit_events").insert({

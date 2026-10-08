@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for first-time church onboarding interactive walkthrough guide with tier-aware feature spotlight beacons, removal of hero section video, and a dedicated dashboard tutorial video banner.",
-  "updatedAt":  "2026-10-07T23:46:35.576600998Z",
+  "summary":  "Plan to fix the three user-reported issues:\n1. Walkthrough spotlight: Cut out the active feature so it remains crystal clear and unblurred while only the rest of the screen gets blurred/dimmed, allowing direct clicking.\n2. Support sender name: Replace hardcoded 'Church Submitter' with actual church name and branch/headquarters indicator (e.g., 'GCYC Exusia [HQR]' or 'ICGC Kumasi [BRE]').\n3. Resolved tickets & auto-reply: Lock resolved tickets from further replies (view only), and restrict the automated support welcome greeting to the ticket's very first message only.",
+  "updatedAt":  "2026-10-08T01:04:26.747310744Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

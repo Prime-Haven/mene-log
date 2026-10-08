@@ -109,6 +109,47 @@ export async function sendSupportNotificationAlert(options: {
 }
 
 /**
+ * Sends an email notification to the church administrator when their support ticket
+ * is resolved by the technical operations team.
+ */
+export async function sendTicketResolvedNotification(options: {
+  churchName: string;
+  recipientEmail: string;
+  ticketId: string;
+  subject: string;
+  status: string;
+}) {
+  const directLink = `${SITE_URL}/support`;
+  const emailSubject = `[Ticket Resolved] ${options.subject} - Mene:Log Operations`;
+
+  const html = renderEmail({
+    churchName: options.churchName,
+    brandPrimary: "#8b5cf6",
+    logoUrl: null,
+    subject: `Support Ticket Resolved: ${options.subject}`,
+    body: `Hello ${options.churchName},\n\nYour support ticket #${options.ticketId.slice(0, 8)} ("${options.subject}") has been marked as ${options.status.toUpperCase()} by the Mene:Log Support Team.\n\nOur operations engineering team has completed this inquiry. You can review the full resolution and message thread anytime in your church portal. If you need assistance with any new matters, our team is always on standby.`,
+    ctaLabel: "View Resolution in Support Hub",
+    ctaUrl: directLink,
+  });
+
+  try {
+    const res = await sendEmail({
+      to: options.recipientEmail,
+      subject: emailSubject,
+      html,
+      fromName: "Mene:Log Support Team",
+      replyTo: "support@menelog.site",
+    });
+    if (!res.ok) {
+      console.error("[ticket-resolved] Email dispatch error:", res.error);
+    }
+  } catch (err) {
+    console.error("[ticket-resolved] Failed to dispatch resolution email:", err);
+  }
+}
+
+
+/**
  * Sends an instant SMS alert via Arkesel to +233550160237 and the church's contact phone number
  * using the "Mene Log" sender ID whenever a support ticket is created.
  */

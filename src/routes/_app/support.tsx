@@ -290,29 +290,8 @@ export function ChurchSupportPage() {
         headers,
       });
     },
-    onSuccess: (data) => {
-      // Show simulated typing if not already arrived, and append instant reply in ~1s
-      const supportReply = (data as unknown as { supportReply?: ChurchReplyItem })?.supportReply;
-      if (supportReply) {
-        setTimeout(() => {
-          setIsSupportTyping(false);
-          setOptimisticReplies((prev) => [
-            ...prev,
-            {
-              id: supportReply.id || `support-${Date.now()}`,
-              author_type: "support",
-              message: supportReply.message,
-              created_at: supportReply.created_at || new Date().toISOString(),
-              pending: false,
-            },
-          ]);
-          qc.invalidateQueries({
-            queryKey: ["church-support-thread", tenant?.id, selectedTicketId],
-          });
-        }, 1100);
-      } else {
-        setIsSupportTyping(false);
-      }
+    onSuccess: () => {
+      setIsSupportTyping(false);
       qc.invalidateQueries({ queryKey: ["church-support-thread", tenant?.id, selectedTicketId] });
       qc.invalidateQueries({ queryKey: ["church-support-tickets", tenant?.id] });
     },
@@ -327,6 +306,10 @@ export function ChurchSupportPage() {
   function handleSendReply() {
     const text = replyMessage.trim();
     if (!text || !selectedTicketId || replyMutation.isPending) return;
+    if (selectedTicket?.status === "resolved" || selectedTicket?.status === "closed") {
+      toast.error("This ticket has been resolved and closed.");
+      return;
+    }
 
     // Immediately show user message with 0ms delay!
     const tempId = `temp-${Date.now()}`;
@@ -341,7 +324,6 @@ export function ChurchSupportPage() {
       },
     ]);
     setReplyMessage("");
-    setIsSupportTyping(true);
 
     replyMutation.mutate(text);
   }
@@ -519,7 +501,20 @@ export function ChurchSupportPage() {
                                   : "bg-primary text-primary-foreground font-bold"
                               }`}
                             >
-                              {isChurch ? "Your Church" : "Mene:Log Support Team"}
+                              {isChurch ? (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span>
+                                    {selectedTicket?.church_label ||
+                                      (tenant?.name
+                                        ? tenant.parent_tenant_id
+                                          ? `${tenant.name} [BRE]`
+                                          : `${tenant.name} [HQR]`
+                                        : "Your Church")}
+                                  </span>
+                                </span>
+                              ) : (
+                                "Mene:Log Support Team"
+                              )}
                             </span>
                             {isPending && (
                               <span className="text-[10px] text-amber-500 font-mono animate-pulse">
@@ -564,38 +559,60 @@ export function ChurchSupportPage() {
               </div>
             )}
 
-            {/* Reply Composer */}
-            <div className="pt-4 border-t border-border/60">
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="reply-box" className="text-sm font-semibold">
-                  Send Instant Reply
-                </Label>
-                <span className="text-[11px] text-muted-foreground">
-                  Press{" "}
-                  <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">Enter</kbd> to
-                  send,{" "}
-                  <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">
-                    Shift+Enter
-                  </kbd>{" "}
-                  for new line
-                </span>
-              </div>
-              <Textarea
-                id="reply-box"
-                rows={3}
-                placeholder="Type your message here..."
-                value={replyMessage}
-                onChange={(e) => setReplyMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full bg-background"
-              />
-              <div className="mt-3 flex justify-between items-center">
-                {selectedTicket.status === "resolved" && (
-                  <p className="text-xs text-amber-400">
-                    * Sending a reply will re-open this resolved ticket.
+            {/* Reply Composer or Resolved Lock Banner */}
+            {selectedTicket.status === "resolved" || selectedTicket.status === "closed" ? (
+              <div className="pt-4 border-t border-border/60">
+                <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5 text-center space-y-2.5">
+                  <div className="flex items-center justify-center gap-2 text-violet-400 font-bold text-sm">
+                    <CheckCircle2 className="size-5" />
+                    <span>This Support Ticket has been Resolved</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                    This ticket has been marked as resolved. The discussion is closed for new replies.
+                    You can review the full conversation history above at any time. If you need assistance with a new matter, please create a new support ticket.
                   </p>
-                )}
-                <div className="ml-auto">
+                  <div className="pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedTicketId(null);
+                        setIsNewDialogOpen(true);
+                      }}
+                      className="text-xs gap-1.5 h-8 border-violet-500/40 text-violet-300 hover:bg-violet-500/20"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>Open New Support Ticket</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-4 border-t border-border/60">
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="reply-box" className="text-sm font-semibold">
+                    Send Instant Reply
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    Press{" "}
+                    <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">Enter</kbd> to
+                    send,{" "}
+                    <kbd className="px-1 py-0.5 rounded bg-muted font-mono text-[10px]">
+                      Shift+Enter
+                    </kbd>{" "}
+                    for new line
+                  </span>
+                </div>
+                <Textarea
+                  id="reply-box"
+                  rows={3}
+                  placeholder="Type your message here..."
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full bg-background"
+                />
+                <div className="mt-3 flex justify-end items-center">
                   <Button
                     onClick={handleSendReply}
                     disabled={!replyMessage.trim()}
@@ -606,7 +623,7 @@ export function ChurchSupportPage() {
                   </Button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
       ) : (

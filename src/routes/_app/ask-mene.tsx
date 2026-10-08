@@ -53,10 +53,10 @@ export const Route = createFileRoute("/_app/ask-mene")({
 });
 
 const starters = [
-  "How has attendance changed across our recent services?",
-  "What should our leadership team pay attention to this month?",
-  "Summarise our first-timer activity in the last 30 days.",
-  "How close are we to our package limits?",
+  "Who came to our most recent church service?",
+  "How do I set up QR check-in and scan passes?",
+  "How do I register a new member and generate their passcard?",
+  "Summarize our attendance and first-timer growth this month",
 ];
 
 const textOf = (message: UIMessage) =>
@@ -113,7 +113,7 @@ function AskMene() {
     id: tenant?.id ? `ask-mene-${tenant.id}` : "ask-mene",
     messages: history.data ?? [],
     transport,
-    onError: (error) => toast.error(error.message || "Ask Mene:Log is unavailable."),
+    onError: (error) => toast.error(error.message || "Ask Mene is unavailable."),
     onFinish: () => queryClient.invalidateQueries({ queryKey: ["ask-mene-history", tenant?.id] }),
   });
 
@@ -131,7 +131,7 @@ function AskMene() {
   }
 
   async function clearHistory() {
-    if (!tenant || !window.confirm("Clear this church's shared Ask Mene:Log conversation?")) return;
+    if (!tenant || !window.confirm("Clear this church's shared Ask Mene conversation?")) return;
     const { data: conversation } = await supabase
       .from("ask_mene_conversations")
       .select("id")
@@ -165,10 +165,10 @@ function AskMene() {
     <PageTransition className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-eyebrow">Aggregate intelligence</p>
-          <h1 className="mt-2 font-display text-2xl font-bold">Ask Mene:Log</h1>
+          <p className="text-eyebrow">Interactive Ministry Assistant</p>
+          <h1 className="mt-2 font-display text-2xl font-bold">Ask Mene AI (ManyChat)</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Ask concise questions about attendance, growth and church operations.
+            Ask about your church attendance, attendees who came, member records, or get step-by-step guidance on your account.
           </p>
         </div>
         <Button
@@ -181,10 +181,9 @@ function AskMene() {
         </Button>
       </div>
       <div className="flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-        <LockKeyhole className="mt-0.5 size-4 shrink-0 text-primary" />
+        <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
         <p>
-          Only anonymous totals and trends are sent to AI. Names, contacts, birth dates, QR codes
-          and member rows never leave your church database.
+          Ask Mene helps you with your church services, attendees, congregation directory, and step-by-step account settings in real time.
         </p>
       </div>
       <div className="surface flex h-[min(680px,calc(100svh-250px))] min-h-[520px] flex-col overflow-hidden">
@@ -197,8 +196,8 @@ function AskMene() {
             ) : chat.messages.length === 0 ? (
               <ConversationEmptyState
                 icon={<BrainCircuit className="size-8" />}
-                title="Ask a question grounded in your records"
-                description="Mene:Log sees aggregate church statistics, never individual member details."
+                title="How can I assist your church today?"
+                description="Ask about who came to services, attendance statistics, or ask how to manage your Mene:Log account."
               >
                 <div className="space-y-5">
                   <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
@@ -244,7 +243,7 @@ function AskMene() {
             {chat.status === "submitted" && (
               <Reasoning isStreaming>
                 <ReasoningTrigger
-                  getThinkingMessage={() => <Shimmer>Reading your church trends…</Shimmer>}
+                  getThinkingMessage={() => <Shimmer>Consulting your church assistant…</Shimmer>}
                 />
               </Reasoning>
             )}

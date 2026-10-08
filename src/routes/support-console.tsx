@@ -263,7 +263,7 @@ export function SupportConsolePage() {
     toast.info("Signed out of Support Console");
   }
 
-  // Query console tickets
+  // Query console tickets with active 2s polling
   const {
     data: tickets = [],
     isLoading: isLoadingTickets,
@@ -271,6 +271,7 @@ export function SupportConsolePage() {
   } = useQuery({
     queryKey: ["support-console-tickets", isOperator, statusFilter, priorityFilter, searchTerm],
     enabled: isOperator,
+    refetchInterval: 2000,
     queryFn: async () => {
       const headers = await getAuthHeader();
       return listTicketsFn({
@@ -284,10 +285,12 @@ export function SupportConsolePage() {
     },
   });
 
-  // Query single ticket detail & thread
+  // Query single ticket detail & thread with instant 1s polling for real-time conversation sync
   const { data: threadData, isLoading: isLoadingThread } = useQuery({
     queryKey: ["support-console-ticket-thread", selectedTicketId],
     enabled: isOperator && !!selectedTicketId,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
     queryFn: async () => {
       if (!selectedTicketId) return null;
       const headers = await getAuthHeader();
@@ -297,6 +300,37 @@ export function SupportConsolePage() {
       });
     },
   });
+
+  // Real-time subscription for support console: instant message arrivals with 0 refresh required
+  useEffect(() => {
+    if (!selectedTicketId) return;
+
+    const channel = supabase
+      .channel(`support-console-realtime-${selectedTicketId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_ticket_replies",
+          filter: `ticket_id=eq.${selectedTicketId}`,
+        },
+        () => {
+          qc.invalidateQueries({
+            queryKey: ["support-console-ticket-thread", selectedTicketId],
+          });
+          qc.invalidateQueries({
+            queryKey: ["support-console-tickets"],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTicketId, qc]);
+
 
   // Query support staff accounts (any operator can view the team)
   const { data: staffList = [], isLoading: isLoadingStaff } = useQuery({
@@ -791,10 +825,12 @@ export function SupportConsolePage() {
 
                   <div className="space-y-3 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground">Church Name</p>
-                      <p className="font-semibold text-foreground">
-                        {activeTenant?.name || selectedQueueTicket?.tenant_name || "Church Partner"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Church Entity</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="font-semibold text-foreground">
+                          {activeTicket?.church_label || activeTenant?.church_label || activeTenant?.name || selectedQueueTicket?.church_label || selectedQueueTicket?.tenant_name || "Church Partner"}
+                        </p>
+                      </div>
                     </div>
 
                     <div>
@@ -895,7 +931,7 @@ export function SupportConsolePage() {
                                     </span>
                                   ) : isChurch ? (
                                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-foreground">
-                                      Church Submitter
+                                      {activeTicket?.church_label || activeTenant?.church_label || selectedQueueTicket?.church_label || activeTenant?.name || selectedQueueTicket?.tenant_name || "Church"}
                                     </span>
                                   ) : (
                                     <span className="text-xs font-bold px-2 py-0.5 rounded bg-primary text-primary-foreground">
@@ -1109,7 +1145,7 @@ export function SupportConsolePage() {
                           {ticket.status.replace("_", " ")}
                         </span>
                         <span className="text-xs font-semibold text-foreground/90">
-                          {ticket.tenant_name}
+                          {ticket.church_label || ticket.tenant_name}
                         </span>
                         <span className="text-xs font-mono text-muted-foreground">
                           ({ticket.tenant_subdomain || "church"})
