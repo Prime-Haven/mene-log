@@ -131,7 +131,7 @@ function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-20 lg:pb-0">
       {settings?.homepage?.banner && (
-        <div className="fixed inset-x-0 bottom-0 z-40 bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground md:top-0 md:bottom-auto">
+        <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-40 bg-primary px-4 py-2 text-center text-xs font-semibold text-primary-foreground md:top-0 md:bottom-auto">
           {settings.homepage.banner}
         </div>
       )}

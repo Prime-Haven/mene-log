@@ -379,7 +379,7 @@ export async function sendNewChurchSignupAlert(options: {
         replyTo: "support@menelog.site",
       });
       if (recipient === "mene.log26@gmail.com") {
-        primaryResult = res;
+        primaryResult = { ok: res.ok, providerId: res.providerId };
       }
     } catch (err) {
       console.error(`[signup alert] Failed to send new church notification email to ${recipient}:`, err);

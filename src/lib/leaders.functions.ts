@@ -88,7 +88,7 @@ export const registerLeader = createServerFn({ method: "POST" })
 
     // Never derive a code from public data: churches must set one explicitly.
     const expectedCode = codeRow?.code;
-    if (!expectedCode || expectedCode.trim().length < 8) {
+    if (!expectedCode || expectedCode.trim().length < 6) {
       return {
         ok: false as const,
         message: "Leader sign-up isn't open yet. Please ask your church administrator for the leader access code.",
