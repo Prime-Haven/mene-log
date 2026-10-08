@@ -137,6 +137,13 @@ async function createBranchTenant(
   return t.id as string;
 }
 
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export const createBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -146,19 +153,16 @@ export const createBranch = createServerFn({ method: "POST" })
         name: z.string().trim().min(2).max(120),
         subdomain,
         city: z.string().trim().max(80),
-        admin_email: z.string().trim().email().max(160),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const head = await assertHeadOffice(context, data.tenant_id);
-    const email = data.admin_email.toLowerCase();
     {
       const rl = await adminDb();
       const checks = await Promise.all([
         rl.rpc("check_rate_limit", { _bucket: "branch_invite_user", _identifier: context.userId, _max: 5, _window_seconds: 3600 }),
         rl.rpc("check_rate_limit", { _bucket: "branch_invite_tenant", _identifier: head.id, _max: 20, _window_seconds: 86400 }),
-        rl.rpc("check_rate_limit", { _bucket: "branch_invite_email", _identifier: email, _max: 2, _window_seconds: 86400 }),
       ]);
       if (checks.some((c) => c.error || c.data === false))
         return { ok: false as const, message: "Too many branch invitations. Please try again later." };
@@ -171,20 +175,104 @@ export const createBranch = createServerFn({ method: "POST" })
       true,
       null,
     );
-    const invited = await inviteOwner(id, email, data.name, head.name);
+    // One-time invite link the head office shares with the branch admin themselves.
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
     const db = await adminDb();
+    const { data: branchRow } = await db
+      .from("tenants")
+      .select("settings")
+      .eq("id", id)
+      .single();
+    const settings = (branchRow?.settings ?? {}) as Record<string, unknown>;
+    settings.branch_invite = {
+      hash: await sha256Hex(token),
+      expires_at: new Date(Date.now() + 7 * 864e5).toISOString(),
+    };
+    await db.from("tenants").update({ settings }).eq("id", id);
     await db.rpc("log_audit", {
       _tenant: head.id,
       _action: "branch.created",
       _target: data.subdomain,
-      _detail: { branch: id, invited_email: email, invited },
+      _detail: { branch: id, invite: "link" },
       _actor: context.userId,
     });
     return {
       ok: true as const,
-      message: invited
-        ? `Branch created. ${data.admin_email} has been invited.`
-        : "Branch created, but the admin invite could not be sent.",
+      message: "Branch created. Share the invite link with its administrator.",
+      invitePath: `/branch-invite?token=${token}`,
+    };
+  });
+
+/** Public: a branch admin claims their branch through the one-time invite link. */
+export const claimBranchInvite = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        token: z.string().trim().min(32).max(128),
+        full_name: z.string().trim().min(2).max(120),
+        email: z.string().trim().email().max(160),
+        password: z.string().min(8, "Password must be at least 8 characters").max(64),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const db = await adminDb();
+    const ip = (getRequestHeader("cf-connecting-ip") ?? "unknown").split(",")[0]!.trim();
+    const { data: allowed } = await db.rpc("check_rate_limit", {
+      _bucket: "branch_invite_claim",
+      _identifier: ip,
+      _max: 10,
+      _window_seconds: 3600,
+    });
+    if (allowed === false)
+      return { ok: false as const, message: "Too many attempts. Please try again in an hour." };
+    const hash = await sha256Hex(data.token);
+    const { data: rows } = await db
+      .from("tenants")
+      .select("id, name, settings, parent_tenant_id")
+      .eq("settings->branch_invite->>hash", hash)
+      .limit(1);
+    const tenant = rows?.[0];
+    const invite = (tenant?.settings as Record<string, { hash?: string; expires_at?: string } | undefined> | undefined)?.branch_invite;
+    if (!tenant || !invite?.expires_at || new Date(invite.expires_at).getTime() < Date.now())
+      return { ok: false as const, message: "This invite link is invalid or has expired." };
+    const email = data.email.toLowerCase();
+    let userId: string | null = null;
+    const { data: created, error: createError } = await db.auth.admin.createUser({
+      email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name },
+    });
+    if (created?.user) userId = created.user.id;
+    else if (createError?.message?.includes("already been registered")) {
+      const { data: profile } = await db
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      userId = profile?.id ?? null;
+    }
+    if (!userId)
+      return { ok: false as const, message: "Could not create your account. Try another email." };
+    await db.from("tenant_users").insert({
+      tenant_id: tenant.id,
+      user_id: userId,
+      role: "owner",
+      status: "active",
+    });
+    const settings = { ...(tenant.settings as Record<string, unknown>) };
+    delete settings.branch_invite;
+    await db.from("tenants").update({ settings }).eq("id", tenant.id);
+    await db.rpc("log_audit", {
+      _tenant: tenant.parent_tenant_id ?? tenant.id,
+      _action: "branch.invite_claimed",
+      _target: tenant.name,
+      _detail: { branch: tenant.id },
+    });
+    return {
+      ok: true as const,
+      message: `You're now the administrator of ${tenant.name}. Sign in to open your branch dashboard.`,
     };
   });
 
