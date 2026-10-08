@@ -511,6 +511,7 @@ export function Services() {
 
           <Button
             size="sm"
+            data-tour="page-create-service"
             onClick={() => {
               resetForm();
               setCreateOpen(true);

@@ -1,95 +1,111 @@
-# 30-Day Trial, Post-Trial Paywall & Downgrade, and Onboarding Admin Alerts
+# Onboarding Walkthrough Guide & Dashboard Tutorial Video
 
-Implement the exact changes requested in the voice note: extend the trial period from 14 to 30 days, guide expired trials to payment or downgrade with strict Pro feature locking, and deliver instant SMS and Email notifications upon church onboarding completion.
+Implement an interactive, tier-aware walkthrough guide for first-time church signups that spotlights active features, guides page actions, removes the video from the hero section, and adds a dedicated tutorial video banner to the main dashboard.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
 > The following confirmed decisions guide this execution:
-> - **30-Day Trial Everywhere**: Database provisioning (`provision_tenant`), schema defaults, UI countdowns, and warning crons will uniformly use a **30-day trial** (increased from 14 days).
-> - **Post-Trial Paywall & Guided Downgrade**: 
->   - When a 30-day trial concludes without payment, churches will be presented with a clear banner guiding them to activate/pay for their tier or smoothly downgrade to the **Free plan**.
->   - Adding an active "Downgrade to Free" action in `Billing & Plans` so churches can self-service switch to Free at any time.
->   - Feature locking (`src/lib/entitlements.ts` & `FeatureGate.tsx`) guarantees Pro/Standard features remain locked when on Free, while all member directories, attendances, and data remain preserved.
-> - **Onboarding Admin Notifications**:
->   - **SMS Alert**: Immediately dispatched via Arkesel to `0550160237` (formatted as `+233550160237` with sender ID `"Mene Log"`).
->   - **Email Alert**: Sent to `mene.log26@gmail.com` via Resend with church details, admin name, package, and direct Super Admin review link.
+> - **Interactive Spotlight Beacons**: Walkthrough will use interactive spotlight beacons and callouts anchored to active sidebar navigation items and page controls.
+> - **Strict Tier-Aware Feature Gating**: Locked features under lower tiers will **not** be included in the walkthrough. On Premium accounts (or active tiers), all available features will have their step-by-step guidance.
+> - **Sub-Page Guidance**: When a user clicks a feature and enters its page, context-sensitive guided callouts highlight primary controls (e.g. Add Member, Launch Kiosk, Create Service).
+> - **Hero Video Removal**: The video modal and button in the public landing page hero section will be replaced with a clean "Explore Platform" anchor action.
+> - **Dedicated Dashboard Tutorial Video Banner**: As the final step after completing the walkthrough (or accessible directly on `/dashboard`), a dedicated video banner will feature the tutorial player with an easily replaceable demo video source.
 
 ---
 
-## 1. Overview & Core Concept
+## 1. Overview & Architecture
 
-- **What It Delivers**: 
-  1. A generous 30-day full-feature trial giving churches ample time through multiple Sunday services.
-  2. A seamless end-of-trial transition: pay for their chosen tier (via Paystack card or Mobile Money) or downgrade to Free with graceful feature tier restrictions.
-  3. Real-time operator awareness via instant SMS to `0550160237` and email to `mene.log26@gmail.com` the moment any new church completes onboarding.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          NEW CHURCH ONBOARDING FLOW                         │
+│                                                                             │
+│  [Complete Onboarding]                                                      │
+│           │                                                                 │
+│           ▼                                                                 │
+│  [Enter Dashboard (First Time)]                                             │
+│           │                                                                 │
+│           ▼                                                                 │
+│  [Walkthrough Spotlight Tour Launches]                                      │
+│    • Step 1: Dashboard Overview                                             │
+│    • Step 2: Door Check-In & Scanner (active on all tiers)                  │
+│    • Step 3: Attendance Register (active on all tiers)                      │
+│    • Step 4: Services Setup (active on all tiers)                           │
+│    • Step 5: Member Directory (active on all tiers)                         │
+│    • Step 6+: Pro/Premium Features (Follow-ups, Leaders, Reports,           │
+│               Messaging, Structure, Branches, Billing — ONLY if unlocked)   │
+│           │                                                                 │
+│           ▼                                                                 │
+│  [Final Step: Dedicated Tutorial Video Banner on Dashboard]                 │
+│    • Plays demo video with easy code replacement slot                       │
+│    • Once watched or dismissed, full workspace is ready                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 2. User Experience & Flows
 
-### A. Church Onboarding & Alerts Flow
-```
-┌──────────────────────────┐       ┌────────────────────────────────────────────────────────┐
-│ Church Finishes Register │ ────> │  1. Database creates church with 30-day trial         │
-│ & Email Verification     │       │  2. SMS dispatched to 0550160237                       │
-│                          │       │  3. Email dispatched to mene.log26@gmail.com           │
-└──────────────────────────┘       └────────────────────────────────────────────────────────┘
-```
-- **Admin SMS Format**:  
-  `"[Mene:Log] New church onboarded: Grace Baptist (subdomain: grace) on 30-day PRO trial. Admin: Pastor Kwame (0244123456). Review at menelog.site/super-admin"`
-- **Admin Email Format**:  
-  Branded HTML email to `mene.log26@gmail.com` detailing Church Name, Subdomain, Contact Email, Contact Phone, Selected Plan, and One-Click Super Admin Link.
+### A. Walkthrough Spotlight Engine (`src/components/walkthrough/WalkthroughTour.tsx`)
+- **First-Time Detection**: Automatically opens on `/dashboard` if `menelog_walkthrough_completed_${tenantId}` is false in `localStorage`.
+- **Spotlight Anchors (`data-tour="..."`)**:
+  - `data-tour="nav-dashboard"`: "Operations Hub — View your weekly Sunday headcounts, demographics, and first-timer trends."
+  - `data-tour="nav-scan"`: "4-Second Door Scanner — Launch mobile camera scanning or tablet kiosk check-in."
+  - `data-tour="nav-attendance"`: "Live Attendance Register — View present attendees, manual overrides, and timestamps."
+  - `data-tour="nav-services"`: "Church Services — Create Sunday services, prayer meetings, and live streams."
+  - `data-tour="nav-members"`: "Member Directory — Add congregation profiles, upload photos, and track family data."
+  - `data-tour="nav-followups"`: *(Tier-gated)* "Pastoral Follow-ups — Track first-timers and check-in absence alerts."
+  - `data-tour="nav-leaders"`: *(Tier-gated)* "Pastoral Leadership — Assign church leaders and department overseers."
+  - `data-tour="nav-reports"`: *(Tier-gated)* "Ministry Analytics — Generate growth reports and export member records."
+  - `data-tour="nav-messaging"`: *(Tier-gated)* "Broadcast Announcements — Send instant SMS and Email notifications."
+  - `data-tour="nav-structure"`: *(Tier-gated)* "Congregation Structure — Set up committees, departments, and cells."
+  - `data-tour="nav-branches"`: *(Tier-gated)* "Multi-Branch Oversight — Manage campuses and satellite parishes."
+  - `data-tour="nav-billing"`: "Plans & Space Addons — Manage your 30-day trial and church packages."
+- **Page-Level Sub-Guides**:
+  - On `/members`: highlights "Add Member" button and Search/Filter bar.
+  - On `/services`: highlights "Create Service" button.
+  - On `/scan`: highlights "Kiosk Mode" and Camera Scanner.
+- **Controls**: "Next", "Back", "Skip Walkthrough", plus a "Restart Walkthrough" option in the user profile menu.
 
-### B. 30-Day Trial & Post-Trial Experience
-```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│ Active 30-Day Trial (Days 1–30)                                                          │
-│ Banner: "Your 30-day trial is currently active. 18 days remaining until Sunday, Nov 2"   │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ Trial Expired (Day 31+)                                                                  │
-│ Warning Banner: "Your 30-day trial has concluded. Activate your plan or switch to Free." │
-│ [Renew / Pay for Pro]                [Downgrade to Free Forever]                         │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-```
-- When on **Free** (after downgrade):
-  - Pro features (e.g., Automated SMS/WhatsApp, Multi-branch management, Advanced leader rank hierarchies, Space add-ons) show the friendly upgrade modal (`FeatureGate`).
-  - Essential core check-in, attendance recording, and member directory remain fully functional forever.
+### B. Dashboard Tutorial Video Banner (`src/components/dashboard/DashboardTutorialBanner.tsx`)
+- Appears prominently near the top of `/dashboard` after walkthrough completion (or collapsed/expandable).
+- High-fidelity player styling with poster frame, play/pause controls, time display, and fullscreen.
+- Includes a dedicated code comment and configuration variable:
+  ```ts
+  // TUTORIAL VIDEO SOURCE CONFIGURATION:
+  // Replace this path with your finalized video asset or direct URL/embed
+  export const DASHBOARD_TUTORIAL_VIDEO_SRC = "/assets/mene-worship-hero.webm";
+  ```
+- Action buttons: "Mark as Watched", "Dismiss Banner", and "Replay Tutorial".
+
+### C. Hero Section Simplification
+- In `src/components/landing/HeroSection.tsx`:
+  - Remove `Watch Interactive Tour` video modal trigger and play button.
+  - Replace with a clean, elegant anchor button:
+    `<a href="#features" className="...">Explore Capabilities</a>`
+  - In `src/routes/index.tsx`:
+    - Remove `HeroShowreelModal` component and `showreelOpen` state.
 
 ---
 
 ## 3. Technical Implementation Steps
 
-### Step 1: Database & Server Trial Duration (30 Days)
-- Update SQL tenant provisioning definition (`provision_tenant` / `reserve_tenant_and_start_trial`):
-  - Set `trial_ends_at = now() + interval '30 days'`
-  - Set `period_end = v_start + 30`
-  - Set audit payload `trial_days: 30`
-- Update `src/routes/onboarding.tsx` and `src/routes/onboarding-complete.tsx` to verify the 30-day trial creation.
+### Step 1: Create Walkthrough Tour Engine
+- Create `src/components/walkthrough/WalkthroughTour.tsx` and `src/components/walkthrough/walkthrough-context.tsx`.
+- Connect to `useTenant()` so active tier filters out any features where `ctx.can(feature)` is false.
+- Inject `data-tour` attributes into `src/routes/_app/route.tsx` for all sidebar navigation links.
+- Add page-level tour targets on `/dashboard`, `/members`, `/services`, and `/scan`.
 
-### Step 2: Onboarding SMS & Email Dispatch
-- In `src/lib/support.server.ts`:
-  - Update `sendNewChurchSignupAlert`:
-    - Add SMS dispatch to `+233550160237` using `sendSms` with sender `"Mene Log"`.
-    - Set primary email alert recipient to `mene.log26@gmail.com` (and copy `primehaven26@gmail.com`).
-  - Ensure both direct signup and email-verification onboarding completion trigger these alerts.
+### Step 2: Create Dashboard Tutorial Video Banner
+- Create `src/components/dashboard/DashboardTutorialBanner.tsx`.
+- Place a working video player referencing the bundled video (`@/assets/mene-worship-hero.webm`).
+- Mount on `src/routes/_app/dashboard.tsx` with persistent dismiss/watched status.
 
-### Step 3: Billing Downgrade to Free & Feature Locking
-- In `src/lib/billing.functions.ts`:
-  - Add `downgradeToFree` server function:
-    - Verifies church admin/owner authorization.
-    - Updates `tenants.tier = 'free'` and `subscriptions.tier = 'free'` with `period_end = '9999-12-31'`.
-    - Logs audit event `billing.downgraded_to_free`.
-- In `src/routes/_app/billing.tsx`:
-  - Enable the "Select Free" / "Downgrade to Free" button with confirmation dialog.
-  - When trial is expired (`!trialActive && tenant.tier !== 'free' && !hasPaidSubscription`), display an alert card guiding payment or downgrade.
-- In `src/lib/entitlements.ts` & `src/components/FeatureGate.tsx`:
-  - Verify all Pro features are locked when tier is `free`, displaying the upgrade prompt to reactivate Pro.
+### Step 3: Remove Video from Landing Hero
+- In `src/components/landing/HeroSection.tsx`, replace the `Watch Interactive Tour` button with an "Explore Capabilities" link.
+- In `src/routes/index.tsx`, remove `HeroShowreelModal` imports and rendering.
 
----
-
-## 4. Verification & Testing
-
-1. **Lint & Build**: Run `lint_applet` and `compile_applet`.
-2. **Onboarding Simulation**: Complete onboarding and test that `sendNewChurchSignupAlert` executes with SMS payload to `0550160237` and email payload to `mene.log26@gmail.com`.
-3. **Billing & Downgrade**: Verify that a church can switch to Free, that the Pro features gate properly, and that records remain intact.
+### Step 4: Verification
+- Verify build with `lint_applet` and `compile_applet`.
+- Verify tier gating: simulate Free, Standard, and Premium to confirm locked items never show in the walkthrough.
+- Verify video playback and dismiss persistence.

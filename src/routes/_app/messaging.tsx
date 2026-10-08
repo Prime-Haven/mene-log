@@ -178,6 +178,7 @@ function Messaging() {
 
       <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
         <form
+          data-tour="page-messaging-form"
           className="surface space-y-4 p-5"
           onSubmit={(e) => {
             e.preventDefault();

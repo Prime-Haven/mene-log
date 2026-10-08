@@ -416,7 +416,7 @@ function Members() {
                   </Link>
                 </Button>
               )}
-              <Button onClick={() => setAddOpen(true)}>
+              <Button data-tour="page-add-member" onClick={() => setAddOpen(true)}>
                 <UserPlus className="size-4" /> Add member
               </Button>
             </>
@@ -424,7 +424,7 @@ function Members() {
         </div>
       </div>
 
-      <div className="relative">
+      <div data-tour="page-member-search" className="relative">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9"

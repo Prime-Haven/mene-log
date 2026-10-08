@@ -38,10 +38,11 @@ import { InstallMene } from "@/components/InstallMene";
 import { getBrandAssetUrl } from "@/lib/checkin.functions";
 import { ReviewPrompt } from "@/components/ReviewPrompt";
 import { planLabel } from "@/lib/pricing";
-import { Lock, Building2 } from "lucide-react";
+import { Lock, Building2, Compass } from "lucide-react";
 import type { Feature } from "@/lib/entitlements";
 import { UpgradePanel } from "@/components/FeatureGate";
 import { MeneLogLogo } from "@/components/MeneLogLogo";
+import { WalkthroughTour } from "@/components/walkthrough/WalkthroughTour";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -283,10 +284,12 @@ function AppLayout() {
                     : pathname.startsWith(to) &&
                       (routerSearch as Record<string, unknown>)?.tab !== "online";
                   const locked = !!feature && !ctx.can(feature);
+                  const tourKey = `nav-${to.replace(/^\//, "")}`;
                   return (
                     <Link
                       key={`${to}-${label}`}
                       to={to}
+                      data-tour={tourKey}
                       search={search as never}
                       onClick={() => mobile && setMobileOpen(false)}
                       title={label}
@@ -314,11 +317,22 @@ function AppLayout() {
           );
         })}
       </nav>
-      <div className="border-t border-sidebar-border p-3">
+      <div className="border-t border-sidebar-border p-3 space-y-1.5">
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Interactive Walkthrough"
+          className={`w-full gap-2.5 rounded-xl text-primary hover:bg-primary/10 transition-colors ${collapsed && !mobile ? "justify-center px-0" : "justify-start"}`}
+          onClick={() => window.dispatchEvent(new CustomEvent("menelog:start-walkthrough"))}
+        >
+          <Compass className="size-4 shrink-0" />
+          {(!collapsed || mobile) && "Feature Walkthrough"}
+        </Button>
+
         {(!collapsed || mobile) && (
           <>
             <InstallMene compact />
-            <p className="px-3 pb-2 pt-3 text-xs capitalize text-muted-foreground">
+            <p className="px-3 pb-1 pt-2 text-xs capitalize text-muted-foreground">
               {ctx.role?.replace("_", " ")}
             </p>
           </>
@@ -360,6 +374,7 @@ function AppLayout() {
       </aside>
 
       <ReviewPrompt />
+      <WalkthroughTour />
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="flex w-[86vw] max-w-80 flex-col p-0">

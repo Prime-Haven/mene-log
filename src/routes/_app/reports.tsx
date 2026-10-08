@@ -128,7 +128,8 @@ function Reports() {
         <h1 className="mt-2 text-2xl font-bold">Reports</h1>
       </div>
 
-      <Tabs defaultValue="service">
+      <div data-tour="page-reports-tabs">
+        <Tabs defaultValue="service">
         <TabsList>
           <TabsTrigger value="service">Service attendance</TabsTrigger>
           <TabsTrigger value="first">First-timers</TabsTrigger>
@@ -284,6 +285,7 @@ function Reports() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

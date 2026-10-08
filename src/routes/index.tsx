@@ -38,7 +38,6 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { PublicAskMene } from "@/components/PublicAskMene";
 import { HeroNavbar } from "@/components/landing/HeroNavbar";
 import { HeroSection } from "@/components/landing/HeroSection";
-import { HeroShowreelModal } from "@/components/landing/HeroShowreelModal";
 import { MobileAppTabBar } from "@/components/landing/MobileAppTabBar";
 import { useActiveSection } from "@/hooks/useActiveSection";
 
@@ -127,7 +126,6 @@ function LandingPage() {
   const currency = useCurrency();
   const settings = usePlatformSettings();
   const [interval, setBillingInterval] = useState<BillingInterval>("monthly");
-  const [showreelOpen, setShowreelOpen] = useState(false);
   const activeSection = useActiveSection(["hero", "features", "care", "pricing", "faq"], 320);
 
   return (
@@ -142,13 +140,7 @@ function LandingPage() {
       <HeroNavbar activeSection={activeSection} />
 
       {/* Redesigned Architectural Hero Section with Expanded Growing Together Deck */}
-      <HeroSection onWatchShowreel={() => setShowreelOpen(true)} />
-
-      {/* Interactive Video Tour / Showreel Modal */}
-      <HeroShowreelModal
-        open={showreelOpen}
-        onClose={() => setShowreelOpen(false)}
-      />
+      <HeroSection />
 
       <main className="relative z-10">
 

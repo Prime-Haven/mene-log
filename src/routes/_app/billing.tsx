@@ -208,7 +208,7 @@ export function Billing() {
       )}
 
       {/* Signed-in Account Context Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div data-tour="page-billing-cards" className="grid gap-4 sm:grid-cols-3">
         <div className="surface p-5">
           <p className="text-eyebrow">Active Package</p>
           <div className="mt-2 flex items-center gap-2">

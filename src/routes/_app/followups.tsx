@@ -125,7 +125,7 @@ function Followups() {
           Nobody needs a follow-up right now.
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div data-tour="page-followups-cards" className="grid gap-3 lg:grid-cols-2">
           {rows.map((r) => (
             <FollowupCard
               key={r.member_id}

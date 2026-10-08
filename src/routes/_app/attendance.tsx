@@ -489,7 +489,7 @@ export function AttendanceRegister() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div data-tour="page-attendance-actions" className="flex items-center gap-2.5">
           <Button
             variant="outline"
             size="sm"

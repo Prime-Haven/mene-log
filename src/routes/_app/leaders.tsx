@@ -145,7 +145,7 @@ function LeadersPage() {
         </p>
       </div>
 
-      <div className="surface space-y-4 p-5">
+      <div data-tour="page-leaders-access" className="surface space-y-4 p-5">
         <div className="flex items-center gap-2">
           <KeyRound className="size-4 text-primary" />
           <h2 className="font-display font-bold">Leader access code</h2>

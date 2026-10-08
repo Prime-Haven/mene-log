@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan to extend trial duration to 30 days, add post-trial paywall and clean Free tier downgrade functionality with Pro feature locking, and wire automatic SMS (to 0550160237) and Email (to mene.log26@gmail.com) alerts on onboarding completion.",
-  "updatedAt":  "2026-10-07T12:19:35.958717041Z",
+  "summary":  "Implementation plan for first-time church onboarding interactive walkthrough guide with tier-aware feature spotlight beacons, removal of hero section video, and a dedicated dashboard tutorial video banner.",
+  "updatedAt":  "2026-10-07T23:46:35.576600998Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

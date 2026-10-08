@@ -92,7 +92,7 @@ function BranchesPage() {
             included.
           </p>
         </div>
-        <Button onClick={() => setAdding((v) => !v)}>
+        <Button data-tour="page-branches-add" onClick={() => setAdding((v) => !v)}>
           <Plus className="size-4" /> New branch
         </Button>
       </div>

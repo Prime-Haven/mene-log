@@ -439,7 +439,7 @@ export function Scan() {
 
       {/* Camera Scanner View */}
       {mode === "camera" && serviceId && (
-        <div className="surface overflow-hidden border border-border/80 shadow-panel">
+        <div data-tour="page-camera-scanner" className="surface overflow-hidden border border-border/80 shadow-panel">
           <ClientOnly
             fallback={
               <div className="grid h-64 place-items-center text-sm text-muted-foreground">

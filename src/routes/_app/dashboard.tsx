@@ -36,6 +36,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { AbsenceAlerts } from "@/components/AbsenceAlerts";
+import { DashboardTutorialBanner } from "@/components/dashboard/DashboardTutorialBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -181,7 +182,10 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Tiered Account Operations Hero */}
+      {/* 1. System Tutorial & Orientation Video Banner */}
+      <DashboardTutorialBanner tenantName={tenant?.name} />
+
+      {/* 2. Tiered Account Operations Hero */}
       <motion.section
         initial={reduceMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -339,7 +343,7 @@ export function Dashboard() {
       </section>
 
       {/* KPI Tiles */}
-      <section className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+      <section data-tour="page-kpi-cards" className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map((m, idx) => {
           const Icon = m.icon;
           return (
@@ -375,7 +379,7 @@ export function Dashboard() {
       <AbsenceAlerts />
 
       {/* Attendance Growth Trend */}
-      <section className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-4">
+      <section data-tour="page-attendance-trend" className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-lg font-bold text-ink flex items-center gap-2">

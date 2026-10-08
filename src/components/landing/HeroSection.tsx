@@ -8,7 +8,7 @@ import {
   BarChart3,
   Church,
   Clock,
-  Play,
+  Compass,
   QrCode,
   ScanLine,
   ShieldCheck,
@@ -178,16 +178,15 @@ export function HeroSection({
               <ArrowRight className="size-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
 
-            <button
-              type="button"
-              onClick={onWatchShowreel}
-              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full border border-white/10 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 active:scale-95"
+            <a
+              href="#features"
+              className="group inline-flex w-full sm:w-auto justify-center items-center gap-3 rounded-full border border-white/15 bg-white/5 px-8 py-4 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:border-white/30 active:scale-95"
             >
               <span className="grid size-8 place-items-center rounded-full bg-white/10 transition-colors duration-300 group-hover:bg-white/20">
-                <Play className="size-4 fill-current ml-0.5" />
+                <Compass className="size-4 text-sky-300 transition-transform duration-300 group-hover:rotate-45" />
               </span>
-              <span>Watch Interactive Tour</span>
-            </button>
+              <span>Explore Platform Features</span>
+            </a>
           </div>
         </div>
       </div>

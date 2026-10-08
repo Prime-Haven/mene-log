@@ -208,7 +208,7 @@ export function Structure() {
       <div className="grid gap-6 lg:grid-cols-12">
         {/* Left Column: Configure Leader Roles & Reporting Rules */}
         <div className="lg:col-span-6 space-y-6">
-          <div className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-5">
+          <div data-tour="page-structure-roles" className="surface rounded-2xl border border-border/80 p-5 shadow-panel space-y-5">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <h2 className="text-base font-bold flex items-center gap-2">
