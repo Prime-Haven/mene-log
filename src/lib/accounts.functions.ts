@@ -48,6 +48,19 @@ export const inviteAccount = createServerFn({ method: "POST" })
       .single();
     if (!tenant) return { ok: false as const, message: "Church not found." };
 
+    {
+      const { supabaseAdmin: rl } = await import("@/integrations/supabase/client.server");
+      const inviteEmail = data.email.toLowerCase();
+      const checks = await Promise.all([
+        rl.rpc("check_rate_limit", { _bucket: "staff_invite_user", _identifier: userId, _max: 10, _window_seconds: 3600 }),
+        rl.rpc("check_rate_limit", { _bucket: "staff_invite_tenant", _identifier: data.tenant_id, _max: 30, _window_seconds: 86400 }),
+        rl.rpc("check_rate_limit", { _bucket: "staff_invite_email", _identifier: inviteEmail, _max: 2, _window_seconds: 86400 }),
+      ]);
+      if (checks.some((c) => c.error || c.data !== true)) {
+        return { ok: false as const, message: "Too many invitations right now. Please try again later." };
+      }
+    }
+
     // Free tier = 1 account (owner only)
     // Standard tier = up to 3 accounts (owner + 2 additional admins/ushers)
     // Pro tier = up to 10 accounts (admins, leaders, ushers)
@@ -210,7 +223,24 @@ export const updateAccountPermissions = createServerFn({ method: "POST" })
     const updatePayload: Record<string, unknown> = {
       permissions: data.permissions,
     };
-    if (data.role) {
+    if (data.role && data.role !== targetAccount.role) {
+      const { data: tierRow } = await supabaseAdmin
+        .from("tenants")
+        .select("tier")
+        .eq("id", data.tenant_id)
+        .single();
+      const roleAllows: Record<string, string[]> = {
+        free: [],
+        standard: ["usher", "church_admin"],
+        pro: ["usher", "church_admin", "leader"],
+        premium: ["usher", "church_admin", "leader", "branch_admin"],
+      };
+      if (!tierRow || !roleAllows[tierRow.tier]?.includes(data.role)) {
+        return {
+          ok: false as const,
+          message: `The ${data.role.replace("_", " ")} role is not included in your current package.`,
+        };
+      }
       updatePayload.role = data.role;
     }
 
