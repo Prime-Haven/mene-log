@@ -188,7 +188,10 @@ export const createBranch = createServerFn({ method: "POST" })
       hash: await sha256Hex(token),
       expires_at: new Date(Date.now() + 7 * 864e5).toISOString(),
     };
-    await db.from("tenants").update({ settings }).eq("id", id);
+    await db
+      .from("tenants")
+      .update({ settings: settings as never })
+      .eq("id", id);
     await db.rpc("log_audit", {
       _tenant: head.id,
       _action: "branch.created",
@@ -263,7 +266,10 @@ export const claimBranchInvite = createServerFn({ method: "POST" })
     });
     const settings = { ...(tenant.settings as Record<string, unknown>) };
     delete settings.branch_invite;
-    await db.from("tenants").update({ settings }).eq("id", tenant.id);
+    await db
+      .from("tenants")
+      .update({ settings: settings as never })
+      .eq("id", tenant.id);
     await db.rpc("log_audit", {
       _tenant: tenant.parent_tenant_id ?? tenant.id,
       _action: "branch.invite_claimed",
