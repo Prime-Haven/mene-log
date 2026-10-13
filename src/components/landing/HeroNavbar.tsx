@@ -77,16 +77,17 @@ export function HeroNavbar({
                 <a
                   key={item.id}
                   href={item.href}
+                  aria-current={isCurrent ? "location" : undefined}
                   onClick={(e) => handleScrollTo(e, item.href)}
                   className={`relative flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all duration-200 ${
                     isCurrent
-                      ? "bg-white text-slate-950 shadow-md font-bold"
-                      : "text-white/80 hover:text-white hover:bg-white/15"
+                       ? "bg-deep-foreground text-deep shadow-md font-bold"
+                       : "text-deep-foreground/80 hover:text-deep-foreground hover:bg-deep-foreground/15"
                   }`}
                 >
                   <span>{item.label}</span>
                   {isCurrent && (
-                    <span className="size-1 rounded-full bg-blue-600 animate-pulse" />
+                    <span className="size-1 rounded-full bg-primary" />
                   )}
                 </a>
               );

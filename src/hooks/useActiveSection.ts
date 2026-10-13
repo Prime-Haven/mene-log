@@ -2,30 +2,42 @@ import { useEffect, useState } from "react";
 
 export function useActiveSection(sectionIds: string[], offset: number = 280): string {
   const [activeId, setActiveId] = useState<string>(sectionIds[0] ?? "hero");
+  const sectionKey = sectionIds.join(",");
 
   useEffect(() => {
+    const ids = sectionKey.split(",");
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + offset;
+      const marker = Math.min(offset, window.innerHeight * 0.25);
+      if (window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+        setActiveId(ids[ids.length - 1] ?? "hero");
+        return;
+      }
 
-      for (let i = sectionIds.length - 1; i >= 0; i--) {
-        const id = sectionIds[i];
+      for (let i = ids.length - 1; i >= 0; i--) {
+        const id = ids[i];
         if (!id) continue;
         const el = document.getElementById(id);
         if (el) {
-          const top = el.offsetTop;
-          if (scrollPosition >= top) {
+          // All sections must be compared in viewport coordinates: offsetTop
+          // is relative to each section's parent, not necessarily the document.
+          const top = el.getBoundingClientRect().top;
+          if (marker >= top) {
             setActiveId(id);
             return;
           }
         }
       }
-      setActiveId(sectionIds[0] ?? "hero");
+      setActiveId(ids[0] ?? "hero");
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
     handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [sectionIds, offset]);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [sectionKey, offset]);
 
   return activeId;
 }
