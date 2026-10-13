@@ -58,6 +58,17 @@ export const Route = createFileRoute("/api/public/ask-mene")({
           );
           const tier = (tenantRow?.tier ?? "free") as string;
           const pro = planConfig[tier]?.["ask_mene_pro"] === true;
+          const { hasFeature } = await import("@/lib/entitlements");
+          const askAllowed =
+            typeof planConfig[tier]?.["ask_mene"] === "boolean"
+              ? planConfig[tier]?.["ask_mene"] === true
+              : hasFeature(tier as never, "ask_mene");
+          if (!tenantRow || !askAllowed) {
+            return Response.json(
+              { error: "Ask Mene:Log isn't included in your church's current plan." },
+              { status: 403 },
+            );
+          }
 
           const messages = Array.isArray(body.messages) ? body.messages.slice(pro ? -40 : -16) : [];
           const latest = [...messages].reverse().find((message) => message.role === "user");

@@ -261,7 +261,7 @@ export async function sendSupportTicketSmsAlert(options: {
             to: clean,
             body: churchMsg,
             sender: "Mene Log",
-          }).catch((e) => console.error(`[support-sms] Dispatch to ${clean} failed:`, e));
+          }).catch((e) => console.error("[support-sms] Dispatch to a church recipient failed:", e instanceof Error ? e.message : "unknown error"));
         }
       }
     }
