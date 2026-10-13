@@ -8,6 +8,10 @@ export function useActiveSection(sectionIds: string[], offset: number = 280): st
     const ids = sectionKey.split(",");
     const handleScroll = () => {
       const marker = Math.min(offset, window.innerHeight * 0.25);
+      if (window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+        setActiveId(ids[ids.length - 1] ?? "hero");
+        return;
+      }
 
       for (let i = ids.length - 1; i >= 0; i--) {
         const id = ids[i];
