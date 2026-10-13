@@ -103,9 +103,9 @@ export const Route = createFileRoute("/api/public/ask-mene")({
 
           const { data: recentServices } = await supabaseAdmin
             .from("services")
-            .select("id, name, service_type, starts_at, target_attendance")
+            .select("id, name, service_type, service_date, target_attendance")
             .eq("tenant_id", tenantId)
-            .order("starts_at", { ascending: false })
+            .order("service_date", { ascending: false })
             .limit(10);
 
           const serviceIds = (recentServices ?? []).map((s) => s.id);
@@ -136,7 +136,7 @@ export const Route = createFileRoute("/api/public/ask-mene")({
               const mem = a.member as unknown as { full_name?: string } | null;
               return {
                 service_name: svc?.name || "Church Service",
-                service_date: svc?.starts_at ? new Date(svc.starts_at).toLocaleDateString() : "",
+                service_date: svc?.service_date ? new Date(svc.service_date).toLocaleDateString() : "",
                 attendee_name: mem?.full_name || "Guest Attendee",
                 method: a.method,
                 recorded_at: a.recorded_at,
