@@ -85,7 +85,7 @@ export const submitChurchTicket = createServerFn({ method: "POST" })
         .eq("id", data.branch_id)
         .eq("tenant_id", data.tenant_id)
         .maybeSingle();
-      if (!branchRow) return { ok: false as const, message: "That branch does not belong to your church." };
+      if (!branchRow) throw new Error("That branch does not belong to your church.");
       if (branchRow.name) branchName = branchRow.name;
     }
 
