@@ -129,6 +129,14 @@ export const getBrandAssetUrl = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Only sign files that a church currently uses as its logo or background.
+    const tenantId = data.path.split("/")[0];
+    const { data: owner } = await supabaseAdmin
+      .from("tenants")
+      .select("logo_path, background_path")
+      .eq("id", tenantId)
+      .maybeSingle();
+    if (!owner || (owner.logo_path !== data.path && owner.background_path !== data.path)) return null;
     const { data: signed, error } = await supabaseAdmin.storage
       .from("tenant-branding")
       .createSignedUrl(data.path, 3600);

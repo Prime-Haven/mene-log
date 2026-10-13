@@ -148,7 +148,7 @@ export async function checkAndSendTrialExpiryAlerts(
         replyTo: "support@menelog.site",
       }).catch((e) => console.error("[trial-alerts] Operator copy failed:", e));
     } else {
-      console.error(`[trial-alerts] Failed to send ${milestone} alert to ${t.contact_email}:`, emailResult.error);
+      console.error(`[trial-alerts] Failed to send ${milestone} alert for tenant ${t.id}`);
     }
   }
 

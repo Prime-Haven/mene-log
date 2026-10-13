@@ -290,7 +290,7 @@ export const removeAccount = createServerFn({ method: "POST" })
 
     const { data: target } = await supabaseAdmin
       .from("tenant_users")
-      .select("id, role")
+      .select("id, role, user_id")
       .eq("id", data.account_id)
       .eq("tenant_id", data.tenant_id)
       .single();
@@ -306,6 +306,13 @@ export const removeAccount = createServerFn({ method: "POST" })
       .eq("tenant_id", data.tenant_id);
 
     if (error) throw error;
+
+    // A removed person must also lose any leader access in this church.
+    await supabaseAdmin
+      .from("leader_profiles")
+      .update({ status: "suspended" })
+      .eq("tenant_id", data.tenant_id)
+      .eq("user_id", target.user_id);
 
     await supabaseAdmin.rpc("log_audit", {
       _tenant: data.tenant_id,
