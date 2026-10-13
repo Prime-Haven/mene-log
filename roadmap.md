@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Fix homepage section selector and verify scroll navigation
+- [ ] Replace public assistant canned replies with privacy-safe AI and verify conversation
+
 - [x] Platform settings + console Settings area
 - [x] Pricing driven by settings
 - [x] Discount codes
