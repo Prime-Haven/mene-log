@@ -396,8 +396,12 @@ export const downgradeToFree = createServerFn({ method: "POST" })
       return { ok: true as const, message: "Church is already on the Free plan." };
     }
 
+    // Plan writes need the service role: `authenticated` has no UPDATE on
+    // tenants/subscriptions. The is_tenant_admin check above gates this.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     // 1. Update tenants table to 'free'
-    const { error: tenantErr } = await supabase
+    const { error: tenantErr } = await supabaseAdmin
       .from("tenants")
       .update({
         tier: "free",
@@ -410,7 +414,7 @@ export const downgradeToFree = createServerFn({ method: "POST" })
     }
 
     // 2. Update subscriptions table to 'free'
-    await supabase
+    await supabaseAdmin
       .from("subscriptions")
       .update({
         tier: "free",
