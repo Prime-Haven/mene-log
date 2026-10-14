@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Fix homepage section selector and verify scroll navigation
+- [x] Fix homepage section selector and verify scroll navigation
 - [ ] Replace public assistant canned replies with privacy-safe AI and verify conversation
-- [ ] Draft WhatsApp + email invitations for pastors to try the Free plan
+- [x] Draft WhatsApp + email invitations for pastors to try the Free plan
 
 - [x] Platform settings + console Settings area
 - [x] Pricing driven by settings
