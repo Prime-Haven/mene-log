@@ -64,7 +64,7 @@ export const Route = createFileRoute("/c/$subdomain")({
   errorComponent: () => (
     <div className="flex min-h-screen items-center justify-center p-6 text-center">
       <div className="surface max-w-md p-8">
-        <h2 className="font-display text-xl font-bold">Check-in Unavailable</h2>
+        <h1 className="font-display text-xl font-bold">Check-in Unavailable</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           We could not load this church's check-in page. Please verify the web address or contact
           the church administrator.
@@ -367,7 +367,10 @@ function CheckIn() {
   if (church === null) {
     return (
       <div className="grid min-h-screen place-items-center px-5 text-center">
-        <p className="text-sm text-muted-foreground">This church check-in page does not exist.</p>
+        <div>
+          <h1 className="font-display text-xl font-bold">Church check-in page not found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">This church check-in page does not exist.</p>
+        </div>
       </div>
     );
   }
@@ -492,7 +495,12 @@ function CheckIn() {
             />
           )}
           <h1 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight text-white sm:text-4xl">
-            {church?.name ?? "Loading…"}
+            {church?.name ?? "Loading church check-in…"}
+            {church?.name && (
+              <span className="sr-only">
+                {tab === "leader" ? " — Leader area" : tab === "branch" ? " — Branch portal" : " — Member check-in"}
+              </span>
+            )}
           </h1>
           <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
             <Sparkles className="size-3" /> Welcome — let's check you in
@@ -1302,8 +1310,9 @@ function BranchArea({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-white/90">Branch Campus Name</Label>
+              <Label htmlFor="branch-register-name" className="text-xs font-semibold text-white/90">Branch Campus Name</Label>
               <Input
+                id="branch-register-name"
                 required
                 placeholder="e.g. Grace City Kumasi Campus"
                 value={f.name}
@@ -1314,8 +1323,9 @@ function BranchArea({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-white/90">Check-in Address (Subdomain)</Label>
+              <Label htmlFor="branch-register-subdomain" className="text-xs font-semibold text-white/90">Check-in Address (Subdomain)</Label>
               <Input
+                id="branch-register-subdomain"
                 required
                 placeholder="e.g. grace-kumasi"
                 value={f.subdomain}
@@ -1330,8 +1340,9 @@ function BranchArea({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-white/90">Town or City</Label>
+              <Label htmlFor="branch-register-city" className="text-xs font-semibold text-white/90">Town or City</Label>
               <Input
+                id="branch-register-city"
                 required
                 placeholder="e.g. Kumasi, Ashanti Region"
                 value={f.city}
@@ -1342,8 +1353,9 @@ function BranchArea({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-white/90">Branch Leader's Full Name</Label>
+              <Label htmlFor="branch-register-contact" className="text-xs font-semibold text-white/90">Branch Leader's Full Name</Label>
               <Input
+                id="branch-register-contact"
                 required
                 placeholder="e.g. Pastor Emmanuel Osei"
                 value={f.contact_name}
@@ -1355,8 +1367,9 @@ function BranchArea({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-white/90">Branch Admin Email</Label>
+                <Label htmlFor="branch-register-email" className="text-xs font-semibold text-white/90">Branch Admin Email</Label>
                 <Input
+                  id="branch-register-email"
                   required
                   type="email"
                   placeholder="admin@branch.org"
@@ -1367,8 +1380,9 @@ function BranchArea({
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-white/90">Contact Phone Number</Label>
+                <Label htmlFor="branch-register-phone" className="text-xs font-semibold text-white/90">Contact Phone Number</Label>
                 <Input
+                  id="branch-register-phone"
                   required
                   type="tel"
                   placeholder="024 000 0000"
@@ -1383,8 +1397,9 @@ function BranchArea({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-white/90">Branch Admin Password</Label>
+                <Label htmlFor="branch-register-password" className="text-xs font-semibold text-white/90">Branch Admin Password</Label>
                 <PasswordInput
+                  id="branch-register-password"
                   required
                   placeholder="Min 8 characters"
                   value={f.password}
@@ -1394,8 +1409,9 @@ function BranchArea({
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold text-white/90">Confirm Password</Label>
+                <Label htmlFor="branch-register-confirm" className="text-xs font-semibold text-white/90">Confirm Password</Label>
                 <PasswordInput
+                  id="branch-register-confirm"
                   required
                   placeholder="Re-type password"
                   value={f.confirm}
