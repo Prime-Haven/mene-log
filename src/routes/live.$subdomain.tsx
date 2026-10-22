@@ -109,6 +109,14 @@ function WatchLive() {
           </span>
         </div>
 
+        <h1 className="mb-5 text-center font-display text-2xl font-bold">
+          {!session
+            ? "Watch the service live"
+            : service
+              ? `${service.name} — ${session.church}`
+              : `No live service — ${session.church}`}
+        </h1>
+
         <AnimatePresence mode="wait">
           {!session ? (
             <motion.form
@@ -123,7 +131,6 @@ function WatchLive() {
                 <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <KeyRound className="size-6" />
                 </div>
-                <h1 className="font-display text-2xl font-bold">Watch the service live</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Enter your member code (e.g. ML-1024) printed under your check-in QR. Your
                   attendance is recorded automatically while you watch.
@@ -143,7 +150,7 @@ function WatchLive() {
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" className="h-11 w-full" disabled={busy}>
+              <Button type="submit" className="h-11 w-full" disabled={busy} aria-label={busy ? "Starting live service…" : "Start watching"}>
                 {busy ? <Loader2 className="size-4 animate-spin" /> : "Start watching"}
               </Button>
             </motion.form>
@@ -156,7 +163,7 @@ function WatchLive() {
             >
               <div>
                 <p className="text-sm text-muted-foreground">{session.church}</p>
-                <h1 className="font-display text-2xl font-bold">Welcome, {session.member}</h1>
+                <h2 className="font-display text-xl font-bold">Welcome, {session.member}</h2>
               </div>
               {session.services.length === 0 ? (
                 <div className="surface p-8 text-center text-sm text-muted-foreground">

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Correct public check-in/live headings and accessible control names; verify SEO correction
+
 - [x] Fix homepage section selector and verify scroll navigation
 - [ ] Replace public assistant canned replies with privacy-safe AI and verify conversation
 - [x] Draft WhatsApp + email invitations for pastors to try the Free plan
