@@ -6,19 +6,9 @@ import { cn } from "@/lib/utils";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@/lib/streamdown-code-stub";
 import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
-import {
-  createContext,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 
 import { Shimmer } from "./shimmer";
@@ -156,12 +146,7 @@ const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
 };
 
 export const ReasoningTrigger = memo(
-  ({
-    className,
-    children,
-    getThinkingMessage = defaultGetThinkingMessage,
-    ...props
-  }: ReasoningTriggerProps) => {
+  ({ className, children, getThinkingMessage = defaultGetThinkingMessage, ...props }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
 
     return (
@@ -176,9 +161,7 @@ export const ReasoningTrigger = memo(
           <>
             <BrainIcon className="size-4" />
             {getThinkingMessage(isStreaming, duration)}
-            <ChevronDownIcon
-              className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
-            />
+            <ChevronDownIcon className={cn("size-4 transition-transform", isOpen ? "rotate-180" : "rotate-0")} />
           </>
         )}
       </CollapsibleTrigger>
